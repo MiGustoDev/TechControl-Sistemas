@@ -280,14 +280,10 @@ export function MonitoresPage() {
           <h1 className="text-2xl font-bold tracking-tight">Monitores</h1>
           <p className="text-sm text-muted-foreground">{monitors.length} monitores registrados</p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="size-4" />
-          Nuevo monitor
-        </Button>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-48">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-sm">
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por marca, modelo, PC vinculada..."
@@ -305,9 +301,14 @@ export function MonitoresPage() {
             <SelectItem value="in-use">En uso</SelectItem>
             <SelectItem value="in-stock">En stock</SelectItem>
             <SelectItem value="in-repair">En reparación</SelectItem>
-            <SelectItem value="decommissioned">Dado de baja</SelectItem>
+            <SelectItem value="decommissioned">Dada de baja</SelectItem>
           </SelectContent>
         </Select>
+
+        <Button onClick={openCreate} className="ml-auto">
+          <Plus className="size-4" />
+          Nuevo monitor
+        </Button>
       </div>
 
       {filtered.length === 0 ? (

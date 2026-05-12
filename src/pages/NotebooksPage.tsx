@@ -354,10 +354,6 @@ export function NotebooksPage() {
           <h1 className="text-2xl font-bold tracking-tight">Equipos</h1>
           <p className="text-sm text-muted-foreground">{notebooks.length} equipos registrados</p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="size-4" />
-          Nuevo equipo
-        </Button>
       </div>
 
       {/* Status summary */}
@@ -383,8 +379,8 @@ export function NotebooksPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-48">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-sm">
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por código, marca, usuario, área..."
@@ -417,6 +413,11 @@ export function NotebooksPage() {
             <SelectItem value="desktop">Desktops</SelectItem>
           </SelectContent>
         </Select>
+
+        <Button onClick={openCreate} className="ml-auto">
+          <Plus className="size-4" />
+          Nuevo equipo
+        </Button>
       </div>
 
       {/* Grid */}
