@@ -12,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useApp } from "@/context/AppContext";
 
@@ -26,6 +27,8 @@ const mainNavItems = [
 
 export function AppSidebar() {
   const { currentPage, setCurrentPage, stockItems, orders, printers, notebooks, monitors, dataliveTVs } = useApp();
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
   const criticalStock = stockItems.filter((i) => i.status === "low" || i.status === "out").length;
   
@@ -40,14 +43,16 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-2.5 px-2 py-1">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg overflow-hidden bg-white border border-border">
+        <div className={`flex items-center ${isCollapsed ? "justify-center px-0" : "gap-2.5 px-2"} py-2`}>
+          <div className={`flex ${isCollapsed ? "size-8" : "size-9"} shrink-0 items-center justify-center rounded-lg overflow-hidden bg-white border border-border transition-all`}>
             <img src={`${import.meta.env.BASE_URL}LOGOcircular.png`} alt="Logo" className="size-full object-contain p-0.5" />
           </div>
-          <div className="grid leading-tight">
-            <span className="truncate text-sm font-semibold">StockControl</span>
-            <span className="truncate text-xs text-muted-foreground">Control de Inventario</span>
-          </div>
+          {!isCollapsed && (
+            <div className="grid leading-tight">
+              <span className="truncate text-sm font-semibold">StockControl</span>
+              <span className="truncate text-xs text-muted-foreground">Control de Inventario</span>
+            </div>
+          )}
         </div>
       </SidebarHeader>
 
@@ -84,46 +89,6 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
-
-              {/* Collapsible Others - Hidden per request */}
-              {/* <Collapsible defaultOpen={isOtherActive} className="group/collapsible">
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip="Otros">
-                      <MoreHorizontal />
-                      <span>Otros</span>
-                      <ChevronDown className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {otherNavItems.map((item) => {
-                        const Icon = item.icon;
-                        const isActive = currentPage === item.id;
-                        let badge: number | null = null;
-                        if (item.id === "catalog") badge = criticalStock || null;
-
-                        return (
-                          <SidebarMenuSubItem key={item.id}>
-                            <SidebarMenuSubButton
-                              isActive={isActive}
-                              onClick={() => setCurrentPage(item.id)}
-                            >
-                              <Icon className="size-4" />
-                              <span>{item.label}</span>
-                              {badge !== null && (
-                                <span className="ml-auto rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-600">
-                                  {badge}
-                                </span>
-                              )}
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        );
-                      })}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible> */}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -132,14 +97,16 @@ export function AppSidebar() {
       <SidebarFooter>
         <div className="px-2 py-2">
           {criticalStock > 0 && (
-            <div className="mb-2 flex items-center gap-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-2.5 py-2 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+            <div className={`mb-2 flex items-center gap-2 rounded-md border border-amber-500/20 bg-amber-500/10 ${isCollapsed ? "justify-center p-2" : "px-2.5 py-2"} text-[11px] font-medium text-amber-600 dark:text-amber-400`}>
               <AlertTriangle className="size-3.5 shrink-0" />
-              <span>{criticalStock} ítems con stock bajo</span>
+              {!isCollapsed && <span>{criticalStock} ítems con stock bajo</span>}
             </div>
           )}
-          <div className="text-xs text-muted-foreground">
-            Sistema IT v1.0.0
-          </div>
+          {!isCollapsed && (
+            <div className="text-xs text-muted-foreground">
+              Sistema IT v1.0.0
+            </div>
+          )}
         </div>
       </SidebarFooter>
       <SidebarRail />
