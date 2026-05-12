@@ -403,17 +403,22 @@ export function NotebooksPage() {
       </div>
 
       {/* Stats */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-3">
         {[
-          { key: "in-use", label: "En uso", color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
-          { key: "loaned", label: "Prestadas", color: "text-violet-600 bg-violet-50 border-violet-200" },
-          { key: "in-stock", label: "En stock", color: "text-sky-600 bg-sky-50 border-sky-200" },
-          { key: "in-repair", label: "En reparación", color: "text-amber-600 bg-amber-50 border-amber-200" },
-          { key: "decommissioned", label: "Dadas de baja", color: "text-rose-600 bg-rose-50 border-rose-200" },
+          { key: "in-use", label: "En uso", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400" },
+          { key: "loaned", label: "Prestadas", color: "bg-violet-500/10 border-violet-500/20 text-violet-600 dark:text-violet-400" },
+          { key: "in-stock", label: "En stock", color: "bg-sky-500/10 border-sky-500/20 text-sky-600 dark:text-sky-400" },
+          { key: "in-repair", label: "En reparación", color: "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400" },
+          { key: "decommissioned", label: "Dadas de baja", color: "bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400" },
         ].map((s) => (
-          <div key={s.key} className={`flex items-center gap-2 rounded-full border px-3 py-1.5 ${s.color}`}>
-            <span className="text-lg font-bold">{stats[s.key as NotebookStatus]}</span>
-            <span className="text-xs font-medium">{s.label}</span>
+          <div 
+            key={s.key} 
+            className={`flex items-center gap-2.5 rounded-full border px-1.5 py-1.5 pr-4 transition-all hover:scale-105 cursor-default ${s.color}`}
+          >
+            <div className="flex size-7 items-center justify-center rounded-full bg-current/10 text-sm font-bold">
+              {stats[s.key as NotebookStatus]}
+            </div>
+            <span className="text-xs font-bold uppercase tracking-tight">{s.label}</span>
           </div>
         ))}
       </div>

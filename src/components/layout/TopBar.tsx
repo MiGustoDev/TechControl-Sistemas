@@ -17,12 +17,9 @@ const pageLabels: Record<string, string> = {
   datalive: "DataliveTV",
 };
 
-interface TopBarProps {
-  search: string;
-  onSearchChange: (v: string) => void;
-}
+interface TopBarProps {}
 
-export function TopBar({ search, onSearchChange }: TopBarProps) {
+export function TopBar({}: TopBarProps) {
   const { currentPage } = useApp();
   const { theme, setTheme } = useTheme();
 
@@ -36,16 +33,6 @@ export function TopBar({ search, onSearchChange }: TopBarProps) {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <div className="relative hidden sm:block">
-          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar..."
-            className="h-8 w-56 pl-8 text-sm"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
-
         <Button
           variant="ghost"
           size="icon-sm"
@@ -53,15 +40,6 @@ export function TopBar({ search, onSearchChange }: TopBarProps) {
         >
           {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
         </Button>
-
-{/* <Button variant="ghost" size="icon-sm" className="relative">
-          <Bell className="size-4" />
-          {pendingOrders > 0 && (
-            <Badge className="absolute -right-0.5 -top-0.5 size-4 justify-center rounded-full p-0 text-[10px]">
-              {pendingOrders}
-            </Badge>
-          )}
-        </Button> */}
       </div>
     </header>
   );

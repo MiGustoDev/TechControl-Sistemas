@@ -17,7 +17,6 @@ import { PersonalPage } from "@/pages/PersonalPage";
 
 function AppContent() {
   const { currentPage } = useApp();
-  const [search, setSearch] = useState("");
 
   const renderPage = () => {
     switch (currentPage) {
@@ -39,7 +38,7 @@ function AppContent() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <TopBar search={search} onSearchChange={setSearch} />
+        <TopBar />
         <main className="flex-1 overflow-auto">
           {renderPage()}
         </main>

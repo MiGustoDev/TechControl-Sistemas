@@ -132,8 +132,8 @@ export function AppSidebar() {
       <SidebarFooter>
         <div className="px-2 py-2">
           {criticalStock > 0 && (
-            <div className="mb-2 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-700">
-              <AlertTriangle className="size-3 shrink-0" />
+            <div className="mb-2 flex items-center gap-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-2.5 py-2 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="size-3.5 shrink-0" />
               <span>{criticalStock} ítems con stock bajo</span>
             </div>
           )}
