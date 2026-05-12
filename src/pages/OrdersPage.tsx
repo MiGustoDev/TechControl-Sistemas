@@ -51,7 +51,7 @@ function OrderTimeline({ order }: { order: Order }) {
                   isDone
                     ? isCurrent
                       ? orderStatusColor(step)
-                      : "border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-800 dark:bg-emerald-950/30"
+                      : "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                     : "border-border bg-muted text-muted-foreground"
                 )}>
                   {idx < currentIdx && <CheckCircle className="mr-1 size-3" />}

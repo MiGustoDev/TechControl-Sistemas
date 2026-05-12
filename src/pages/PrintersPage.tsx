@@ -230,10 +230,10 @@ export function PrintersPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "OK", value: stats.ok, color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
-          { label: "Con alerta", value: stats.alert, color: "text-amber-600 bg-amber-50 border-amber-200" },
-          { label: "Mantenimiento", value: stats.maintenance, color: "text-rose-600 bg-rose-50 border-rose-200" },
-          { label: "Sin conexión", value: stats.offline, color: "text-slate-500 bg-slate-50 border-slate-200" },
+          { label: "OK", value: stats.ok, color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
+          { label: "Con alerta", value: stats.alert, color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20" },
+          { label: "Mantenimiento", value: stats.maintenance, color: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20" },
+          { label: "Sin conexión", value: stats.offline, color: "text-slate-500 dark:text-slate-400 bg-slate-500/10 border-slate-500/20" },
         ].map((s) => (
           <div key={s.label} className={`flex flex-col rounded-lg border px-4 py-3 ${s.color}`}>
             <span className="text-2xl font-bold">{s.value}</span>

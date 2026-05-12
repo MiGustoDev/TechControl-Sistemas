@@ -53,7 +53,7 @@ function MonitorCard({ monitor, onEdit, onViewDetail }: MonitorCardProps) {
         </div>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-2">
-        <StatusBadge label={notebookStatusLabel(monitor.status)} colorClass={statusColor} />
+        <StatusBadge label={notebookStatusLabel(monitor.status)} colorClass={statusColor} className="self-start" />
 
         {monitor.currentAssignment ? (
           <div className="flex items-start gap-1.5 rounded-md bg-muted/40 px-2.5 py-2">

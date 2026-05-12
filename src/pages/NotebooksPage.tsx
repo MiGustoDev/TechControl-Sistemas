@@ -55,7 +55,7 @@ function NotebookCard({ notebook, onEdit, onViewDetail }: NotebookCardProps) {
         </div>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-2">
-        <StatusBadge label={notebookStatusLabel(notebook.status)} colorClass={statusColor} />
+        <StatusBadge label={notebookStatusLabel(notebook.status)} colorClass={statusColor} className="self-start" />
 
         {/* Assignment */}
         {notebook.currentAssignment ? (
