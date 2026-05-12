@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Printer, MapPin, Cpu, Calendar, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Wrench, WifiOff, CreditCard as Edit, Trash2, Save } from "lucide-react";
+import { Plus, Search, Printer, MapPin, Cpu, Calendar, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Wrench, WifiOff, Pencil as Edit, Trash2, Save } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -386,9 +386,9 @@ export function PrintersPage() {
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="sm:justify-start gap-2">
+            <Button onClick={handleSave}><Save className="size-4" />{editingPrinter ? "Guardar cambios" : "Registrar impresora"}</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}><Save className="size-4" />Guardar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Laptop, User, Cpu, HardDrive, Monitor, CreditCard as Edit, Save, History, Database, Loader2 } from "lucide-react";
+import { Plus, Search, Laptop, User, Cpu, HardDrive, Monitor, Pencil as Edit, Save, History, Database, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,11 +64,6 @@ function NotebookCard({ notebook, onEdit, onViewDetail }: NotebookCardProps) {
             <div className="min-w-0">
               <p className="text-xs font-medium truncate">{notebook.currentAssignment.userName}</p>
               <p className="text-xs text-muted-foreground">{notebook.currentAssignment.area}</p>
-              {notebook.status === "loaned" && notebook.currentAssignment.expectedReturnAt && (
-                <p className="text-xs text-amber-600">
-                  Vence: {formatDate(notebook.currentAssignment.expectedReturnAt)}
-                </p>
-              )}
             </div>
           </div>
         ) : (
@@ -80,27 +75,25 @@ function NotebookCard({ notebook, onEdit, onViewDetail }: NotebookCardProps) {
 
         <Separator />
 
-        {/* Specs */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {/* Quick Specs */}
+        <div className="flex flex-col gap-1.5 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-1.5">
             <Cpu className="size-3 shrink-0" />
             <span className="truncate">{notebook.processor}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <HardDrive className="size-3 shrink-0" />
-            <span>{notebook.ram} · {notebook.storage}</span>
+          <div className="flex items-center gap-1.5">
+            <Database className="size-3 shrink-0" />
+            <span className="truncate">{notebook.ram}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Monitor className="size-3 shrink-0" />
-            <span>{notebook.screenSize} · {notebook.os}</span>
+          <div className="flex items-center gap-1.5">
+            <HardDrive className="size-3 shrink-0" />
+            <span className="truncate">{notebook.storage}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Loader2 className="size-3 shrink-0" />
+            <span className="truncate">{notebook.os}</span>
           </div>
         </div>
-
-        {notebook.notes && (
-          <div className="mt-1 rounded-md bg-muted/50 px-2.5 py-1.5 text-xs text-muted-foreground line-clamp-2">
-            {notebook.notes}
-          </div>
-        )}
       </CardContent>
     </Card>
   );
@@ -116,18 +109,16 @@ function NotebookDetailModal({
   onClose: () => void;
 }) {
   if (!notebook) return null;
-  const Icon = notebook.category === "desktop" ? Monitor : Laptop;
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Icon className="size-5" />
-            {notebook.internalCode} — {notebook.brand} {notebook.model}
+            {notebook.category === "desktop" ? <Monitor className="size-5" /> : <Laptop className="size-5" />}
+            {notebook.internalCode} - {notebook.brand} {notebook.model}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-5">
-          {/* Status + assignment */}
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge
               label={notebookStatusLabel(notebook.status)}
@@ -135,21 +126,20 @@ function NotebookDetailModal({
             />
             {notebook.physicalCondition && (
               <Badge variant="outline" className="text-xs">
-                Estado físico: {
+                Físico: {
                   { excellent: "Excelente", good: "Bueno", fair: "Regular", poor: "Malo" }[notebook.physicalCondition]
                 }
               </Badge>
             )}
             {notebook.functionalStatus && (
               <Badge variant="outline" className="text-xs">
-                Func.: {
+                Funcional: {
                   { working: "Funcionando", partial: "Parcial", "not-working": "No funciona" }[notebook.functionalStatus]
                 }
               </Badge>
             )}
           </div>
 
-          {/* Current assignment */}
           {notebook.currentAssignment && (
             <div className="rounded-lg border bg-muted/30 p-4">
               <h4 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
@@ -158,7 +148,7 @@ function NotebookDetailModal({
               </h4>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Usuario:</span>{" "}
+                  <span className="text-muted-foreground">Responsable:</span>{" "}
                   <span className="font-medium">{notebook.currentAssignment.userName}</span>
                 </div>
                 <div>
@@ -166,90 +156,69 @@ function NotebookDetailModal({
                   <span className="font-medium">{notebook.currentAssignment.area}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Tipo:</span>{" "}
-                  <span className="font-medium">{notebook.currentAssignment.type === "permanent" ? "Permanente" : "Préstamo"}</span>
-                </div>
-                <div>
                   <span className="text-muted-foreground">Desde:</span>{" "}
                   <span className="font-medium">{formatDate(notebook.currentAssignment.assignedAt)}</span>
                 </div>
-                {notebook.currentAssignment.expectedReturnAt && (
-                  <div className="col-span-2">
-                    <span className="text-muted-foreground">Devolución estimada:</span>{" "}
-                    <span className="font-medium text-amber-600">{formatDate(notebook.currentAssignment.expectedReturnAt)}</span>
-                  </div>
-                )}
-                {notebook.currentAssignment.notes && (
-                  <div className="col-span-2">
-                    <span className="text-muted-foreground">Notas:</span>{" "}
-                    <span>{notebook.currentAssignment.notes}</span>
-                  </div>
-                )}
+                <div>
+                  <span className="text-muted-foreground">Tipo:</span>{" "}
+                  <span className="font-medium">
+                    {notebook.currentAssignment.type === "permanent" ? "Permanente" : "Préstamo"}
+                  </span>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Specs */}
           <div>
-            <h4 className="mb-2 text-sm font-semibold">Especificaciones técnicas</h4>
+            <h4 className="mb-2 text-sm font-semibold">Especificaciones Técnicas</h4>
             <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
               {[
-                ["Marca", notebook.brand],
-                ["Modelo", notebook.model],
-                ["N° Serie", notebook.serialNumber],
-                ["Código interno", notebook.internalCode],
                 ["Procesador", notebook.processor],
-                ["RAM", notebook.ram],
+                ["Memoria RAM", notebook.ram],
                 ["Almacenamiento", notebook.storage],
-                ["Pantalla", notebook.screenSize],
-                ["Sistema operativo", notebook.os],
-                ["Fecha de ingreso", formatDate(notebook.entryDate)],
-                notebook.lastReviewDate && ["Última revisión", formatDate(notebook.lastReviewDate)],
-              ].filter((v): v is string[] => Boolean(v)).map(([label, value]) => (
-                <div key={label as string} className="flex gap-1">
-                  <span className="text-muted-foreground min-w-0">{label}:</span>
-                  <span className="font-medium min-w-0 break-words">{value as string}</span>
+                ["Pantalla", notebook.screenSize || "N/A"],
+                ["Sistema Operativo", notebook.os],
+                ["Número de serie", notebook.serialNumber || "N/A"],
+                ["Fecha ingreso", formatDate(notebook.entryDate)],
+              ].map(([label, value]) => (
+                <div key={label} className="flex gap-1">
+                  <span className="text-muted-foreground">{label}:</span>
+                  <span className="font-medium">{value}</span>
                 </div>
               ))}
             </div>
           </div>
-
+          
           {notebook.notes && (
             <div className="rounded-md bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
               <strong className="text-foreground">Observaciones:</strong> {notebook.notes}
             </div>
           )}
 
-          {/* History */}
-          <div>
-            <h4 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
-              <History className="size-4" />
-              Historial de asignaciones
-            </h4>
-            {notebook.assignmentHistory.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sin historial de asignaciones.</p>
-            ) : (
+          {notebook.assignmentHistory && notebook.assignmentHistory.length > 0 && (
+            <div>
+              <h4 className="mb-2 text-sm font-semibold flex items-center gap-1.5">
+                <History className="size-4" />
+                Historial de movimientos
+              </h4>
               <div className="space-y-2">
-                {[...notebook.assignmentHistory].reverse().map((asgn) => (
-                  <div key={asgn.id} className="flex items-start gap-3 rounded-md bg-muted/30 px-3 py-2">
-                    <User className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    <div className="text-sm">
-                      <p className="font-medium">{asgn.userName} <span className="font-normal text-muted-foreground">— {asgn.area}</span></p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(asgn.assignedAt)}
-                        {asgn.returnedAt && ` → ${formatDate(asgn.returnedAt)}`}
-                        {" · "}{asgn.type === "permanent" ? "Permanente" : "Préstamo"}
+                {notebook.assignmentHistory.map((h, i) => (
+                  <div key={i} className="flex gap-3 text-xs border-l-2 border-muted pl-3 py-0.5">
+                    <span className="text-muted-foreground shrink-0">{formatDate(h.assignedAt)}</span>
+                    <div>
+                      <p className="font-medium">
+                        {h.type === "permanent" ? "Asignación permanente" : "Préstamo"} a {h.userName}
                       </p>
-                      {asgn.notes && <p className="text-xs text-muted-foreground">{asgn.notes}</p>}
+                      <p className="text-muted-foreground">Área: {h.area}</p>
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cerrar</Button>
+        <DialogFooter className="sm:justify-start gap-2">
+          <Button onClick={onClose}>Cerrar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -258,18 +227,18 @@ function NotebookDetailModal({
 
 const defaultForm = {
   category: "notebook" as Notebook["category"],
+  internalCode: "",
   brand: "",
   model: "",
   serialNumber: "",
-  internalCode: "",
   processor: "",
   ram: "",
   storage: "",
   screenSize: "",
-  os: "",
+  os: "Windows",
+  status: "in-stock" as NotebookStatus,
   physicalCondition: "good" as Notebook["physicalCondition"],
   functionalStatus: "working" as Notebook["functionalStatus"],
-  status: "in-stock" as NotebookStatus,
   entryDate: new Date().toISOString().slice(0, 10),
   notes: "",
   assignedUserId: "none",
@@ -277,30 +246,29 @@ const defaultForm = {
 };
 
 export function NotebooksPage() {
-  const { notebooks, users, addNotebook, updateNotebook, loading, migrateAllData } = useApp();
+  const { notebooks, users, addNotebook, updateNotebook } = useApp();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterCategory, setFilterCategory] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [editingNotebook, setEditingNotebook] = useState<Notebook | null>(null);
   const [detailNotebook, setDetailNotebook] = useState<Notebook | null>(null);
-  const [filterCategory, setFilterCategory] = useState("all");
   const [form, setForm] = useState(defaultForm);
 
   const filtered = notebooks.filter((n) => {
     const matchSearch =
       !search ||
+      n.internalCode.toLowerCase().includes(search.toLowerCase()) ||
       n.brand.toLowerCase().includes(search.toLowerCase()) ||
       n.model.toLowerCase().includes(search.toLowerCase()) ||
-      n.internalCode.toLowerCase().includes(search.toLowerCase()) ||
-      (n.currentAssignment?.userName ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      (n.currentAssignment?.area ?? "").toLowerCase().includes(search.toLowerCase());
+      (n.currentAssignment?.userName ?? "").toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === "all" || n.status === filterStatus;
     const matchCategory = filterCategory === "all" || n.category === filterCategory;
     return matchSearch && matchStatus && matchCategory;
   });
 
-  const stats = {
+  const statsCounts: Record<NotebookStatus, number> = {
     "in-use": notebooks.filter((n) => n.status === "in-use").length,
     loaned: notebooks.filter((n) => n.status === "loaned").length,
     "in-stock": notebooks.filter((n) => n.status === "in-stock").length,
@@ -318,22 +286,22 @@ export function NotebooksPage() {
     setEditingNotebook(n);
     setForm({
       category: n.category,
+      internalCode: n.internalCode,
       brand: n.brand,
       model: n.model,
-      serialNumber: n.serialNumber,
-      internalCode: n.internalCode,
+      serialNumber: n.serialNumber || "",
       processor: n.processor,
       ram: n.ram,
       storage: n.storage,
-      screenSize: n.screenSize,
+      screenSize: n.screenSize || "",
       os: n.os,
+      status: n.status,
       physicalCondition: n.physicalCondition,
       functionalStatus: n.functionalStatus,
-      status: n.status,
       entryDate: n.entryDate,
       notes: n.notes ?? "",
       assignedUserId: n.currentAssignment?.userId ?? "none",
-      assignmentType: (n.currentAssignment?.type ?? "permanent") as "permanent" | "loan",
+      assignmentType: n.currentAssignment?.type ?? "permanent",
     });
     setDialogOpen(true);
   };
@@ -344,34 +312,37 @@ export function NotebooksPage() {
   };
 
   const handleSave = () => {
-    if (!form.brand || !form.model || !form.internalCode) {
+    if (!form.internalCode || !form.brand || !form.model) {
       toast.error("Completá los campos obligatorios");
       return;
     }
 
     const assignmentData = form.assignedUserId !== "none" ? {
       currentAssignment: {
-        id: editingNotebook?.currentAssignment?.id ?? Math.random().toString(36).substr(2, 9),
-        notebookId: editingNotebook?.id ?? "",
-        userId: form.assignedUserId,
         userName: users.find(u => u.id === form.assignedUserId)?.fullName ?? "Desconocido",
         area: users.find(u => u.id === form.assignedUserId)?.location ?? "N/A",
         assignedAt: editingNotebook?.currentAssignment?.assignedAt ?? new Date().toISOString(),
         type: form.assignmentType,
+        userId: form.assignedUserId,
       }
     } : { currentAssignment: undefined };
 
-    const finalData = { ...form, ...assignmentData };
-    // Remove temporary form fields before saving
+    const finalData = { 
+      ...form, 
+      ...assignmentData,
+      assignmentHistory: editingNotebook?.assignmentHistory ?? []
+    };
+    
+    // Remove temporary form fields
     delete (finalData as any).assignedUserId;
     delete (finalData as any).assignmentType;
 
     if (editingNotebook) {
-      updateNotebook(editingNotebook.id, finalData);
-      toast.success("Equipo actualizado");
+      updateNotebook(editingNotebook.id, finalData as any);
+      toast.success("Equipo actualizado correctamente");
     } else {
-      addNotebook({ ...finalData, assignmentHistory: [] });
-      toast.success("Equipo registrado");
+      addNotebook(finalData as any);
+      toast.success("Equipo registrado correctamente");
     }
     setDialogOpen(false);
   };
@@ -383,43 +354,31 @@ export function NotebooksPage() {
           <h1 className="text-2xl font-bold tracking-tight">Equipos</h1>
           <p className="text-sm text-muted-foreground">{notebooks.length} equipos registrados</p>
         </div>
-        <div className="flex gap-2">
-          {notebooks.length === 0 && !loading && (
-            <Button 
-              variant="outline" 
-              onClick={migrateAllData}
-              disabled={loading}
-              className="gap-2 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
-            >
-              {loading ? <Loader2 className="size-4 animate-spin" /> : <Database className="size-4" />}
-              Migrar Datos Mockup
-            </Button>
-          )}
-          <Button onClick={openCreate}>
-            <Plus className="size-4" />
-            Nuevo equipo
-          </Button>
-        </div>
+        <Button onClick={openCreate}>
+          <Plus className="size-4" />
+          Nuevo equipo
+        </Button>
       </div>
 
-      {/* Stats */}
-      <div className="flex flex-wrap gap-3">
+      {/* Status summary */}
+      <div className="flex flex-wrap gap-2">
         {[
-          { key: "in-use", label: "En uso", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400" },
-          { key: "loaned", label: "Prestadas", color: "bg-violet-500/10 border-violet-500/20 text-violet-600 dark:text-violet-400" },
-          { key: "in-stock", label: "En stock", color: "bg-sky-500/10 border-sky-500/20 text-sky-600 dark:text-sky-400" },
-          { key: "in-repair", label: "En reparación", color: "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400" },
-          { key: "decommissioned", label: "Dadas de baja", color: "bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400" },
-        ].map((s) => (
-          <div 
-            key={s.key} 
-            className={`flex items-center gap-2.5 rounded-full border px-1.5 py-1.5 pr-4 transition-all hover:scale-105 cursor-default ${s.color}`}
+          { status: "in-use" as NotebookStatus, label: "EN USO" },
+          { status: "loaned" as NotebookStatus, label: "PRESTADAS" },
+          { status: "in-stock" as NotebookStatus, label: "EN STOCK" },
+          { status: "in-repair" as NotebookStatus, label: "EN REPARACIÓN" },
+          { status: "decommissioned" as NotebookStatus, label: "DADAS DE BAJA" },
+        ].map(({ status, label }) => (
+          <button
+            key={status}
+            onClick={() => setFilterStatus(filterStatus === status ? "all" : status)}
+            className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${notebookStatusColor(status)} ${
+              filterStatus === status ? "ring-2 ring-primary ring-offset-2" : "opacity-80 hover:opacity-100"
+            }`}
           >
-            <div className="flex size-7 items-center justify-center rounded-full bg-current/10 text-sm font-bold">
-              {stats[s.key as NotebookStatus]}
-            </div>
-            <span className="text-xs font-bold uppercase tracking-tight">{s.label}</span>
-          </div>
+            <span className="text-sm">{statsCounts[status]}</span>
+            {label}
+          </button>
         ))}
       </div>
 
@@ -436,7 +395,7 @@ export function NotebooksPage() {
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Estado" />
+            <SelectValue placeholder="Todos los estados" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los estados</SelectItem>
@@ -632,9 +591,9 @@ export function NotebooksPage() {
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="sm:justify-end">
+            <Button onClick={handleSave}><Save className="size-4" />{editingNotebook ? "Guardar cambios" : "Registrar equipo"}</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}><Save className="size-4" />Guardar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Monitor, User, CreditCard as Edit, Save, Layout } from "lucide-react";
+import { Plus, Search, Monitor, User, Pencil as Edit, Save, Layout } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -414,9 +414,9 @@ export function MonitoresPage() {
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+          <DialogFooter className="sm:justify-start gap-2">
             <Button onClick={handleSave}><Save className="size-4" />Guardar</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, ShoppingCart, ChevronDown, ChevronUp, CircleCheck as CheckCircle, Circle as XCircle, History, Save, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, ShoppingCart, ChevronDown, ChevronUp, CircleCheck as CheckCircle, Circle as XCircle, History, Save, Pencil as Edit, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -322,9 +322,8 @@ export function OrdersPage() {
             onClick={() => setFilterStatus(filterStatus === status ? "all" : status)}
             className={cn(
               "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
-              filterStatus === status
-                ? orderStatusColor(status)
-                : "border-border bg-muted/30 text-muted-foreground hover:bg-muted"
+              orderStatusColor(status),
+              filterStatus === status ? "ring-2 ring-primary ring-offset-2" : "opacity-80 hover:opacity-100"
             )}
           >
             <span className="text-base font-bold">{statsCounts[status]}</span>
@@ -454,8 +453,8 @@ export function OrdersPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave}><Save className="size-4" />{editingOrder ? "Guardar cambios" : "Crear pedido"}</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
