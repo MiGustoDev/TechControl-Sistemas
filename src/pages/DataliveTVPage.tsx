@@ -43,8 +43,8 @@ function TVBranchCard({ branch, devices, onEdit, onDelete }: TVBranchCardProps) 
   };
 
   return (
-    <Card className="flex flex-col transition-shadow hover:shadow-md border-primary/20 bg-primary/5">
-      <CardHeader className="pb-3 bg-primary/10 rounded-t-lg">
+    <Card className="flex flex-col p-0 transition-shadow hover:shadow-md border-primary/20 bg-primary/5 overflow-hidden">
+      <CardHeader className="p-4 bg-primary/10 rounded-none border-b border-primary/20">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex size-9 items-center justify-center rounded-lg border border-primary/30 bg-primary/10">
@@ -66,7 +66,7 @@ function TVBranchCard({ branch, devices, onEdit, onDelete }: TVBranchCardProps) 
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-4 pt-4">
+      <CardContent className="flex flex-1 flex-col gap-4 pt-4 pb-4">
         <div className="grid grid-cols-1 gap-2">
           {devices.map((tv) => {
             const isSoon = tv.name === "Próximamente";
@@ -236,10 +236,6 @@ export function DataliveTVPage() {
             Credenciales de cartelería digital por sucursal
           </p>
         </div>
-        <Button onClick={openCreate} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-          <Plus className="size-4" />
-          Nuevo dispositivo
-        </Button>
       </div>
 
       {/* General Info & Stats */}
@@ -252,37 +248,41 @@ export function DataliveTVPage() {
           <div className="h-px flex-1 bg-border/40" />
         </div>
         
-        <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4">
-          <div className="flex flex-col justify-center rounded-lg border-2 border-primary/30 bg-primary/5 px-4 py-3 shadow-sm md:col-span-1 lg:col-span-1">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
+        <div className="flex flex-wrap gap-3">
+          <div className="flex items-center gap-4 rounded-lg border-2 border-primary/30 bg-primary/5 px-4 h-16 shadow-sm transition-all hover:bg-primary/10">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 mb-0.5">
                 <User className="size-3 text-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Usuario Universal</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Usuario</span>
               </div>
+              <span className="text-xl font-black text-primary tracking-tight leading-none">migusto</span>
+            </div>
+            <div className="ml-1">
               <CopyButton text="migusto" />
             </div>
-            <span className="text-xl font-black text-primary tracking-tight">migusto</span>
           </div>
           
-          <div className="flex flex-col justify-center rounded-lg border-2 border-primary/30 bg-primary/5 px-4 py-3 shadow-sm md:col-span-1 lg:col-span-1">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4 rounded-lg border-2 border-primary/30 bg-primary/5 px-4 h-16 shadow-sm transition-all hover:bg-primary/10">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 mb-0.5">
                 <Key className="size-3 text-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">PIN Universal</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">PIN</span>
               </div>
+              <span className="text-xl font-black font-mono tracking-[0.1em] text-primary leading-none">85749621</span>
+            </div>
+            <div className="ml-1">
               <CopyButton text="85749621" />
             </div>
-            <span className="text-xl font-black font-mono tracking-[0.2em] text-primary">85749621</span>
           </div>
 
-          <div className="flex flex-col justify-center rounded-lg border border-border bg-muted/30 px-4 py-3">
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-5 h-16">
             <span className="text-2xl font-bold text-foreground">{totalBranches}</span>
-            <span className="text-xs font-medium text-muted-foreground">Sucursales</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Sucursales</span>
           </div>
           
-          <div className="flex flex-col justify-center rounded-lg border border-border bg-muted/30 px-4 py-3">
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-5 h-16">
             <span className="text-2xl font-bold text-foreground">{totalDevices}</span>
-            <span className="text-xs font-medium text-muted-foreground">Dispositivos</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Dispositivos</span>
           </div>
         </div>
       </div>
@@ -309,6 +309,11 @@ export function DataliveTVPage() {
             ))}
           </SelectContent>
         </Select>
+
+        <Button onClick={openCreate} className="ml-auto bg-primary hover:bg-primary/90 text-primary-foreground">
+          <Plus className="size-4" />
+          Nuevo dispositivo
+        </Button>
       </div>
 
       {/* Grid */}
