@@ -65,13 +65,13 @@ TechControl no solo gestiona datos; ofrece una experiencia. El diseño se centra
 ## 🖼️ Vista de la Interfaz
 
 ### Gestión de Equipamiento
-![Equipos](C:\Users\Sitemas\.gemini\antigravity\brain\2afc1e44-ba8f-4c28-8cce-c4962d42a3c5\media__1778685577142.png)
+![Equipos](./public/equipos.png)
 
 ### Control de Impresión
-![Impresoras](C:\Users\Sitemas\.gemini\antigravity\brain\2afc1e44-ba8f-4c28-8cce-c4962d42a3c5\media__1778685606241.png)
+![Impresoras](./public/impresoras.png)
 
 ### Monitoreo de Pantallas
-![Monitores](C:\Users\Sitemas\.gemini\antigravity\brain\2afc1e44-ba8f-4c28-8cce-c4962d42a3c5\media__1778685624603.png)
+![Monitores](./public/monitores.png)
 
 ---
 
