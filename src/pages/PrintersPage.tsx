@@ -221,23 +221,19 @@ export function PrintersPage() {
             {printers.length} impresoras registradas
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="size-4" />
-          Nueva impresora
-        </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="flex flex-wrap gap-3">
         {[
           { label: "OK", value: stats.ok, color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
           { label: "Con alerta", value: stats.alert, color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20" },
           { label: "Mantenimiento", value: stats.maintenance, color: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20" },
           { label: "Sin conexión", value: stats.offline, color: "text-slate-500 dark:text-slate-400 bg-slate-500/10 border-slate-500/20" },
         ].map((s) => (
-          <div key={s.label} className={`flex flex-col rounded-lg border px-4 py-3 ${s.color}`}>
+          <div key={s.label} className={`flex items-center gap-3 rounded-xl border px-5 h-14 shadow-sm transition-all hover:shadow-md ${s.color}`}>
             <span className="text-2xl font-bold">{s.value}</span>
-            <span className="text-xs font-medium">{s.label}</span>
+            <span className="text-xs font-bold uppercase tracking-wide whitespace-nowrap">{s.label}</span>
           </div>
         ))}
       </div>
@@ -277,6 +273,11 @@ export function PrintersPage() {
             ))}
           </SelectContent>
         </Select>
+
+        <Button onClick={openCreate} className="ml-auto">
+          <Plus className="size-4" />
+          Nueva impresora
+        </Button>
       </div>
 
       {/* Grid */}
@@ -304,7 +305,7 @@ export function PrintersPage() {
           <div className="grid gap-4 py-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Nombre *</Label>
+                <Label>Nombre <span className="text-red-500">*</span></Label>
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="IMP-ADMIN-01" />
               </div>
               <div className="space-y-1.5">
@@ -314,11 +315,11 @@ export function PrintersPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Marca *</Label>
+                <Label>Marca <span className="text-red-500">*</span></Label>
                 <Input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder="HP" />
               </div>
               <div className="space-y-1.5">
-                <Label>Modelo *</Label>
+                <Label>Modelo <span className="text-red-500">*</span></Label>
                 <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} placeholder="LaserJet Pro M404n" />
               </div>
             </div>
@@ -386,8 +387,8 @@ export function PrintersPage() {
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
             </div>
           </div>
-          <DialogFooter className="sm:justify-start gap-2">
-            <Button onClick={handleSave}><Save className="size-4" />{editingPrinter ? "Guardar cambios" : "Registrar impresora"}</Button>
+          <DialogFooter className="sm:justify-end gap-2">
+            <Button onClick={handleSave}><Save className="size-4" />{editingPrinter ? "Guardar" : "Registrar impresora"}</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
           </DialogFooter>
         </DialogContent>

@@ -400,7 +400,7 @@ export function OrdersPage() {
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="space-y-1.5">
-              <Label>Ítem solicitado *</Label>
+              <Label>Ítem solicitado <span className="text-red-500">*</span></Label>
               <Input value={form.itemName} onChange={(e) => setForm({ ...form, itemName: e.target.value })} placeholder="Toner HP 85A" />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -434,12 +434,12 @@ export function OrdersPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Solicitante *</Label>
+                <Label>Solicitante <span className="text-red-500">*</span></Label>
                 <Input value={form.requestedBy} onChange={(e) => setForm({ ...form, requestedBy: e.target.value })} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Motivo de la solicitud *</Label>
+              <Label>Motivo de la solicitud <span className="text-red-500">*</span></Label>
               <Textarea
                 value={form.reason}
                 onChange={(e) => setForm({ ...form, reason: e.target.value })}
@@ -453,7 +453,7 @@ export function OrdersPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleSave}><Save className="size-4" />{editingOrder ? "Guardar cambios" : "Crear pedido"}</Button>
+            <Button onClick={handleSave}><Save className="size-4" />{editingOrder ? "Guardar" : "Crear pedido"}</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
           </DialogFooter>
         </DialogContent>

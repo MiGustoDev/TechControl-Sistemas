@@ -340,11 +340,11 @@ export function MonitoresPage() {
           <div className="grid gap-4 py-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Marca *</Label>
+                <Label>Marca <span className="text-red-500">*</span></Label>
                 <Input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder="Samsung" />
               </div>
               <div className="space-y-1.5">
-                <Label>Modelo *</Label>
+                <Label>Modelo <span className="text-red-500">*</span></Label>
                 <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} placeholder="LF24T35" />
               </div>
             </div>
@@ -415,7 +415,7 @@ export function MonitoresPage() {
               </div>
             </div>
           </div>
-          <DialogFooter className="sm:justify-start gap-2">
+          <DialogFooter className="sm:justify-end gap-2">
             <Button onClick={handleSave}><Save className="size-4" />Guardar</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
           </DialogFooter>

@@ -217,7 +217,7 @@ function NotebookDetailModal({
             </div>
           )}
         </div>
-        <DialogFooter className="sm:justify-start gap-2">
+        <DialogFooter className="sm:justify-end gap-2">
           <Button onClick={onClose}>Cerrar</Button>
         </DialogFooter>
       </DialogContent>
@@ -445,11 +445,12 @@ export function NotebooksPage() {
 
       {/* Edit/create dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl p-0">
+          <DialogHeader className="p-6 pb-0">
             <DialogTitle>{editingNotebook ? "Editar equipo" : "Nuevo equipo"}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-2">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto p-6 pt-2">
+            <div className="grid gap-4 py-2">
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label>Categoría</Label>
@@ -462,7 +463,7 @@ export function NotebooksPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Código interno *</Label>
+                <Label>Código interno <span className="text-red-500">*</span></Label>
                 <Input value={form.internalCode} onChange={(e) => setForm({ ...form, internalCode: e.target.value })} placeholder="NB-LEN-001" />
               </div>
               <div className="space-y-1.5">
@@ -481,11 +482,11 @@ export function NotebooksPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Marca *</Label>
+                <Label>Marca <span className="text-red-500">*</span></Label>
                 <Input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder="Dell" />
               </div>
               <div className="space-y-1.5">
-                <Label>Modelo *</Label>
+                <Label>Modelo <span className="text-red-500">*</span></Label>
                 <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} placeholder="Latitude 5520" />
               </div>
             </div>
@@ -591,9 +592,10 @@ export function NotebooksPage() {
                 </div>
               </div>
             </div>
+            </div>
           </div>
           <DialogFooter className="sm:justify-end">
-            <Button onClick={handleSave}><Save className="size-4" />{editingNotebook ? "Guardar cambios" : "Registrar equipo"}</Button>
+            <Button onClick={handleSave}><Save className="size-4" />{editingNotebook ? "Guardar" : "Registrar equipo"}</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
           </DialogFooter>
         </DialogContent>
