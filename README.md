@@ -64,14 +64,29 @@ TechControl no solo gestiona datos; ofrece una experiencia. El diseño se centra
 
 ## 🖼️ Vista de la Interfaz
 
-### Gestión de Equipamiento
-![Equipos](./public/equipos.png)
-
-### Control de Impresión
-![Impresoras](./public/impresoras.png)
-
-### Monitoreo de Pantallas
-![Monitores](./public/monitores.png)
+<div align="center">
+  <table border="0">
+    <tr>
+      <td align="center">
+        <img src="./public/equipos.png" width="400px" alt="Gestión de Equipamiento" />
+        <br />
+        <sub><b>Gestión de Equipamiento — Notebooks & PCs</b></sub>
+      </td>
+      <td align="center">
+        <img src="./public/impresoras.png" width="400px" alt="Centro de Impresión" />
+        <br />
+        <sub><b>Centro de Impresión — Consumibles & Alertas</b></sub>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" colspan="2">
+        <img src="./public/monitores.png" width="815px" alt="Monitoreo de Pantallas" />
+        <br />
+        <sub><b>Monitoreo de Pantallas — Ubicación & Estado</b></sub>
+      </td>
+    </tr>
+  </table>
+</div>
 
 ---
 
