@@ -33,14 +33,14 @@ function NotebookCard({ notebook, onEdit, onViewDetail }: NotebookCardProps) {
 
   return (
     <Card
-      className={`flex flex-col cursor-pointer transition-shadow hover:shadow-md ${isAlert ? "border-amber-200 dark:border-amber-800" : ""}`}
+      className={`flex flex-col cursor-pointer transition-shadow hover:shadow-md ${isAlert ? "border-amber-300 dark:border-amber-800" : ""}`}
       onClick={() => onViewDetail(notebook)}
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className={`flex size-9 items-center justify-center rounded-lg border ${isAlert ? "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30" : "bg-muted"}`}>
-              <Icon className="size-4 text-muted-foreground" />
+            <div className={`flex size-9 items-center justify-center rounded-lg border shadow-sm ${isAlert ? "border-amber-400 bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30" : "border-slate-300 bg-slate-100 dark:bg-slate-800"}`}>
+              <Icon className="size-4 text-slate-700 dark:text-slate-300" />
             </div>
             <div>
               <h3 className="font-semibold leading-tight text-sm">{notebook.internalCode}</h3>
@@ -48,8 +48,8 @@ function NotebookCard({ notebook, onEdit, onViewDetail }: NotebookCardProps) {
             </div>
           </div>
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="icon-xs" onClick={() => onEdit(notebook)}>
-              <Edit className="size-3" />
+            <Button variant="outline" size="icon-xs" className="h-7 w-7 border-slate-300 bg-white shadow-sm hover:bg-slate-50" onClick={() => onEdit(notebook)}>
+              <Edit className="size-3 text-slate-700" />
             </Button>
           </div>
         </div>
@@ -368,8 +368,8 @@ export function NotebooksPage() {
           <button
             key={status}
             onClick={() => setFilterStatus(filterStatus === status ? "all" : status)}
-            className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${notebookStatusColor(status)} ${
-              filterStatus === status ? "ring-2 ring-primary ring-offset-2" : "opacity-80 hover:opacity-100"
+            className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-all shadow-sm ${notebookStatusColor(status)} ${
+              filterStatus === status ? "ring-2 ring-primary ring-offset-2 scale-105" : "hover:scale-105"
             }`}
           >
             <span className="text-sm">{statsCounts[status]}</span>

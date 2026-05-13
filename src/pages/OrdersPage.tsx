@@ -47,12 +47,12 @@ function OrderTimeline({ order }: { order: Order }) {
             return (
               <div key={step} className="flex items-center">
                 <div className={cn(
-                  "flex h-7 items-center rounded-full border px-2.5 text-xs font-medium transition-all",
+                  "flex h-7 items-center rounded-full border px-2.5 text-xs font-bold transition-all shadow-sm",
                   isDone
                     ? isCurrent
                       ? orderStatusColor(step)
-                      : "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                    : "border-border bg-muted text-muted-foreground"
+                      : "border-emerald-400 bg-emerald-100 text-emerald-800 dark:text-emerald-400"
+                    : "border-slate-300 bg-slate-100 text-slate-600"
                 )}>
                   {idx < currentIdx && <CheckCircle className="mr-1 size-3" />}
                   {orderStatusLabel(step)}
@@ -140,10 +140,10 @@ function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
               className="shrink-0"
             />
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon-xs" onClick={() => onEdit(order)} title="Editar pedido">
-                <Edit className="size-3" />
+              <Button variant="outline" size="icon-xs" className="h-7 w-7 border-slate-300 bg-white shadow-sm hover:bg-slate-50" onClick={() => onEdit(order)} title="Editar pedido">
+                <Edit className="size-3 text-slate-700" />
               </Button>
-              <Button variant="ghost" size="icon-xs" className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20" onClick={() => onDelete(order.id)} title="Eliminar pedido">
+              <Button variant="outline" size="icon-xs" className="h-7 w-7 border-rose-300 bg-white shadow-sm text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => onDelete(order.id)} title="Eliminar pedido">
                 <Trash2 className="size-3" />
               </Button>
             </div>
@@ -173,7 +173,7 @@ function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
                 size="sm" 
                 variant="outline" 
                 onClick={handleCancel} 
-                className="h-8 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                className="h-8 border-rose-400 bg-rose-100 text-rose-800 font-bold hover:bg-rose-200 hover:text-rose-900 shadow-sm transition-all active:scale-95"
               >
                 <XCircle className="size-3.5" />
                 Cancelar
@@ -326,9 +326,9 @@ export function OrdersPage() {
             key={status}
             onClick={() => setFilterStatus(filterStatus === status ? "all" : status)}
             className={cn(
-              "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
+              "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-all shadow-sm",
               orderStatusColor(status),
-              filterStatus === status ? "ring-2 ring-primary ring-offset-2" : "opacity-80 hover:opacity-100"
+              filterStatus === status ? "ring-2 ring-primary ring-offset-2 scale-105" : "hover:scale-105"
             )}
           >
             <span className="text-base font-bold">{statsCounts[status]}</span>

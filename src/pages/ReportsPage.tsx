@@ -128,23 +128,23 @@ export function ReportsPage() {
 
       {/* Export buttons */}
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={exportLowStock}>
+        <Button variant="outline" size="sm" className="border-slate-300 bg-white shadow-sm hover:bg-slate-50" onClick={exportLowStock}>
           <Download className="size-3.5" />
           Stock bajo (CSV)
         </Button>
-        <Button variant="outline" size="sm" onClick={exportPrinters}>
+        <Button variant="outline" size="sm" className="border-slate-300 bg-white shadow-sm hover:bg-slate-50" onClick={exportPrinters}>
           <Download className="size-3.5" />
           Impresoras (CSV)
         </Button>
-        <Button variant="outline" size="sm" onClick={exportNotebooks}>
+        <Button variant="outline" size="sm" className="border-slate-300 bg-white shadow-sm hover:bg-slate-50" onClick={exportNotebooks}>
           <Download className="size-3.5" />
           Equipos (CSV)
         </Button>
-        <Button variant="outline" size="sm" onClick={exportOrders}>
+        <Button variant="outline" size="sm" className="border-slate-300 bg-white shadow-sm hover:bg-slate-50" onClick={exportOrders}>
           <Download className="size-3.5" />
           Pedidos (CSV)
         </Button>
-        <Button variant="outline" size="sm" onClick={exportMovements}>
+        <Button variant="outline" size="sm" className="border-slate-300 bg-white shadow-sm hover:bg-slate-50" onClick={exportMovements}>
           <Download className="size-3.5" />
           Movimientos (CSV)
         </Button>
@@ -212,9 +212,9 @@ export function ReportsPage() {
                     colorClass={orderStatusColor(status as any)}
                   />
                   <div className="flex items-center gap-3">
-                    <div className="h-2 overflow-hidden rounded-full bg-muted" style={{ width: "120px" }}>
+                    <div className="h-2.5 overflow-hidden rounded-full bg-slate-200 border border-slate-300 shadow-inner" style={{ width: "120px" }}>
                       <div
-                        className="h-full rounded-full bg-primary"
+                        className="h-full rounded-full bg-slate-800"
                         style={{ width: `${(count / orders.length) * 100}%` }}
                       />
                     </div>
@@ -338,14 +338,14 @@ export function ReportsPage() {
                 </TableHeader>
                 <TableBody>
                   {lowStockItems.map((item) => (
-                    <TableRow key={item.id} className={item.status === "out" ? "bg-rose-50/50 dark:bg-rose-950/20" : "bg-amber-50/50 dark:bg-amber-950/20"}>
+                    <TableRow key={item.id} className={item.status === "out" ? "bg-rose-100/60 hover:bg-rose-100/80 dark:bg-rose-950/20" : "bg-amber-100/60 hover:bg-amber-100/80 dark:bg-amber-950/20"}>
                       <TableCell className="font-medium">{item.name}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{item.internalCode}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">{categoryLabel(item.category)}</Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <span className={`font-bold ${item.currentStock === 0 ? "text-rose-600" : "text-amber-600"}`}>
+                        <span className={`font-bold ${item.currentStock === 0 ? "text-rose-800" : "text-amber-800"}`}>
                           {item.currentStock}
                         </span>
                       </TableCell>

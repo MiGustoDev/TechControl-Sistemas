@@ -112,34 +112,34 @@ export function movementTypeLabel(t: MovementType): string {
 
 export function printerStatusColor(s: PrinterStatus): string {
   const map: Record<PrinterStatus, string> = {
-    ok: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-    "toner-low": "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20",
-    "image-unit-low": "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20",
-    maintenance: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20",
-    offline: "text-slate-500 dark:text-slate-400 bg-slate-500/10 border-slate-500/20",
+    ok: "text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/20",
+    "toner-low": "text-amber-800 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/20",
+    "image-unit-low": "text-amber-800 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/20",
+    maintenance: "text-rose-800 dark:text-rose-400 bg-rose-100 dark:bg-rose-500/10 border-rose-300 dark:border-rose-500/20",
+    offline: "text-slate-700 dark:text-slate-400 bg-slate-100 dark:bg-slate-500/10 border-slate-300 dark:border-slate-500/20",
   };
   return map[s] ?? "text-muted-foreground bg-muted border-border";
 }
 
 export function notebookStatusColor(s: NotebookStatus): string {
   const map: Record<NotebookStatus, string> = {
-    "in-use": "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-    "in-repair": "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20",
-    "in-stock": "text-sky-600 dark:text-sky-400 bg-sky-500/10 border-sky-500/20",
-    loaned: "text-violet-600 dark:text-violet-400 bg-violet-500/10 border-violet-500/20",
-    decommissioned: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20",
+    "in-use": "text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/20",
+    "in-repair": "text-amber-800 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/20",
+    "in-stock": "text-sky-800 dark:text-sky-400 bg-sky-100 dark:bg-sky-500/10 border-sky-300 dark:border-sky-500/20",
+    loaned: "text-violet-800 dark:text-violet-400 bg-violet-100 dark:bg-violet-500/10 border-violet-300 dark:border-violet-500/20",
+    decommissioned: "text-rose-800 dark:text-rose-400 bg-rose-100 dark:bg-rose-500/10 border-rose-300 dark:border-rose-500/20",
   };
   return map[s] ?? "text-muted-foreground bg-muted border-border";
 }
 
 export function orderStatusColor(s: OrderStatus): string {
   const map: Record<OrderStatus, string> = {
-    requested: "text-sky-600 dark:text-sky-400 bg-sky-500/10 border-sky-500/20",
-    "in-process": "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20",
-    ordered: "text-violet-600 dark:text-violet-400 bg-violet-500/10 border-violet-500/20",
-    delivered: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-    returned: "text-slate-500 dark:text-slate-400 bg-slate-500/10 border-slate-500/20",
-    cancelled: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20",
+    requested: "text-sky-800 dark:text-sky-400 bg-sky-100 dark:bg-sky-500/10 border-sky-300 dark:border-sky-500/20",
+    "in-process": "text-amber-800 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/20",
+    ordered: "text-violet-800 dark:text-violet-400 bg-violet-100 dark:bg-violet-500/10 border-violet-300 dark:border-violet-500/20",
+    delivered: "text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/20",
+    returned: "text-slate-700 dark:text-slate-400 bg-slate-100 dark:bg-slate-500/10 border-slate-300 dark:border-slate-500/20",
+    cancelled: "text-rose-800 dark:text-rose-400 bg-rose-100 dark:bg-rose-500/10 border-rose-300 dark:border-rose-500/20",
   };
   return map[s] ?? "text-muted-foreground bg-muted border-border";
 }
@@ -156,24 +156,24 @@ export function orderPriorityColor(p: OrderPriority): string {
 
 export function itemStatusColor(s: ItemStatus): string {
   const map: Record<ItemStatus, string> = {
-    active: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-    low: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20",
-    out: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20",
-    discontinued: "text-slate-500 dark:text-slate-400 bg-slate-500/10 border-slate-500/20",
+    active: "text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/20",
+    low: "text-amber-800 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/20",
+    out: "text-rose-800 dark:text-rose-400 bg-rose-100 dark:bg-rose-500/10 border-rose-300 dark:border-rose-500/20",
+    discontinued: "text-slate-700 dark:text-slate-400 bg-slate-100 dark:bg-slate-500/10 border-slate-300 dark:border-slate-500/20",
   };
   return map[s] ?? "text-muted-foreground bg-muted border-border";
 }
 
 export function movementTypeColor(t: MovementType): string {
   const map: Record<MovementType, string> = {
-    entry: "text-emerald-600 bg-emerald-50 border-emerald-200",
-    exit: "text-sky-600 bg-sky-50 border-sky-200",
-    return: "text-amber-600 bg-amber-50 border-amber-200",
-    reassignment: "text-violet-600 bg-violet-50 border-violet-200",
-    loan: "text-orange-600 bg-orange-50 border-orange-200",
-    adjustment: "text-slate-600 bg-slate-50 border-slate-200",
-    decommission: "text-rose-600 bg-rose-50 border-rose-200",
-    repair: "text-amber-600 bg-amber-50 border-amber-200",
+    entry: "text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/20",
+    exit: "text-sky-800 dark:text-sky-400 bg-sky-100 dark:bg-sky-500/10 border-sky-300 dark:border-sky-500/20",
+    return: "text-amber-800 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/20",
+    reassignment: "text-violet-800 dark:text-violet-400 bg-violet-100 dark:bg-violet-500/10 border-violet-300 dark:border-violet-500/20",
+    loan: "text-orange-800 dark:text-orange-400 bg-orange-100 dark:bg-orange-500/10 border-orange-300 dark:border-orange-500/20",
+    adjustment: "text-slate-700 dark:text-slate-400 bg-slate-100 dark:bg-slate-500/10 border-slate-300 dark:border-slate-500/20",
+    decommission: "text-rose-800 dark:text-rose-400 bg-rose-100 dark:bg-rose-500/10 border-rose-300 dark:border-rose-500/20",
+    repair: "text-amber-800 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/20",
   };
   return map[t] ?? "text-muted-foreground bg-muted border-border";
 }

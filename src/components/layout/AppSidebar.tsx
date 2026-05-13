@@ -84,7 +84,9 @@ export function AppSidebar() {
                       <span>{item.label}</span>
                     </SidebarMenuButton>
                     {badge !== null && (
-                      <SidebarMenuBadge>{badge}</SidebarMenuBadge>
+                      <SidebarMenuBadge className="bg-slate-200 text-slate-800 border border-slate-300 font-bold shadow-sm">
+                        {badge}
+                      </SidebarMenuBadge>
                     )}
                   </SidebarMenuItem>
                 );
@@ -97,7 +99,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <div className="px-2 py-2">
           {criticalStock > 0 && (
-            <div className={`mb-2 flex items-center gap-2 rounded-md border border-amber-500/20 bg-amber-500/10 ${isCollapsed ? "justify-center p-2" : "px-2.5 py-2"} text-[11px] font-medium text-amber-600 dark:text-amber-400`}>
+            <div className={`mb-2 flex items-center gap-2 rounded-md border border-amber-400 bg-amber-100/80 ${isCollapsed ? "justify-center p-2" : "px-2.5 py-2"} text-[11px] font-bold text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400 shadow-sm`}>
               <AlertTriangle className="size-3.5 shrink-0" />
               {!isCollapsed && <span>{criticalStock} ítems con stock bajo</span>}
             </div>

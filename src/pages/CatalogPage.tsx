@@ -158,22 +158,22 @@ export function CatalogPage() {
 
       {/* Summary */}
       <div className="flex flex-wrap gap-3">
-        <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-4 py-2.5">
-          <span className="text-2xl font-bold">{stockItems.length}</span>
-          <span className="text-sm text-muted-foreground">Total ítems</span>
+        <div className="flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-100 px-4 py-2.5 shadow-sm">
+          <span className="text-2xl font-bold text-slate-800">{stockItems.length}</span>
+          <span className="text-sm font-bold text-slate-600">Total ítems</span>
         </div>
         {lowCount > 0 && (
-          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-800 dark:bg-amber-950/30">
-            <AlertTriangle className="size-4 text-amber-500" />
-            <span className="text-2xl font-bold text-amber-600">{lowCount}</span>
-            <span className="text-sm text-amber-600">Stock bajo</span>
+          <div className="flex items-center gap-2 rounded-lg border border-amber-400 bg-amber-100 px-4 py-2.5 shadow-sm dark:border-amber-800 dark:bg-amber-950/30">
+            <AlertTriangle className="size-4 text-amber-600" />
+            <span className="text-2xl font-bold text-amber-800">{lowCount}</span>
+            <span className="text-sm font-bold text-amber-800">Stock bajo</span>
           </div>
         )}
         {outCount > 0 && (
-          <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 dark:border-rose-800 dark:bg-rose-950/30">
-            <AlertTriangle className="size-4 text-rose-500" />
-            <span className="text-2xl font-bold text-rose-600">{outCount}</span>
-            <span className="text-sm text-rose-600">Sin stock</span>
+          <div className="flex items-center gap-2 rounded-lg border border-rose-400 bg-rose-100 px-4 py-2.5 shadow-sm dark:border-rose-800 dark:bg-rose-950/30">
+            <AlertTriangle className="size-4 text-rose-600" />
+            <span className="text-2xl font-bold text-rose-800">{outCount}</span>
+            <span className="text-sm font-bold text-rose-800">Sin stock</span>
           </div>
         )}
       </div>
@@ -244,9 +244,9 @@ export function CatalogPage() {
                   key={item.id}
                   className={
                     item.status === "out"
-                      ? "bg-rose-50/50 dark:bg-rose-950/20"
+                      ? "bg-rose-100/60 hover:bg-rose-100/80 dark:bg-rose-950/20"
                       : item.status === "low"
-                      ? "bg-amber-50/50 dark:bg-amber-950/20"
+                      ? "bg-amber-100/60 hover:bg-amber-100/80 dark:bg-amber-950/20"
                       : ""
                   }
                 >
@@ -281,11 +281,11 @@ export function CatalogPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon-xs" onClick={() => openEdit(item)}>
-                        <Edit className="size-3" />
+                      <Button variant="outline" size="icon-xs" className="h-7 w-7 border-slate-300 bg-white shadow-sm hover:bg-slate-50" onClick={() => openEdit(item)}>
+                        <Edit className="size-3 text-slate-700" />
                       </Button>
-                      <Button variant="ghost" size="icon-xs" onClick={() => handleDelete(item.id)}>
-                        <Trash2 className="size-3 text-rose-400" />
+                      <Button variant="outline" size="icon-xs" className="h-7 w-7 border-rose-300 bg-white shadow-sm text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => handleDelete(item.id)}>
+                        <Trash2 className="size-3" />
                       </Button>
                     </div>
                   </TableCell>
