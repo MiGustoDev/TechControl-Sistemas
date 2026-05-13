@@ -146,12 +146,12 @@ export function orderStatusColor(s: OrderStatus): string {
 
 export function orderPriorityColor(p: OrderPriority): string {
   const map: Record<OrderPriority, string> = {
-    low: "text-slate-600 bg-slate-50 border-slate-200",
-    medium: "text-amber-600 bg-amber-50 border-amber-200",
-    high: "text-orange-600 bg-orange-50 border-orange-200",
-    critical: "text-rose-600 bg-rose-50 border-rose-200",
+    low: "bg-slate-500 text-white border-transparent",
+    medium: "bg-amber-500 text-white border-transparent",
+    high: "bg-orange-500 text-white border-transparent",
+    critical: "bg-rose-500 text-white border-transparent",
   };
-  return map[p] ?? "text-muted-foreground bg-muted border-border";
+  return map[p] ?? "bg-muted text-muted-foreground border-transparent";
 }
 
 export function itemStatusColor(s: ItemStatus): string {

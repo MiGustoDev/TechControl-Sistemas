@@ -157,15 +157,24 @@ function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
 
         {/* Actions */}
         {(canAdvance || (order.status !== "cancelled" && order.status !== "delivered")) && (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
             {canAdvance && (
-              <Button size="sm" variant="outline" onClick={handleAdvance}>
+              <Button 
+                size="sm" 
+                onClick={handleAdvance}
+                className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all active:scale-95"
+              >
                 <CheckCircle className="size-3.5" />
                 {nextStatusLabel[order.status]}
               </Button>
             )}
             {order.status !== "cancelled" && order.status !== "delivered" && (
-              <Button size="sm" variant="ghost" onClick={handleCancel} className="text-rose-500 hover:text-rose-600">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={handleCancel} 
+                className="h-8 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+              >
                 <XCircle className="size-3.5" />
                 Cancelar
               </Button>
