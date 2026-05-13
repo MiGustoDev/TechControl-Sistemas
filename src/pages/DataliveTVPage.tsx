@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Monitor, User, CreditCard as Edit, Trash2, Save, LayoutGrid, Copy, Check, Key } from "lucide-react";
+import { Plus, Search, Monitor, User, Pencil as Edit, Trash2, Save, LayoutGrid, Copy, Check, Key } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
