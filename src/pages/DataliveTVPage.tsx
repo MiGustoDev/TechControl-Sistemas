@@ -289,7 +289,7 @@ export function DataliveTVPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-48">
+        <div className="relative flex-1 max-w-md">
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por sucursal, ID, nombre de TV..."
@@ -299,7 +299,7 @@ export function DataliveTVPage() {
           />
         </div>
         <Select value={filterBranch} onValueChange={setFilterBranch}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-44">
             <SelectValue placeholder="Sucursal" />
           </SelectTrigger>
           <SelectContent>
@@ -342,7 +342,7 @@ export function DataliveTVPage() {
           <div className="grid gap-4 py-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Sucursal *</Label>
+                <Label>Sucursal <span className="text-red-500">*</span></Label>
                 <Select value={form.branch} onValueChange={(v) => setForm({ ...form, branch: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -353,12 +353,12 @@ export function DataliveTVPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Nombre del dispositivo *</Label>
+                <Label>Nombre del dispositivo <span className="text-red-500">*</span></Label>
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="ej. TV1 o VIDEOWALL1" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>ID del Dispositivo *</Label>
+              <Label>ID del Dispositivo <span className="text-red-500">*</span></Label>
               <Input value={form.deviceId} onChange={(e) => setForm({ ...form, deviceId: e.target.value })} placeholder="417" />
             </div>
             <div className="space-y-1.5">
@@ -366,9 +366,9 @@ export function DataliveTVPage() {
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+          <DialogFooter className="sm:justify-end">
             <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 text-primary-foreground"><Save className="size-4" />Guardar</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

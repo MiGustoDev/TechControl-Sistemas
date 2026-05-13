@@ -172,7 +172,7 @@ function MonitorDetailModal({
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cerrar</Button>
+          <Button onClick={onClose}>Cerrar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
