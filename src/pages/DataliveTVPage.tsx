@@ -92,12 +92,12 @@ function TVBranchCard({ branch, devices, onEdit, onDelete }: TVBranchCardProps) 
                 </div>
 
                 {!isSoon && (
-                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <Button variant="outline" size="icon-xs" className="h-7 w-7 border-slate-300 bg-white shadow-sm hover:bg-slate-50" onClick={() => onEdit(tv)}>
-                      <Edit className="size-3 text-slate-700" />
+                  <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Button variant="ghost" size="icon-xs" onClick={() => onEdit(tv)}>
+                      <Edit className="size-3" />
                     </Button>
-                    <Button variant="outline" size="icon-xs" className="h-7 w-7 border-rose-300 bg-white shadow-sm text-rose-600 hover:bg-rose-50" onClick={() => onDelete(tv.id)}>
-                      <Trash2 className="size-3" />
+                    <Button variant="ghost" size="icon-xs" onClick={() => onDelete(tv.id)}>
+                      <Trash2 className="size-3 text-rose-400" />
                     </Button>
                   </div>
                 )}
@@ -241,8 +241,8 @@ export function DataliveTVPage() {
       {/* General Info & Stats */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-500 border border-amber-300 shadow-sm">
-            <Key className="size-3" />
+          <div className="flex items-center gap-2 rounded-md border border-amber-400 bg-amber-100/80 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400 shadow-sm">
+            <Key className="size-3.5" />
             Acceso Universal para todas las TVs
           </div>
           <div className="h-px flex-1 bg-border/40" />
@@ -275,14 +275,14 @@ export function DataliveTVPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 rounded-lg border border-slate-300 bg-slate-100 px-5 h-16 shadow-sm">
-            <span className="text-2xl font-bold text-slate-800">{totalBranches}</span>
-            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-600">Sucursales</span>
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-5 h-16">
+            <span className="text-2xl font-bold text-foreground">{totalBranches}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Sucursales</span>
           </div>
           
-          <div className="flex items-center gap-3 rounded-lg border border-slate-300 bg-slate-100 px-5 h-16 shadow-sm">
-            <span className="text-2xl font-bold text-slate-800">{totalDevices}</span>
-            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-600">Dispositivos</span>
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-5 h-16">
+            <span className="text-2xl font-bold text-foreground">{totalDevices}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Dispositivos</span>
           </div>
         </div>
       </div>

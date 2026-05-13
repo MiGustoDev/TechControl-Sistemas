@@ -31,14 +31,14 @@ interface MetricCardProps {
 function MetricCard({ title, value, icon: Icon, description, alert, colorClass, onClick }: MetricCardProps) {
   return (
     <Card
-      className={`cursor-pointer transition-all hover:shadow-lg ${alert && value > 0 ? "border-amber-400 bg-amber-100 dark:border-amber-800 dark:bg-amber-950/20 shadow-sm" : "border-slate-300 shadow-sm"}`}
+      className={`cursor-pointer transition-shadow hover:shadow-md ${alert && value > 0 ? "border-amber-300 bg-amber-100 dark:border-amber-800 dark:bg-amber-950/20" : ""}`}
       onClick={onClick}
     >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-          <div className={`flex size-9 items-center justify-center rounded-lg border shadow-sm ${colorClass ? `${colorClass} border-black/5` : "bg-slate-100 border-slate-300"}`}>
-            <Icon className={`size-4 ${colorClass ? "text-foreground" : "text-slate-600"}`} />
+          <div className={`flex size-8 items-center justify-center rounded-lg ${colorClass ?? "bg-muted"}`}>
+            <Icon className="size-4 text-muted-foreground" />
           </div>
         </div>
       </CardHeader>
@@ -109,7 +109,7 @@ export function DashboardPage() {
 
       {/* Critical Alerts */}
       {(outStock > 0 || criticalPrinters > 0) && (
-        <div className="rounded-lg border-2 border-rose-400 bg-rose-100 p-4 shadow-sm dark:border-rose-900 dark:bg-rose-950/30">
+        <div className="rounded-lg border border-rose-300 bg-rose-100 p-4 dark:border-rose-900 dark:bg-rose-950/30">
           <div className="flex items-center gap-2 text-rose-800 dark:text-rose-400">
             <AlertCircle className="size-4 shrink-0" />
             <span className="font-bold text-sm">Alertas críticas</span>
@@ -234,8 +234,8 @@ export function DashboardPage() {
                 {recentMovements.map((mov, idx) => (
                   <div key={mov.id}>
                     <div className="flex items-start gap-3 py-3">
-                      <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-slate-100 shadow-sm">
-                        <ArrowLeftRight className="size-3.5 text-slate-700" />
+                      <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                        <ArrowLeftRight className="size-3 text-muted-foreground" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
@@ -284,7 +284,7 @@ export function DashboardPage() {
                   {alertItems.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between gap-2 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 shadow-sm"
+                      className="flex items-center justify-between gap-2 rounded-md bg-muted/40 px-3 py-2"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{item.name}</p>

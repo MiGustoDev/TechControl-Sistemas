@@ -124,7 +124,7 @@ export function PersonalPage() {
             const totalAssets = equipment.notebooks.length + equipment.monitors.length;
             
             return (
-              <Card key={u.id} className="group relative overflow-hidden transition-all hover:shadow-lg border-slate-300 shadow-sm">
+              <Card key={u.id} className="group relative overflow-hidden transition-all hover:shadow-lg border-muted-foreground/10">
                 <div className={`absolute left-0 top-0 h-full w-1 ${u.active ? "bg-primary" : "bg-muted"}`} />
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
@@ -134,7 +134,7 @@ export function PersonalPage() {
                         <MapPin className="size-3" /> {u.location}
                       </p>
                     </div>
-                    <Badge variant={u.active ? "default" : "secondary"} className={cn("shrink-0 text-[10px] h-5 uppercase tracking-wider font-bold shadow-sm", u.active ? "bg-emerald-600 hover:bg-emerald-700" : "bg-slate-200 text-slate-700")}>
+                    <Badge variant={u.active ? "default" : "secondary"} className="shrink-0 text-[10px] h-5 uppercase tracking-wider">
                       {u.active ? "Activo" : "Inactivo"}
                     </Badge>
                   </div>
@@ -162,13 +162,13 @@ export function PersonalPage() {
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {equipment.notebooks.map(n => (
-                          <Badge key={n.id} variant="outline" className="flex items-center gap-1 bg-sky-100 text-sky-800 border-sky-400 font-bold py-0.5 shadow-sm">
+                          <Badge key={n.id} variant="outline" className="flex items-center gap-1 bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/10 dark:text-sky-300 dark:border-sky-800 py-0.5">
                             <Laptop className="size-3" />
                             {n.internalCode}
                           </Badge>
                         ))}
                         {equipment.monitors.map(m => (
-                          <Badge key={m.id} variant="outline" className="flex items-center gap-1 bg-emerald-100 text-emerald-800 border-emerald-400 font-bold py-0.5 shadow-sm">
+                          <Badge key={m.id} variant="outline" className="flex items-center gap-1 bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/10 dark:text-emerald-300 dark:border-emerald-800 py-0.5">
                             <Monitor className="size-3" />
                             {m.brand} {m.model}
                           </Badge>
@@ -177,11 +177,11 @@ export function PersonalPage() {
                     )}
                   </div>
                   
-                  <div className="flex items-center justify-end gap-2 pt-2 transition-opacity">
-                    <Button variant="outline" size="icon-xs" className="h-7 w-7 border-slate-300 bg-white shadow-sm hover:bg-slate-50" onClick={() => openEdit(u)} title="Editar perfil">
-                      <Edit className="size-3.5 text-slate-700" />
+                  <div className="flex items-center justify-end gap-2 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon-xs" onClick={() => openEdit(u)} title="Editar perfil">
+                      <Edit className="size-3.5" />
                     </Button>
-                    <Button variant="outline" size="icon-xs" className="h-7 w-7 border-rose-300 bg-white shadow-sm text-rose-600 hover:bg-rose-50" onClick={() => handleDelete(u.id)} title="Eliminar registro">
+                    <Button variant="ghost" size="icon-xs" className="text-destructive hover:text-destructive" onClick={() => handleDelete(u.id)} title="Eliminar registro">
                       <Trash2 className="size-3.5" />
                     </Button>
                   </div>

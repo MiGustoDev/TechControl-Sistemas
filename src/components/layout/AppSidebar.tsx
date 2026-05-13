@@ -84,7 +84,7 @@ export function AppSidebar() {
                       <span>{item.label}</span>
                     </SidebarMenuButton>
                     {badge !== null && (
-                      <SidebarMenuBadge className="bg-slate-200 text-slate-800 border border-slate-300 font-bold shadow-sm">
+                      <SidebarMenuBadge className="bg-muted-foreground/10 font-bold text-foreground">
                         {badge}
                       </SidebarMenuBadge>
                     )}

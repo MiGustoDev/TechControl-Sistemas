@@ -123,13 +123,13 @@ export function MovementsPage() {
             <button
               key={type}
               onClick={() => setFilterType(filterType === type ? "all" : type)}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all shadow-sm ${
-                filterType === type ? `${movementTypeColor(type)} ring-1 ring-current` : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                filterType === type ? movementTypeColor(type) : "border-border bg-muted/30 text-muted-foreground hover:bg-muted"
               }`}
             >
               <MovementIcon type={type} />
               <span>{movementTypeLabel(type)}</span>
-              <span className={filterType === type ? "bg-black/10 px-1.5 rounded-full" : "bg-slate-100 px-1.5 rounded-full border border-slate-200"}>{count}</span>
+              <span className="font-bold">{count}</span>
             </button>
           );
         })}
@@ -200,9 +200,9 @@ export function MovementsPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5">
-                    <div className={`flex size-7 items-center justify-center rounded-full border shadow-sm ${movementTypeColor(mov.type)}`}>
-                      <MovementIcon type={mov.type} />
-                    </div>
+                      <div className={`flex size-6 items-center justify-center rounded-full border ${movementTypeColor(mov.type)}`}>
+                        <MovementIcon type={mov.type} />
+                      </div>
                       <StatusBadge
                         label={movementTypeLabel(mov.type)}
                         colorClass={movementTypeColor(mov.type)}

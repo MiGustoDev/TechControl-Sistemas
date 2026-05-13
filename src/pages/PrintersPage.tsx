@@ -39,7 +39,7 @@ function PrinterCard({ printer, onEdit, onDelete }: PrinterCardProps) {
 
   return (
     <Card
-      className={`flex flex-col transition-shadow hover:shadow-md ${isAlert ? "border-amber-300 dark:border-amber-800 shadow-sm" : ""}`}
+      className={`flex flex-col transition-shadow hover:shadow-md ${isAlert ? "border-amber-200 dark:border-amber-800" : ""}`}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
@@ -53,11 +53,11 @@ function PrinterCard({ printer, onEdit, onDelete }: PrinterCardProps) {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon-xs" className="h-7 w-7 border-slate-300 bg-white shadow-sm hover:bg-slate-50" onClick={() => onEdit(printer)}>
-              <Edit className="size-3 text-slate-700" />
+            <Button variant="ghost" size="icon-xs" onClick={() => onEdit(printer)}>
+              <Edit className="size-3" />
             </Button>
-            <Button variant="outline" size="icon-xs" className="h-7 w-7 border-rose-300 bg-white shadow-sm text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => onDelete(printer.id)}>
-              <Trash2 className="size-3" />
+            <Button variant="ghost" size="icon-xs" onClick={() => onDelete(printer.id)}>
+              <Trash2 className="size-3 text-rose-400" />
             </Button>
           </div>
         </div>
