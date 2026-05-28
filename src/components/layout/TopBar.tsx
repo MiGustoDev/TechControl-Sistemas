@@ -7,14 +7,16 @@ import { useApp } from "@/context/AppContext";
 import { useTheme } from "@/components/theme-provider";
 
 const pageLabels: Record<string, string> = {
-  dashboard: "Dashboard",
   printers: "Impresoras",
-  notebooks: "Notebooks",
+  notebooks: "Equipos",
+  monitors: "Monitores",
   catalog: "Catálogo de Stock",
   orders: "Pedidos a Compras",
   movements: "Movimientos",
   reports: "Reportes",
   datalive: "DataliveTV",
+  guardias: "Guardias IT",
+  personal: "Personal",
 };
 
 interface TopBarProps {}

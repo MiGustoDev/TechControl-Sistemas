@@ -8,22 +8,51 @@ import type {
   MovementType,
 } from "../types";
 
-export function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+/** Parsea fechas ISO (yyyy-mm-dd o con hora) en hora local, sin corrimiento de día. */
+function parseAppDate(dateStr: string): Date {
+  if (!dateStr) return new Date(NaN);
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}T/.test(dateStr)) {
+    const [y, m, d] = dateStr.slice(0, 10).split("-").map(Number);
+    const time = dateStr.slice(11).replace(/Z$/, "");
+    const [hh = 0, mm = 0, ss = 0] = time.split(":").map((n) => parseInt(n, 10) || 0);
+    return new Date(y, m - 1, d, hh, mm, ss);
+  }
+
+  return new Date(dateStr);
 }
 
+/** Formato estándar de la app: dd/mm/aaaa */
+export function formatDate(dateStr: string): string {
+  const d = parseAppDate(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+/** Fecha y hora: dd/mm/aaaa HH:mm */
 export function formatDateTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const d = parseAppDate(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${formatDate(dateStr)} ${hours}:${minutes}`;
+}
+
+/** Fecha de hoy en formato dd/mm/aaaa */
+export function formatToday(): string {
+  const now = new Date();
+  const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return formatDate(iso);
 }
 
 export function categoryLabel(cat: Category): string {

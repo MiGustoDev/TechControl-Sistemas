@@ -7,6 +7,7 @@ import type {
   Monitor,
   DataliveTV,
   User,
+  Guardia,
 } from "../types";
 
 // ─── STOCK ITEMS ─────────────────────────────────────────────────────────────
@@ -1002,14 +1003,14 @@ export const notebooks: Notebook[] = [
   {
     id: "nb-008",
     category: "notebook",
-    brand: "ASUS",
-    model: "Vivobook Go E150",
-    serialNumber: "S3N0CV00U171099",
-    internalCode: "NTBMGCOM003",
-    processor: "Intel(R) Core(TM) i3-N305",
-    ram: "8 Gb",
-    storage: "SSD 256GB",
-    screenSize: "15.6\"",
+    brand: "Lenovo",
+    model: "ThinkBook 16 G7 ARP",
+    serialNumber: "MP2PV2G7",
+    internalCode: "NTBMGSIS001",
+    processor: "AMD Ryzen 7 7735HS with Radeon Graphics",
+    ram: "16 Gb",
+    storage: "SSD 512GB",
+    screenSize: "16.0\"",
     os: "Windows",
     physicalCondition: "excellent",
     functionalStatus: "working",
@@ -1017,9 +1018,9 @@ export const notebooks: Notebook[] = [
     currentAssignment: {
       id: "asgn-nb008",
       notebookId: "nb-008",
-      userId: "user-mcatolica",
-      userName: "Myrian Catolica",
-      area: "Compras",
+      userId: "usr-039",
+      userName: "Gustavo Gonzalez",
+      area: "Sistemas",
       assignedAt: "2026-01-07T16:05:00Z",
       type: "permanent",
     },
@@ -1031,13 +1032,13 @@ export const notebooks: Notebook[] = [
   {
     id: "nb-009",
     category: "notebook",
-    brand: "ASUS",
-    model: "TUF Gaming A15 FA506NCR",
-    serialNumber: "SANRCX01E538418",
-    internalCode: "NTBMGDSG001",
-    processor: "AMD Ryzen 7 7435HS",
-    ram: "32 Gb",
-    storage: "SSD 512GB",
+    brand: "Lenovo",
+    model: "82TV",
+    serialNumber: "MP2PV2TV",
+    internalCode: "NTBMGSIS002",
+    processor: "AMD Ryzen 5 5625U with Radeon Graphics",
+    ram: "12 Gb",
+    storage: "SSD 256GB",
     screenSize: "15.6\"",
     os: "Windows",
     physicalCondition: "excellent",
@@ -1046,9 +1047,9 @@ export const notebooks: Notebook[] = [
     currentAssignment: {
       id: "asgn-nb009",
       notebookId: "nb-009",
-      userId: "user-mlovatto",
-      userName: "Mariano Lovatto",
-      area: "Diseño",
+      userId: "usr-031",
+      userName: "Facundo Carrizo",
+      area: "Sistemas",
       assignedAt: "2026-01-07T09:32:00Z",
       type: "permanent",
     },
@@ -1060,13 +1061,13 @@ export const notebooks: Notebook[] = [
   {
     id: "nb-010",
     category: "notebook",
-    brand: "ASUS",
-    model: "TUF Gaming A15 FA506NCR",
-    serialNumber: "SANRCX01E58341G",
-    internalCode: "NTBMGDSG002",
-    processor: "AMD Ryzen 7 7435HS",
-    ram: "32 Gb",
-    storage: "SSD 512GB",
+    brand: "Lenovo",
+    model: "IdeaPad 1 15ALC7",
+    serialNumber: "MP2PV1LC7",
+    internalCode: "NTBMGSIS003",
+    processor: "AMD Ryzen 5 5500U with Radeon Graphics",
+    ram: "8 GB",
+    storage: "SSD 256GB",
     screenSize: "15.6\"",
     os: "Windows",
     physicalCondition: "excellent",
@@ -1075,9 +1076,9 @@ export const notebooks: Notebook[] = [
     currentAssignment: {
       id: "asgn-nb010",
       notebookId: "nb-010",
-      userId: "user-cdiaz",
-      userName: "Camila Diaz",
-      area: "Diseño",
+      userId: "usr-076",
+      userName: "Ramiro Lacci",
+      area: "Sistemas",
       assignedAt: "2026-01-26T17:14:00Z",
       type: "permanent",
     },
@@ -1424,7 +1425,7 @@ export const notebooks: Notebook[] = [
     currentAssignment: {
       id: "asgn-nb022",
       notebookId: "nb-022",
-      userId: "user-ggonzalez",
+      userId: "usr-039",
       userName: "Gustavo González",
       area: "Sistemas",
       assignedAt: "2026-01-05T15:06:00Z",
@@ -1454,7 +1455,7 @@ export const notebooks: Notebook[] = [
     currentAssignment: {
       id: "asgn-nb023",
       notebookId: "nb-023",
-      userId: "user-fcarrizo",
+      userId: "usr-031",
       userName: "Facundo Carrizo",
       area: "Sistemas",
       assignedAt: "2026-01-06T12:08:00Z",
@@ -1484,7 +1485,7 @@ export const notebooks: Notebook[] = [
     currentAssignment: {
       id: "asgn-nb024",
       notebookId: "nb-024",
-      userId: "user-rlacci",
+      userId: "usr-076",
       userName: "Ramio Lacci",
       area: "Sistemas",
       assignedAt: "2026-01-05T15:37:00Z",
@@ -1768,6 +1769,7 @@ export const monitors: Monitor[] = [
     status: "in-use",
     physicalCondition: "excellent",
     currentAssignment: {
+      userId: "usr-031",
       userName: "Facundo Carrizo",
       area: "Sistemas",
       assignedAt: "2026-01-06T12:08:00Z",
@@ -1825,7 +1827,8 @@ export const monitors: Monitor[] = [
     status: "in-use",
     physicalCondition: "excellent",
     currentAssignment: {
-      userName: "Ramio Lacci",
+      userId: "usr-076",
+      userName: "Ramiro Lacci",
       area: "Sistemas",
       assignedAt: "2026-01-05T15:37:00Z",
       linkedComputerCode: "NTBMGSIS003",
@@ -2603,7 +2606,7 @@ export const dataliveTVs: DataliveTV[] = [
 // ─── USERS ───────────────────────────────────────────────────────────────────
 
 export const users: User[] = [
-{
+  {
     "id": "usr-001",
     "username": "elizabeth.colman",
     "fullName": "Elizabeth Colman",
@@ -2613,7 +2616,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-003",
     "username": "martin.sastre",
     "fullName": "Martin Sastre",
@@ -2623,7 +2626,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-004",
     "username": "sasha.alfini",
     "fullName": "Sasha Alfini",
@@ -2633,7 +2636,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-005",
     "username": "yoselin.pinero",
     "fullName": "Yoselin Piñero",
@@ -2643,7 +2646,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-006",
     "username": "alexandra.ramirez",
     "fullName": "Alexandra Ramirez",
@@ -2653,7 +2656,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-007",
     "username": "ana.torres",
     "fullName": "Ana Torres",
@@ -2663,7 +2666,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-013",
     "username": "camila.diaz",
     "fullName": "Camila Diaz",
@@ -2673,7 +2676,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-014",
     "username": "camila.ferro",
     "fullName": "Camila Ferro",
@@ -2683,7 +2686,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-015",
     "username": "camila.lescano",
     "fullName": "Camila Lescano",
@@ -2693,7 +2696,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-017",
     "username": "carla.morelli",
     "fullName": "Carla Morelli",
@@ -2703,7 +2706,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-018",
     "username": "carolina.poblete",
     "fullName": "Carolina Poblete",
@@ -2713,7 +2716,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-019",
     "username": "cinthia.vazquez",
     "fullName": "Cinthia Vazquez",
@@ -2723,7 +2726,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-020",
     "username": "claudia.prent",
     "fullName": "Claudia Prent",
@@ -2733,7 +2736,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-021",
     "username": "daniel.peralta",
     "fullName": "Daniel Peralta",
@@ -2743,7 +2746,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-024",
     "username": "diego.reyes",
     "fullName": "Diego Reyes",
@@ -2753,7 +2756,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-026",
     "username": "eduardo.marra",
     "fullName": "Eduardo Marra",
@@ -2763,7 +2766,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-027",
     "username": "elisa.pereira",
     "fullName": "Elisa Pereira",
@@ -2773,7 +2776,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-028",
     "username": "emiliano.corbo",
     "fullName": "Emiliano Corbo",
@@ -2783,7 +2786,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-029",
     "username": "eric.martinez",
     "fullName": "Eric Martinez",
@@ -2793,7 +2796,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-031",
     "username": "facundo.carrizo",
     "fullName": "Facundo Carrizo",
@@ -2803,7 +2806,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-032",
     "username": "florencia.cruz",
     "fullName": "Florencia Cruz",
@@ -2813,7 +2816,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-035",
     "username": "franco.gomez",
     "fullName": "Franco Gomez",
@@ -2823,7 +2826,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-036",
     "username": "gaston.dominguez",
     "fullName": "Gaston Dominguez",
@@ -2833,7 +2836,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-037",
     "username": "gisel.marchetti",
     "fullName": "Gisel Marchetti",
@@ -2843,7 +2846,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-038",
     "username": "gisella.villarreal",
     "fullName": "Gisella Villarreal",
@@ -2853,7 +2856,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-039",
     "username": "gustavo.gonzalez",
     "fullName": "Gustavo Gonzalez",
@@ -2863,7 +2866,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-040",
     "username": "hugo.gazze",
     "fullName": "Hugo Gazze",
@@ -2873,7 +2876,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-041",
     "username": "ignacio.rios",
     "fullName": "Ignacio Rios",
@@ -2883,7 +2886,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-044",
     "username": "juan.villafane",
     "fullName": "Juan Villafane",
@@ -2893,7 +2896,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-045",
     "username": "camila.leguizamon",
     "fullName": "Camila Leguizamon",
@@ -2903,7 +2906,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-046",
     "username": "julio.cejas",
     "fullName": "Julio Cejas",
@@ -2913,7 +2916,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-047",
     "username": "laura.garcia",
     "fullName": "Laura Garcia",
@@ -2923,7 +2926,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-048",
     "username": "lidya.tello",
     "fullName": "Lidya Tello",
@@ -2933,7 +2936,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-049",
     "username": "lucas.barrionuevo",
     "fullName": "Lucas Barrionuevo",
@@ -2943,7 +2946,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-050",
     "username": "lucia.fernandez",
     "fullName": "Lucia Fernandez",
@@ -2953,7 +2956,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-051",
     "username": "maira.perez",
     "fullName": "Maira Perez",
@@ -2963,7 +2966,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-052",
     "username": "manuel.loza",
     "fullName": "Manuel Loza",
@@ -2973,7 +2976,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-053",
     "username": "marcelo.buscalia",
     "fullName": "Marcelo Buscalia",
@@ -2983,7 +2986,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-054",
     "username": "marcos.diaz",
     "fullName": "Marcos Diaz",
@@ -2993,7 +2996,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-055",
     "username": "maria.jose.rios",
     "fullName": "Maria Jose Rios",
@@ -3003,7 +3006,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-056",
     "username": "mariano.garcia",
     "fullName": "Mariano Garcia",
@@ -3013,7 +3016,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-057",
     "username": "mariano.mancilla",
     "fullName": "Mariano Mancilla",
@@ -3023,7 +3026,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-061",
     "username": "matias.guerra",
     "fullName": "Matias Guerra",
@@ -3033,7 +3036,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-063",
     "username": "milagros.ramos",
     "fullName": "Milagros Ramos",
@@ -3043,7 +3046,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-067",
     "username": "nahuel.bracamonte",
     "fullName": "Nahuel Bracamonte",
@@ -3053,7 +3056,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-068",
     "username": "nicolas.villarroel",
     "fullName": "Nicolas Villarroel",
@@ -3063,7 +3066,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-076",
     "username": "ramiro.lacci",
     "fullName": "Ramiro Lacci",
@@ -3073,7 +3076,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-077",
     "username": "rodrigo.ricobene",
     "fullName": "Rodrigo Ricobene",
@@ -3083,7 +3086,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-078",
     "username": "romina.centofante",
     "fullName": "Romina Centofante",
@@ -3093,7 +3096,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-082",
     "username": "santiago.paez",
     "fullName": "Santiago Toledo",
@@ -3103,7 +3106,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-083",
     "username": "santiago.villordo",
     "fullName": "Santiago Villordo",
@@ -3113,7 +3116,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-084",
     "username": "sebastian.lorenzo",
     "fullName": "Sebastian Lorenzo",
@@ -3123,7 +3126,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-085",
     "username": "sofia.gonzalez",
     "fullName": "Sofia Gonzalez",
@@ -3133,7 +3136,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-086",
     "username": "sol.del.valle",
     "fullName": "Sol Del Valle",
@@ -3143,7 +3146,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-088",
     "username": "tobias.bangert",
     "fullName": "Tobias Bangert",
@@ -3153,7 +3156,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-089",
     "username": "valeria.romero",
     "fullName": "Valeria Romero",
@@ -3163,7 +3166,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-091",
     "username": "victoria.perez",
     "fullName": "Victoria Perez",
@@ -3173,7 +3176,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-095",
     "username": "yanina.soto",
     "fullName": "Yanina Soto",
@@ -3183,7 +3186,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-096",
     "username": "andrea.herrera",
     "fullName": "Andrea Herrera",
@@ -3193,7 +3196,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-097",
     "username": "wanda.ruiz",
     "fullName": "Wanda Ruiz",
@@ -3203,7 +3206,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-098",
     "username": "evelyn.cedron",
     "fullName": "Evelyn Cedron",
@@ -3213,7 +3216,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-099",
     "username": "selene.hernandez",
     "fullName": "Selene Hernandez",
@@ -3223,7 +3226,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-100",
     "username": "maria.salazar",
     "fullName": "Maria Salazar",
@@ -3233,7 +3236,7 @@ export const users: User[] = [
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
   },
-{
+  {
     "id": "usr-101",
     "username": "rocio.portillo",
     "fullName": "Rocio Portillo",
@@ -3275,4 +3278,87 @@ export const SUCURSALES = [
   'Puerto Madero', 'San Fernando', 'San Martin', 'San Miguel',
   'Tigre', 'Vicente Lopez', 'Villa Adelina', 'Villa Crespo',
   'Villa Urquiza',
+];
+
+export const guardias: Guardia[] = [
+  {
+    id: "guardia-1",
+    date: "2026-05-10",
+    startTime: "18:00",
+    endTime: "22:00",
+    hours: 4,
+    userId: "usr-076",
+    userName: "Ramiro Lacci",
+    type: "soporte",
+    description: "Soporte fuera de horario por caída de la sucursal San Miguel.",
+    branchesAffected: "San Miguel",
+    status: "approved",
+    notes: "Se coordinó con el proveedor de internet y se reinició el router principal de la sucursal.",
+    createdAt: "2026-05-10T22:15:00Z",
+    updatedAt: "2026-05-10T22:15:00Z"
+  },
+  {
+    id: "guardia-2",
+    date: "2026-05-12",
+    startTime: "19:00",
+    endTime: "22:00",
+    hours: 3,
+    userId: "usr-031",
+    userName: "Facundo Carrizo",
+    type: "soporte",
+    description: "Reconfiguración de enlace de red y antenas en sucursal Caballito.",
+    branchesAffected: "Caballito",
+    status: "approved",
+    notes: "Se restableció el enlace redundante. Pruebas de velocidad correctas.",
+    createdAt: "2026-05-12T22:10:00Z",
+    updatedAt: "2026-05-12T22:10:00Z"
+  },
+  {
+    id: "guardia-3",
+    date: "2026-05-18",
+    startTime: "20:00",
+    endTime: "00:30",
+    hours: 4.5,
+    userId: "usr-031",
+    userName: "Facundo Carrizo",
+    type: "promocion",
+    description: "Monitoreo preventivo del flujo de ventas online por promoción especial.",
+    branchesAffected: "Todas las sucursales",
+    status: "approved",
+    notes: "Monitoreo de APIs y base de datos durante el pico de transacciones. Sin incidentes.",
+    createdAt: "2026-05-19T00:45:00Z",
+    updatedAt: "2026-05-19T00:45:00Z"
+  },
+  {
+    id: "guardia-4",
+    date: "2026-05-20",
+    startTime: "19:00",
+    endTime: "22:00",
+    hours: 3,
+    userId: "usr-076",
+    userName: "Ramiro Lacci",
+    type: "soporte",
+    description: "Actualización de sistema de facturación en sucursal Palermo y Belgrano.",
+    branchesAffected: "Palermo, Belgrano",
+    status: "pending_approval",
+    notes: "Se realizó la actualización con éxito. Pruebas de facturación ok.",
+    createdAt: "2026-05-20T22:10:00Z",
+    updatedAt: "2026-05-20T22:10:00Z"
+  },
+  {
+    id: "guardia-5",
+    date: "2026-05-24",
+    startTime: "08:00",
+    endTime: "14:00",
+    hours: 6,
+    userId: "usr-056",
+    userName: "Mariano Garcia",
+    type: "actualizacion",
+    description: "Migración de servidor principal de base de datos a nuevo hardware.",
+    branchesAffected: "Central / Servidores",
+    status: "pending_approval",
+    notes: "Se realizó backup completo y restauración en el nuevo server. Tiempos de respuesta reducidos a la mitad.",
+    createdAt: "2026-05-24T14:30:00Z",
+    updatedAt: "2026-05-24T14:30:00Z"
+  }
 ];

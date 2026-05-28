@@ -194,6 +194,26 @@ export interface User {
   phone?: string | null;
   location: string;
   active: boolean;
+  role?: string | null;
+  avatarUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface Guardia {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  hours: number;
+  userId: string;
+  userName: string;
+  type: "soporte" | "promocion" | "actualizacion" | "incidencia" | "otro";
+  description: string;
+  branchesAffected?: string;
+  status: "pending_approval" | "approved";
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+

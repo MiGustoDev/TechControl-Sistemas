@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { LevelBar } from "@/components/shared/LevelBar";
 import {
   formatDateTime,
+  formatToday,
   movementTypeLabel,
   movementTypeColor,
   orderStatusLabel,
@@ -90,7 +91,7 @@ export function DashboardPage() {
         <div className="flex flex-col items-end gap-2">
           <div className="text-right text-xs text-muted-foreground">
             <Clock className="mb-0.5 inline-block size-3" />{" "}
-            {new Date().toLocaleDateString("es-AR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
+            {formatToday()}
           </div>
           {orders.length === 0 && !loading && (
             <Button 

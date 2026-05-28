@@ -10,6 +10,7 @@ import type {
   DataliveTV,
   Monitor,
   User,
+  Guardia,
 } from "../types";
 import {
   stockItems as initialItems,
@@ -20,9 +21,54 @@ import {
   orders as initialOrders,
   movements as initialMovements,
   dataliveTVs as initialTVs,
+  guardias as initialGuardias,
 } from "../data/mock";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+
+function guardiaFromDb(g: Record<string, unknown>): Guardia {
+  return {
+    id: g.id as string,
+    date: g.date as string,
+    startTime: g.start_time as string,
+    endTime: g.end_time as string,
+    hours: Number(g.hours),
+    userId: g.user_id as string,
+    userName: g.user_name as string,
+    type: g.type as Guardia["type"],
+    description: g.description as string,
+    branchesAffected: (g.branches_affected as string) || undefined,
+    status: g.status as Guardia["status"],
+    notes: (g.notes as string) || undefined,
+    createdAt: g.created_at as string,
+    updatedAt: g.updated_at as string,
+  };
+}
+
+function guardiaToDb(g: Guardia) {
+  return {
+    id: g.id,
+    date: g.date,
+    start_time: g.startTime,
+    end_time: g.endTime,
+    hours: g.hours,
+    user_id: g.userId,
+    user_name: g.userName,
+    type: g.type,
+    description: g.description,
+    branches_affected: g.branchesAffected || "",
+    status: g.status,
+    notes: g.notes || "",
+    created_at: g.createdAt,
+    updated_at: g.updatedAt,
+  };
+}
+
+function dedupeGuardias(list: Guardia[]): Guardia[] {
+  const byId = new Map<string, Guardia>();
+  for (const g of list) byId.set(g.id, g);
+  return Array.from(byId.values());
+}
 
 interface AppContextValue {
   // Data
@@ -34,6 +80,7 @@ interface AppContextValue {
   orders: Order[];
   movements: Movement[];
   dataliveTVs: DataliveTV[];
+  guardias: Guardia[];
 
   // Stock actions
   addStockItem: (item: Omit<StockItem, "id" | "createdAt" | "updatedAt">) => void;
@@ -75,6 +122,11 @@ interface AppContextValue {
   updateDataliveTV: (id: string, data: Partial<DataliveTV>) => void;
   deleteDataliveTV: (id: string) => void;
 
+  // Guardia actions
+  addGuardia: (g: Omit<Guardia, "id" | "createdAt" | "updatedAt" | "hours">) => void;
+  updateGuardia: (id: string, data: Partial<Guardia>) => void;
+  deleteGuardia: (id: string) => void;
+
   // Navigation state
   currentPage: string;
   setCurrentPage: (page: string) => void;
@@ -87,15 +139,70 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [stockItems, setStockItems] = useState<StockItem[]>([]);
-  const [printers, setPrinters] = useState<Printer[]>([]);
-  const [notebooks, setNotebooks] = useState<Notebook[]>([]);
-  const [monitors, setMonitors] = useState<Monitor[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [stockItems, setStockItems] = useState<StockItem[]>(initialItems);
+  const [printers, setPrinters] = useState<Printer[]>(initialPrinters);
+  const [notebooks, setNotebooks] = useState<Notebook[]>(initialNotebooks);
+  const [monitors, setMonitors] = useState<Monitor[]>(initialMonitors);
+  const [users, setUsers] = useState<User[]>(() => [
+    {
+      id: "usr-031",
+      username: "facundo.carrizo",
+      fullName: "Facundo Carrizo",
+      email: "facundocarrizo@migusto.com.ar",
+      location: "Sistemas",
+      role: "Analista de sistemas / Programador",
+      avatarUrl: "Colaboradores/Facu.jpg",
+      active: true,
+      createdAt: "2026-01-01T08:00:00Z",
+      updatedAt: "2026-01-01T08:00:00Z"
+    },
+    {
+      id: "usr-076",
+      username: "ramiro.lacci",
+      fullName: "Ramiro Lacci",
+      email: "ramirolacci@migusto.com.ar",
+      location: "Sistemas",
+      role: "Analista de sistemas / Programador",
+      avatarUrl: "Colaboradores/Rami.jpg",
+      active: true,
+      createdAt: "2026-01-01T08:00:00Z",
+      updatedAt: "2026-01-01T08:00:00Z"
+    },
+    {
+      id: "usr-039",
+      username: "gustavo.gonzalez",
+      fullName: "Gustavo Gonzalez",
+      email: "gustavogonzalez@migusto.com.ar",
+      location: "Sistemas",
+      role: "Jefe de sistemas / Lider tecnico",
+      avatarUrl: "Colaboradores/Gus.jpg",
+      active: true,
+      createdAt: "2026-01-01T08:00:00Z",
+      updatedAt: "2026-01-01T08:00:00Z"
+    }
+  ]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
   const [dataliveTVs, setDataliveTVs] = useState<DataliveTV[]>([]);
-  const [currentPage, setCurrentPage] = useState("notebooks");
+  const [guardias, setGuardias] = useState<Guardia[]>(() => {
+    const local = localStorage.getItem("techcontrol_guardias");
+    if (local) {
+      try {
+        const parsed = JSON.parse(local) as Guardia[];
+        // Si no existen guardias de Facundo (usr-031), re-sincronizamos con las nuevas guardias iniciales
+        const hasFacundo = parsed.some(g => g.userId === "usr-031");
+        if (!hasFacundo) {
+          localStorage.setItem("techcontrol_guardias", JSON.stringify(initialGuardias));
+          return initialGuardias;
+        }
+        return parsed;
+      } catch (e) {
+        console.error("Error parsing local guardias", e);
+      }
+    }
+    return initialGuardias;
+  });
+  const [currentPage, setCurrentPage] = useState("guardias");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -170,12 +277,73 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updatedAt: m.updated_at
       })));
 
-      if (usr) setUsers(usr.map(u => ({
-        ...u,
-        fullName: u.full_name,
-        createdAt: u.created_at,
-        updatedAt: u.updated_at
-      })));
+      if (usr) {
+        const allowedUsernames = ["facundo.carrizo", "ramiro.lacci", "gustavo.gonzalez"];
+        const filteredUsrs = usr
+          .filter(u => allowedUsernames.includes(u.username))
+          .map(u => {
+            let role = "Analista de sistemas / Programador";
+            if (u.username === "gustavo.gonzalez") {
+              role = "Jefe de sistemas / Lider tecnico";
+            }
+            return {
+              ...u,
+              fullName: u.full_name,
+              role,
+              createdAt: u.created_at,
+              updatedAt: u.updated_at
+            };
+          });
+
+        const defaultTeam = [
+          {
+            id: "usr-031",
+            username: "facundo.carrizo",
+            fullName: "Facundo Carrizo",
+            email: "facundocarrizo@migusto.com.ar",
+            location: "Sistemas",
+            role: "Analista de sistemas / Programador",
+            avatarUrl: "Colaboradores/Facu.jpg",
+            active: true,
+            createdAt: "2026-01-01T08:00:00Z",
+            updatedAt: "2026-01-01T08:00:00Z"
+          },
+          {
+            id: "usr-076",
+            username: "ramiro.lacci",
+            fullName: "Ramiro Lacci",
+            email: "ramirolacci@migusto.com.ar",
+            location: "Sistemas",
+            role: "Analista de sistemas / Programador",
+            avatarUrl: "Colaboradores/Rami.jpg",
+            active: true,
+            createdAt: "2026-01-01T08:00:00Z",
+            updatedAt: "2026-01-01T08:00:00Z"
+          },
+          {
+            id: "usr-039",
+            username: "gustavo.gonzalez",
+            fullName: "Gustavo Gonzalez",
+            email: "gustavogonzalez@migusto.com.ar",
+            location: "Sistemas",
+            role: "Jefe de sistemas / Lider tecnico",
+            avatarUrl: "Colaboradores/Gus.jpg",
+            active: true,
+            createdAt: "2026-01-01T08:00:00Z",
+            updatedAt: "2026-01-01T08:00:00Z"
+          }
+        ];
+
+        const finalTeam = [...defaultTeam];
+        filteredUsrs.forEach(fu => {
+          const index = finalTeam.findIndex(x => x.username === fu.username);
+          if (index !== -1) {
+            finalTeam[index] = { ...finalTeam[index], ...fu };
+          }
+        });
+
+        setUsers(finalTeam);
+      }
 
       if (ords) setOrders(ords.map(o => ({
         ...o,
@@ -204,6 +372,66 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         createdAt: tv.created_at,
         updatedAt: tv.updated_at
       })));
+
+      // Fetch guardias separately to handle missing table gracefully
+      try {
+        const { data: gds, error: gdsError } = await supabase.from("guardias").select("*");
+        if (gds && !gdsError) {
+          let mappedGuardias = dedupeGuardias(gds.map((g) => guardiaFromDb(g as Record<string, unknown>)));
+
+          const readLocalGuardias = (): Guardia[] => {
+            const localStr = localStorage.getItem("techcontrol_guardias");
+            if (!localStr) return dedupeGuardias(initialGuardias);
+            try {
+              const parsed = JSON.parse(localStr) as Guardia[];
+              return dedupeGuardias(parsed.length > 0 ? parsed : initialGuardias);
+            } catch {
+              return dedupeGuardias(initialGuardias);
+            }
+          };
+
+          // Si Supabase está vacío, subir datos locales o iniciales (no borrar el estado local)
+          if (mappedGuardias.length === 0) {
+            const source = readLocalGuardias();
+            const { error: seedError } = await supabase
+              .from("guardias")
+              .upsert(source.map(guardiaToDb), { onConflict: "id" });
+            if (seedError) {
+              console.warn("Error seeding guardias to Supabase:", seedError);
+              setGuardias(source);
+              localStorage.setItem("techcontrol_guardias", JSON.stringify(source));
+            } else {
+              mappedGuardias = source;
+              setGuardias(source);
+              localStorage.setItem("techcontrol_guardias", JSON.stringify(source));
+            }
+          } else {
+            // Subir guardias locales que aún no están en Supabase
+            const localGds = readLocalGuardias();
+            const missingLocals = localGds.filter(
+              (lg) => !mappedGuardias.some((mg) => mg.id === lg.id)
+            );
+
+            if (missingLocals.length > 0) {
+              const { error: syncError } = await supabase
+                .from("guardias")
+                .upsert(missingLocals.map(guardiaToDb), { onConflict: "id" });
+              if (syncError) {
+                console.error("Error syncing local guardias to Supabase:", syncError);
+              } else {
+                mappedGuardias = dedupeGuardias([...mappedGuardias, ...missingLocals]);
+              }
+            }
+
+            setGuardias(mappedGuardias);
+            localStorage.setItem("techcontrol_guardias", JSON.stringify(mappedGuardias));
+          }
+        } else if (gdsError) {
+          console.warn("Supabase guardias query returned error (table might not exist yet):", gdsError);
+        }
+      } catch (err) {
+        console.warn("Could not load guardias from Supabase:", err);
+      }
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -362,6 +590,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         created_at: tv.createdAt,
         updated_at: tv.updatedAt
       })));
+
+      // 9. Guardias
+      await supabase
+        .from("guardias")
+        .upsert(dedupeGuardias(initialGuardias).map(guardiaToDb), { onConflict: "id" });
 
       toast.success("Migración completada con éxito", { id: t });
       fetchData();
@@ -891,6 +1124,115 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [fetchData]);
 
+  const calculateHours = (date: string, startTime: string, endTime: string): number => {
+    if (!startTime || !endTime) return 0;
+    try {
+      const [startH, startM] = startTime.split(":").map(Number);
+      const [endH, endM] = endTime.split(":").map(Number);
+      
+      let startMinutes = startH * 60 + startM;
+      let endMinutes = endH * 60 + endM;
+      
+      if (endMinutes < startMinutes) {
+        endMinutes += 24 * 60;
+      }
+      
+      const diffMinutes = endMinutes - startMinutes;
+      return Math.round((diffMinutes / 60) * 100) / 100;
+    } catch (e) {
+      return 0;
+    }
+  };
+
+  const addGuardia = useCallback(
+    async (g: Omit<Guardia, "id" | "createdAt" | "updatedAt" | "hours">) => {
+      const id = `gd-${genId()}`;
+      const createdAt = now();
+      const hours = calculateHours(g.date, g.startTime, g.endTime);
+      const newGuardia: Guardia = { ...g, id, hours, createdAt, updatedAt: createdAt };
+
+      setGuardias((prev) => {
+        const next = [...prev, newGuardia];
+        localStorage.setItem("techcontrol_guardias", JSON.stringify(next));
+        return next;
+      });
+
+      const { error } = await supabase.from("guardias").insert(guardiaToDb(newGuardia));
+
+      if (error) {
+        console.warn("Error inserting guardia into Supabase:", error);
+        toast.info("Guardia guardada localmente");
+      } else {
+        toast.success("Guardia registrada con éxito");
+      }
+    },
+    [fetchData]
+  );
+
+  const updateGuardia = useCallback(
+    async (id: string, data: Partial<Guardia>) => {
+      setGuardias((prev) => {
+        const next = prev.map((g) => {
+          if (g.id !== id) return g;
+          const merged = { ...g, ...data, updatedAt: now() };
+          if (data.startTime || data.endTime || data.date) {
+            merged.hours = calculateHours(merged.date, merged.startTime, merged.endTime);
+          }
+          return merged;
+        });
+        localStorage.setItem("techcontrol_guardias", JSON.stringify(next));
+        return next;
+      });
+
+      const current = guardias.find((g) => g.id === id);
+      if (!current) return;
+
+      const merged = { ...current, ...data };
+      const hours = calculateHours(merged.date, merged.startTime, merged.endTime);
+
+      const updateData: any = {
+        updated_at: now(),
+        hours
+      };
+      if (data.date) updateData.date = data.date;
+      if (data.startTime) updateData.start_time = data.startTime;
+      if (data.endTime) updateData.end_time = data.endTime;
+      if (data.userId) updateData.user_id = data.userId;
+      if (data.userName) updateData.user_name = data.userName;
+      if (data.type) updateData.type = data.type;
+      if (data.description) updateData.description = data.description;
+      if (data.branchesAffected !== undefined) updateData.branches_affected = data.branchesAffected;
+      if (data.status) updateData.status = data.status;
+      if (data.notes !== undefined) updateData.notes = data.notes;
+
+      const { error } = await supabase.from("guardias").update(updateData).eq("id", id);
+      if (error) {
+        console.warn("Error updating guardia in Supabase:", error);
+      } else {
+        toast.success("Guardia actualizada");
+      }
+    },
+    [guardias, fetchData]
+  );
+
+  const deleteGuardia = useCallback(
+    async (id: string) => {
+      setGuardias((prev) => {
+        const next = prev.filter((g) => g.id !== id);
+        localStorage.setItem("techcontrol_guardias", JSON.stringify(next));
+        return next;
+      });
+
+      const { error } = await supabase.from("guardias").delete().eq("id", id);
+      if (error) {
+        console.warn("Error deleting guardia from Supabase:", error);
+      } else {
+        toast.success("Guardia eliminada");
+      }
+    },
+    [fetchData]
+  );
+
   return (
     <AppContext.Provider
       value={{
@@ -926,6 +1268,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addDataliveTV,
         updateDataliveTV,
         deleteDataliveTV,
+        guardias,
+        addGuardia,
+        updateGuardia,
+        deleteGuardia,
         currentPage,
         setCurrentPage,
         selectedId,
