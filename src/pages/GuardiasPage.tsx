@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { 
   Plus, Search, Edit, Save, Trash2, Clock, Check, X, 
-  FileSpreadsheet, Printer, Filter, Calendar, MapPin, 
+  FileDown, Printer, Filter, Calendar, MapPin, 
   FileText, CheckCircle2, AlertCircle, User as UserIcon, Award, 
   ChevronLeft, ChevronRight, Building2
 } from "lucide-react";
@@ -28,9 +28,9 @@ import { toast } from "sonner";
 import { SUCURSALES } from "@/data/mock";
 import { GUARDIA_TYPES, getGuardiaTypeShortLabel } from "@/data/guardiaTypes";
 import { formatDate, formatToday } from "@/lib/utils-app";
-import type { Guardia, User } from "@/types";
+import type { Guardia, User as AppUser } from "@/types";
 
-function formatCollaboratorRole(user: User) {
+function formatCollaboratorRole(user: AppUser) {
   if (user.role?.trim()) return user.role.trim();
   if (user.location.toLowerCase().includes("sistemas")) return "Equipo de Sistemas IT";
   return user.location;
@@ -236,6 +236,30 @@ export function GuardiasPage() {
     const devBreakdown = Object.values(devMap).sort((a, b) => b.hours - a.hours);
     const mostActive = devBreakdown.length > 0 ? devBreakdown[0].name : "Ninguno";
 
+    const monthGuardias = guardias.filter((g) => {
+      const d = new Date(g.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+    const monthPending = monthGuardias.filter((g) => g.status === "pending_approval");
+    const monthPendingHours = monthPending.reduce((acc, g) => acc + g.hours, 0);
+
+    const pendingByUserMap: Record<string, { name: string; count: number; hours: number }> = {};
+    pendingGuardiasList.forEach((g) => {
+      if (!pendingByUserMap[g.userId]) {
+        pendingByUserMap[g.userId] = { name: g.userName, count: 0, hours: 0 };
+      }
+      pendingByUserMap[g.userId].count += 1;
+      pendingByUserMap[g.userId].hours += g.hours;
+    });
+    const pendingByUser = Object.values(pendingByUserMap).sort((a, b) =>
+      a.name.localeCompare(b.name, "es", { sensitivity: "base" })
+    );
+
+    const approvedHoursAll = guardias
+      .filter((g) => g.status === "approved")
+      .reduce((acc, g) => acc + g.hours, 0);
+    const totalHoursAll = guardias.reduce((acc, g) => acc + g.hours, 0);
+
     return {
       total,
       totalHours,
@@ -243,13 +267,18 @@ export function GuardiasPage() {
       pendingHours,
       hoursThisMonth,
       approvedHoursThisMonth,
+      monthPendingCount: monthPending.length,
+      monthPendingHours,
+      pendingByUser,
+      approvedHoursAll,
+      totalHoursAll,
       lastGuardia,
       busiestHour,
       maxHourCount,
       busiestDate,
       busiestDateStats,
       mostActive,
-      devBreakdown
+      devBreakdown,
     };
   }, [filteredGuardias, guardias]);
 
@@ -324,31 +353,19 @@ export function GuardiasPage() {
     }
   };
 
-  // CSV Export
-  const exportToCSV = () => {
-    const headers = ["Fecha", "Colaborador", "Horario", "Horas", "Tipo", "Descripcion", "Sucursales Afectadas", "Estado", "Notas"];
-    const rows = filteredGuardias.map(g => [
-      formatDate(g.date),
-      g.userName,
-      `${g.startTime} - ${g.endTime}`,
-      g.hours,
-      g.type.toUpperCase(),
-      g.description,
-      g.branchesAffected || "N/A",
-      g.status === "approved" ? "Aprobado" : "Pendiente",
-      g.notes || ""
-    ]);
-
-    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
-      + [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Reporte_Guardias_IT_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const exportToPdf = async () => {
+    if (filteredGuardias.length === 0) {
+      toast.error("No hay guardias para exportar con los filtros actuales");
+      return;
+    }
+    try {
+      const { exportGuardiasPdf } = await import("@/lib/exportGuardiasPdf");
+      const ok = exportGuardiasPdf(filteredGuardias);
+      if (ok) toast.success("PDF descargado correctamente");
+    } catch (err) {
+      console.error("Error al exportar PDF:", err);
+      toast.error("No se pudo generar el PDF");
+    }
   };
 
   // Browser Print
@@ -456,15 +473,15 @@ export function GuardiasPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportToCSV}>
-            <FileSpreadsheet className="size-4 mr-1.5" />
-            Exportar CSV
+          <Button variant="outline" size="sm" onClick={exportToPdf}>
+            <FileDown className="size-4 mr-1.5" />
+            Exportar PDF
           </Button>
           <Button variant="outline" size="sm" onClick={handlePrint}>
             <Printer className="size-4 mr-1.5" />
             Imprimir Reporte
           </Button>
-          <Button onClick={openCreate}>
+          <Button onClick={() => openCreate()}>
             <Plus className="size-4 mr-1.5" />
             Registrar Guardia
           </Button>
@@ -656,7 +673,7 @@ export function GuardiasPage() {
                   title="No hay guardias registradas"
                   description="Registra la primera guardia de sistemas utilizando el botón superior."
                   action={
-                    <Button onClick={openCreate} size="sm" className="print:hidden">
+                    <Button onClick={() => openCreate()} size="sm" className="print:hidden">
                       <Plus className="size-4 mr-1.5" /> Registrar Guardia
                     </Button>
                   }
@@ -944,13 +961,66 @@ export function GuardiasPage() {
 
               <Separator />
 
-              <div className="rounded-lg bg-amber-500/5 border border-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-400 space-y-1">
+              <div
+                className={`rounded-lg border p-3 text-xs space-y-2 ${
+                  stats.pending > 0
+                    ? "bg-amber-500/5 border-amber-500/20 text-amber-900 dark:text-amber-300"
+                    : "bg-emerald-500/5 border-emerald-500/20 text-emerald-900 dark:text-emerald-300"
+                }`}
+              >
                 <p className="font-bold flex items-center gap-1">
-                  <AlertCircle className="size-3.5 shrink-0" />
-                  Liquidación de Horas Extra
+                  {stats.pending > 0 ? (
+                    <AlertCircle className="size-3.5 shrink-0" />
+                  ) : (
+                    <CheckCircle2 className="size-3.5 shrink-0" />
+                  )}
+                  {stats.pending > 0 ? "Requiere tu revisión" : "Estado al día"}
+                </p>
+
+                {stats.pending > 0 ? (
+                  <>
+                    <p className="text-[11px] leading-relaxed opacity-95">
+                      Hay{" "}
+                      <span className="font-semibold">
+                        {stats.pending} {stats.pending === 1 ? "guardia" : "guardias"}
+                      </span>{" "}
+                      ({stats.pendingHours.toFixed(1)} hs) sin aprobar. Revisá el detalle en la lista
+                      y confirmá con <span className="font-semibold">Aprobar</span> antes de liquidar.
+                    </p>
+                    <ul className="text-[11px] leading-relaxed opacity-95 space-y-0.5 pl-3 list-disc">
+                      {stats.pendingByUser.map((u) => (
+                        <li key={u.name}>
+                          {u.name}: {u.count} {u.count === 1 ? "pendiente" : "pendientes"} (
+                          {u.hours.toFixed(1)} hs)
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <p className="text-[11px] leading-relaxed opacity-95">
+                    No hay guardias pendientes. Podés exportar el PDF como respaldo para RRHH o
+                    liquidación.
+                  </p>
+                )}
+
+                <Separator className="opacity-40" />
+
+                <p className="text-[11px] leading-relaxed opacity-90">
+                  <span className="font-semibold">Mes en curso:</span>{" "}
+                  {stats.approvedHoursThisMonth.toFixed(1)} hs aprobadas de{" "}
+                  {stats.hoursThisMonth.toFixed(1)} hs registradas
+                  {stats.monthPendingCount > 0 && (
+                    <>
+                      {" "}
+                      · {stats.monthPendingHours.toFixed(1)} hs aún pendientes
+                    </>
+                  )}
+                  .
                 </p>
                 <p className="text-[11px] leading-relaxed opacity-90">
-                  Las guardias realizadas en fines de semana o feriados se calculan al 100%. Las de días de semana nocturnas se calculan al 50%. Sujeto a aprobación final de gerencia.
+                  <span className="font-semibold">Histórico del equipo:</span>{" "}
+                  {stats.approvedHoursAll.toFixed(1)} hs aprobadas de{" "}
+                  {stats.totalHoursAll.toFixed(1)} hs totales en el sistema.
                 </p>
               </div>
             </CardContent>
