@@ -153,3 +153,23 @@
     cursor: pointer;
   }
 }
+
+@media print {
+  html,
+  body,
+  #root {
+    overflow: hidden !important;
+    height: auto !important;
+  }
+
+  * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+}
