@@ -143,71 +143,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [printers, setPrinters] = useState<Printer[]>(initialPrinters);
   const [notebooks, setNotebooks] = useState<Notebook[]>(initialNotebooks);
   const [monitors, setMonitors] = useState<Monitor[]>(initialMonitors);
-  const [users, setUsers] = useState<User[]>(() => [
-    {
-      id: "usr-031",
-      username: "facundo.carrizo",
-      fullName: "Facundo Carrizo",
-      email: "facundocarrizo@migusto.com.ar",
-      location: "Sistemas",
-      role: "Analista de sistemas / Programador",
-      avatarUrl: "Colaboradores/Facu.jpg",
-      active: true,
-      createdAt: "2026-01-01T08:00:00Z",
-      updatedAt: "2026-01-01T08:00:00Z"
-    },
-    {
-      id: "usr-076",
-      username: "ramiro.lacci",
-      fullName: "Ramiro Lacci",
-      email: "ramirolacci@migusto.com.ar",
-      location: "Sistemas",
-      role: "Analista de sistemas / Programador",
-      avatarUrl: "Colaboradores/Rami.jpg",
-      active: true,
-      createdAt: "2026-01-01T08:00:00Z",
-      updatedAt: "2026-01-01T08:00:00Z"
-    },
-    {
-      id: "usr-039",
-      username: "gustavo.gonzalez",
-      fullName: "Gustavo Gonzalez",
-      email: "gustavogonzalez@migusto.com.ar",
-      location: "Sistemas",
-      role: "Jefe de sistemas / Lider tecnico",
-      avatarUrl: "Colaboradores/Gus.jpg",
-      active: true,
-      createdAt: "2026-01-01T08:00:00Z",
-      updatedAt: "2026-01-01T08:00:00Z"
-    }
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
   const [dataliveTVs, setDataliveTVs] = useState<DataliveTV[]>([]);
-  const [guardias, setGuardias] = useState<Guardia[]>(() => {
-    const local = localStorage.getItem("techcontrol_guardias");
-    if (local) {
-      try {
-        const parsed = JSON.parse(local) as Guardia[];
-        // Si no existen guardias de Facundo (usr-031), re-sincronizamos con las nuevas guardias iniciales
-        const hasFacundo = parsed.some(g => g.userId === "usr-031");
-        if (!hasFacundo) {
-          localStorage.setItem("techcontrol_guardias", JSON.stringify(initialGuardias));
-          return initialGuardias;
-        }
-        return parsed;
-      } catch (e) {
-        console.error("Error parsing local guardias", e);
-      }
-    }
-    return initialGuardias;
-  });
+  const [guardias, setGuardias] = useState<Guardia[]>([]);
   const [currentPage, setCurrentPage] = useState("guardias");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    let dbUsers: User[] = [];
     try {
       const [
         { data: items },
@@ -277,72 +224,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updatedAt: m.updated_at
       })));
 
+      const allowedUserNames = new Set(["Facundo Carrizo", "Ramiro Lacci", "Gustavo Gonzalez"]);
+      const fallbackUsers = initialUsers.filter((u) => allowedUserNames.has(u.fullName));
+
       if (usr) {
-        const allowedUsernames = ["facundo.carrizo", "ramiro.lacci", "gustavo.gonzalez"];
-        const filteredUsrs = usr
-          .filter(u => allowedUsernames.includes(u.username))
-          .map(u => {
-            let role = "Analista de sistemas / Programador";
-            if (u.username === "gustavo.gonzalez") {
-              role = "Jefe de sistemas / Lider tecnico";
-            }
+        dbUsers = usr
+          .filter((u) => Boolean(u?.id))
+          .map((u) => {
+            const username = typeof u.username === "string" && u.username.trim().length > 0
+              ? u.username
+              : (typeof u.full_name === "string" && u.full_name.trim().length > 0
+                ? u.full_name
+                : (typeof u.email === "string" && u.email.trim().length > 0
+                  ? u.email
+                  : "usuario"));
+
             return {
-              ...u,
-              fullName: u.full_name,
-              role,
-              createdAt: u.created_at,
-              updatedAt: u.updated_at
+              id: u.id,
+              username,
+              fullName: typeof u.full_name === "string" && u.full_name.trim().length > 0
+                ? u.full_name
+                : username,
+              email: u.email ?? null,
+              phone: u.phone ?? null,
+              location: u.location ?? "Sistemas",
+              active: u.active ?? true,
+              role: u.role ?? null,
+              avatarUrl: u.avatar_url ?? null,
+              createdAt: u.created_at ?? new Date().toISOString(),
+              updatedAt: u.updated_at ?? new Date().toISOString(),
             };
           });
 
-        const defaultTeam = [
-          {
-            id: "usr-031",
-            username: "facundo.carrizo",
-            fullName: "Facundo Carrizo",
-            email: "facundocarrizo@migusto.com.ar",
-            location: "Sistemas",
-            role: "Analista de sistemas / Programador",
-            avatarUrl: "Colaboradores/Facu.jpg",
-            active: true,
-            createdAt: "2026-01-01T08:00:00Z",
-            updatedAt: "2026-01-01T08:00:00Z"
-          },
-          {
-            id: "usr-076",
-            username: "ramiro.lacci",
-            fullName: "Ramiro Lacci",
-            email: "ramirolacci@migusto.com.ar",
-            location: "Sistemas",
-            role: "Analista de sistemas / Programador",
-            avatarUrl: "Colaboradores/Rami.jpg",
-            active: true,
-            createdAt: "2026-01-01T08:00:00Z",
-            updatedAt: "2026-01-01T08:00:00Z"
-          },
-          {
-            id: "usr-039",
-            username: "gustavo.gonzalez",
-            fullName: "Gustavo Gonzalez",
-            email: "gustavogonzalez@migusto.com.ar",
-            location: "Sistemas",
-            role: "Jefe de sistemas / Lider tecnico",
-            avatarUrl: "Colaboradores/Gus.jpg",
-            active: true,
-            createdAt: "2026-01-01T08:00:00Z",
-            updatedAt: "2026-01-01T08:00:00Z"
-          }
-        ];
-
-        const finalTeam = [...defaultTeam];
-        filteredUsrs.forEach(fu => {
-          const index = finalTeam.findIndex(x => x.username === fu.username);
-          if (index !== -1) {
-            finalTeam[index] = { ...finalTeam[index], ...fu };
-          }
-        });
-
-        setUsers(finalTeam);
+        const effectiveUsers = dbUsers.length > 0
+          ? dbUsers.filter((u) => allowedUserNames.has(u.fullName))
+          : fallbackUsers;
+        setUsers(effectiveUsers);
+      } else {
+        setUsers(fallbackUsers);
       }
 
       if (ords) setOrders(ords.map(o => ({
@@ -376,57 +295,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Fetch guardias separately to handle missing table gracefully
       try {
         const { data: gds, error: gdsError } = await supabase.from("guardias").select("*");
-        if (gds && !gdsError) {
-          let mappedGuardias = dedupeGuardias(gds.map((g) => guardiaFromDb(g as Record<string, unknown>)));
+        const allowedUserNames = new Set(["Facundo Carrizo", "Ramiro Lacci", "Gustavo Gonzalez"]);
+        const fallbackGuardias = initialGuardias.filter((g) => allowedUserNames.has(g.userName));
+        const validUserIds = new Set((dbUsers.length > 0 ? dbUsers : fallbackUsers).map((u) => u.id));
 
-          const readLocalGuardias = (): Guardia[] => {
-            const localStr = localStorage.getItem("techcontrol_guardias");
-            if (!localStr) return dedupeGuardias(initialGuardias);
-            try {
-              const parsed = JSON.parse(localStr) as Guardia[];
-              return dedupeGuardias(parsed.length > 0 ? parsed : initialGuardias);
-            } catch {
-              return dedupeGuardias(initialGuardias);
-            }
-          };
+        const sourceGuardias = gds && !gdsError
+          ? gds.map((g) => guardiaFromDb(g as Record<string, unknown>)).filter((g) => validUserIds.has(g.userId))
+          : fallbackGuardias;
 
-          // Si Supabase está vacío, subir datos locales o iniciales (no borrar el estado local)
-          if (mappedGuardias.length === 0) {
-            const source = readLocalGuardias();
-            const { error: seedError } = await supabase
-              .from("guardias")
-              .upsert(source.map(guardiaToDb), { onConflict: "id" });
-            if (seedError) {
-              console.warn("Error seeding guardias to Supabase:", seedError);
-              setGuardias(source);
-              localStorage.setItem("techcontrol_guardias", JSON.stringify(source));
-            } else {
-              mappedGuardias = source;
-              setGuardias(source);
-              localStorage.setItem("techcontrol_guardias", JSON.stringify(source));
-            }
-          } else {
-            // Subir guardias locales que aún no están en Supabase
-            const localGds = readLocalGuardias();
-            const missingLocals = localGds.filter(
-              (lg) => !mappedGuardias.some((mg) => mg.id === lg.id)
-            );
+        const mappedGuardias = dedupeGuardias(sourceGuardias.filter((g) => validUserIds.has(g.userId)));
 
-            if (missingLocals.length > 0) {
-              const { error: syncError } = await supabase
-                .from("guardias")
-                .upsert(missingLocals.map(guardiaToDb), { onConflict: "id" });
-              if (syncError) {
-                console.error("Error syncing local guardias to Supabase:", syncError);
-              } else {
-                mappedGuardias = dedupeGuardias([...mappedGuardias, ...missingLocals]);
-              }
-            }
+        setGuardias(mappedGuardias);
+        localStorage.setItem("techcontrol_guardias", JSON.stringify(mappedGuardias));
 
-            setGuardias(mappedGuardias);
-            localStorage.setItem("techcontrol_guardias", JSON.stringify(mappedGuardias));
-          }
-        } else if (gdsError) {
+        if (gdsError) {
           console.warn("Supabase guardias query returned error (table might not exist yet):", gdsError);
         }
       } catch (err) {
@@ -590,11 +472,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         created_at: tv.createdAt,
         updated_at: tv.updatedAt
       })));
-
-      // 9. Guardias
-      await supabase
-        .from("guardias")
-        .upsert(dedupeGuardias(initialGuardias).map(guardiaToDb), { onConflict: "id" });
 
       toast.success("Migración completada con éxito", { id: t });
       fetchData();

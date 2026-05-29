@@ -2802,6 +2802,7 @@ export const users: User[] = [
     "fullName": "Facundo Carrizo",
     "email": "facundocarrizo@migusto.com.ar",
     "location": "Sistemas",
+    "avatarUrl": "Colaboradores/Facu.jpg",
     "active": true,
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
@@ -2862,6 +2863,7 @@ export const users: User[] = [
     "fullName": "Gustavo Gonzalez",
     "email": null,
     "location": "Sistemas",
+    "avatarUrl": "Colaboradores/Gus.jpg",
     "active": true,
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"
@@ -3072,6 +3074,7 @@ export const users: User[] = [
     "fullName": "Ramiro Lacci",
     "email": null,
     "location": "Sistemas",
+    "avatarUrl": "Colaboradores/Rami.jpg",
     "active": true,
     "createdAt": "2026-01-01T08:00:00Z",
     "updatedAt": "2026-01-01T08:00:00Z"

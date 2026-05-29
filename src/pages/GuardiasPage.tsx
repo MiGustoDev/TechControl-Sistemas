@@ -625,44 +625,47 @@ export function GuardiasPage() {
                 {/* Status filter */}
                 <div className="flex items-center gap-1.5">
                   <Filter className="size-3.5 text-muted-foreground shrink-0" />
-                  <select
-                    className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="all">Todos los Estados</option>
-                    <option value="approved">Aprobado</option>
-                    <option value="pending_approval">Pendiente</option>
-                  </select>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-9 w-[160px] text-xs shadow-xs">
+                      <SelectValue placeholder="Todos los Estados" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                      <SelectItem value="all">Todos los Estados</SelectItem>
+                      <SelectItem value="approved">Aprobado</SelectItem>
+                      <SelectItem value="pending_approval">Pendiente</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Type filter */}
-                <select
-                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring"
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                >
-                  <option value="all">Todos los Tipos</option>
-                  {GUARDIA_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.shortLabel}
-                    </option>
-                  ))}
-                </select>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="h-9 w-[150px] text-xs shadow-xs">
+                    <SelectValue placeholder="Todos los Tipos" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="max-h-80 duration-150 ease-out">
+                    <SelectItem value="all">Todos los Tipos</SelectItem>
+                    {GUARDIA_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.shortLabel}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
                 {/* Developer filter */}
-                <select
-                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring max-w-[150px]"
-                  value={userFilter}
-                  onChange={(e) => setUserFilter(e.target.value)}
-                >
-                  <option value="all">Todos los Colaboradores</option>
-                  {guardiaCollaborators.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.fullName}
-                    </option>
-                  ))}
-                </select>
+                <Select value={userFilter} onValueChange={setUserFilter}>
+                  <SelectTrigger className="h-9 w-[190px] text-xs shadow-xs">
+                    <SelectValue placeholder="Todos los Colaboradores" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                    <SelectItem value="all">Todos los Colaboradores</SelectItem>
+                    {guardiaCollaborators.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.fullName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <Separator className="print:hidden" />
