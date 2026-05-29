@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { 
   Plus, Search, Edit, Save, Trash2, Clock, Check, 
   FileDown, Printer, Filter, Calendar, 
@@ -69,16 +69,18 @@ function CollaboratorAvatar({
   );
 }
 
+
 export function GuardiasPage() {
   const { guardias, users, addGuardia, updateGuardia, deleteGuardia } = useApp();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [userFilter, setUserFilter] = useState("all");
-  
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGuardia, setEditingGuardia] = useState<Guardia | null>(null);
-  
+  const [showAllBranches, setShowAllBranches] = useState(false);
+
   // Calendar states
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [currentCalMonth, setCurrentCalMonth] = useState(new Date().getMonth());
@@ -100,7 +102,16 @@ export function GuardiasPage() {
   };
 
   const [form, setForm] = useState(defaultForm);
+  const descriptionRef = useRef<HTMLTextAreaElement | null>(null);
+  const notesRef = useRef<HTMLTextAreaElement | null>(null);
 
+
+  // ... (other code remains unchanged)
+
+
+
+
+  // Handle autocomplete branch selection
   // Colaboradores elegibles para guardias: equipo IT + quienes ya tienen registros
   const usersById = useMemo(() => {
     return new Map(users.map((u) => [u.id, u]));
@@ -119,17 +130,68 @@ export function GuardiasPage() {
   }, [users, guardias]);
 
   // Handle autocomplete branch selection
-  const handleAddBranch = (branch: string) => {
-    if (branch === "TODAS") {
-      setForm(prev => ({ ...prev, branchesAffected: "Todas las sucursales" }));
-      return;
-    }
-    const current = form.branchesAffected.trim();
-    if (!current) {
-      setForm(prev => ({ ...prev, branchesAffected: branch }));
-    } else if (!current.toLowerCase().includes(branch.toLowerCase())) {
-      setForm(prev => ({ ...prev, branchesAffected: `${current}, ${branch}` }));
-    }
+  const suggestedBranches = [
+    "TODAS",
+    "Balvanera",
+    "Barrancas de Belgrano",
+    "Bella Vista",
+    "Caballito",
+    "Campana",
+    "Cañitas",
+    "Del Viso",
+    "Devoto",
+    "Don Torcuato",
+    "Escobar",
+    "Floresta",
+    "Gral Pacheco",
+    "Hurlingham",
+    "Ituzaingo",
+    "Los Polvorines",
+    "Martinez",
+    "Maschwitz",
+    "Mataderos",
+    "Merlo",
+    "Moreno",
+    "Muñiz",
+    "Munro",
+    "Paternal",
+    "Pilar Centro",
+    "Pilar Derqui",
+    "Puerto Madero",
+    "San Fernando",
+    "San Martin",
+    "Tigre",
+    "Vicente Lopez",
+    "Villa Adelina",
+    "Villa Crespo",
+    "Villa Urquiza",
+  ];
+
+  const handleToggleBranch = (branch: string) => {
+    setForm((prev) => {
+      const allBranches = suggestedBranches.filter((item) => item !== "TODAS");
+      const current = prev.branchesAffected
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+      if (branch === "TODAS") {
+        const allSelected = allBranches.every((item) => current.includes(item));
+        return {
+          ...prev,
+          branchesAffected: allSelected ? "" : allBranches.join(", "),
+        };
+      }
+
+      const next = current.includes(branch)
+        ? current.filter((item) => item !== branch)
+        : [...current, branch];
+
+      return {
+        ...prev,
+        branchesAffected: next.join(", "),
+      };
+    });
   };
 
   // Filtered Guardias
@@ -284,13 +346,11 @@ export function GuardiasPage() {
 
   const openCreate = (prefilledDate?: string) => {
     setEditingGuardia(null);
-    // Auto-select first systems user if available
-    const initialUser =
-      guardiaCollaborators.length > 0 ? guardiaCollaborators[0] : null;
     setForm({
       ...defaultForm,
-      userId: initialUser?.id || "",
-      userName: initialUser?.fullName || "",
+      userId: "",
+      userName: "",
+      type: "" as any,
       date: prefilledDate || new Date().toISOString().split("T")[0]
     });
     setDialogOpen(true);
@@ -325,7 +385,7 @@ export function GuardiasPage() {
   };
 
   const handleSave = () => {
-    if (!form.userId || !form.date || !form.startTime || !form.endTime || !form.description) {
+    if (!form.userId || !form.date || !form.startTime || !form.endTime || !form.type || !form.description) {
       toast.error("Completá los campos obligatorios (*)");
       return;
     }
@@ -352,6 +412,17 @@ export function GuardiasPage() {
       toast.success(nextStatus === "approved" ? "Guardia aprobada correctamente" : "Guardia marcada como pendiente");
     }
   };
+
+  const autoResizeTextarea = (element: HTMLTextAreaElement | null) => {
+    if (!element) return;
+    element.style.height = "auto";
+    element.style.height = `${Math.max(element.scrollHeight, 72)}px`;
+  };
+
+  useEffect(() => {
+    autoResizeTextarea(descriptionRef.current);
+    autoResizeTextarea(notesRef.current);
+  }, [form.description, form.notes, dialogOpen]);
 
   const exportToPdf = async () => {
     if (filteredGuardias.length === 0) {
@@ -1033,23 +1104,23 @@ export function GuardiasPage() {
 
       {/* Register/Edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>
               {editingGuardia ? "Modificar Registro de Guardia" : "Registrar Nueva Guardia de Sistemas"}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {/* Colaborador */}
             <div className="grid gap-2">
-              <Label htmlFor="userId">Colaborador *</Label>
+              <Label htmlFor="userId">Colaborador <span className="text-red-500">*</span></Label>
               <Select
                 value={form.userId || undefined}
                 onValueChange={handleUserSelect}
               >
                 <SelectTrigger id="userId" className="h-auto min-h-9 py-2">
-                  <SelectValue placeholder="Seleccioná un colaborador del equipo IT..." />
+                  <SelectValue placeholder="Seleccionar colaborador" />
                 </SelectTrigger>
                 <SelectContent position="popper" className="max-h-72">
                   <SelectGroup>
@@ -1076,7 +1147,7 @@ export function GuardiasPage() {
             {/* Date and Times */}
             <div className="grid grid-cols-3 gap-3">
               <div className="grid gap-2 col-span-1">
-                <Label htmlFor="date">Fecha *</Label>
+                <Label htmlFor="date">Fecha <span className="text-red-500">*</span></Label>
                 <Input 
                   id="date" 
                   type="date" 
@@ -1085,7 +1156,7 @@ export function GuardiasPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="startTime">Hora Inicio *</Label>
+                <Label htmlFor="startTime">Hora Inicio <span className="text-red-500">*</span></Label>
                 <Input 
                   id="startTime" 
                   type="time" 
@@ -1094,7 +1165,7 @@ export function GuardiasPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="endTime">Hora Fin *</Label>
+                <Label htmlFor="endTime">Hora Fin <span className="text-red-500">*</span></Label>
                 <Input 
                   id="endTime" 
                   type="time" 
@@ -1106,7 +1177,7 @@ export function GuardiasPage() {
 
             {/* Tipo / motivo */}
             <div className="grid gap-2">
-              <Label htmlFor="type">Motivo / Tipo de Guardia *</Label>
+              <Label htmlFor="type">Motivo / Tipo de Guardia <span className="text-red-500">*</span></Label>
               <Select
                 value={form.type}
                 onValueChange={(value) =>
@@ -1114,7 +1185,7 @@ export function GuardiasPage() {
                 }
               >
                 <SelectTrigger id="type" className="h-auto min-h-9 py-2">
-                  <SelectValue placeholder="Seleccioná el motivo de la guardia..." />
+                  <SelectValue placeholder="Seleccionar tipo de guardia" />
                 </SelectTrigger>
                 <SelectContent position="popper" className="max-h-80">
                   {GUARDIA_TYPES.map((t) => (
@@ -1141,35 +1212,57 @@ export function GuardiasPage() {
                 <Label htmlFor="branchesAffected">Alcance / Sucursales afectadas</Label>
                 <span className="text-[10px] text-muted-foreground">Opcional</span>
               </div>
-              <Input 
-                id="branchesAffected" 
-                placeholder="Ej. Belgrano, San Miguel, Online" 
-                value={form.branchesAffected} 
-                onChange={(e) => setForm({ ...form, branchesAffected: e.target.value })} 
-              />
-              {/* Branch quick recommendation tags */}
-              <div className="flex flex-wrap gap-1 mt-1">
-                <span className="text-[10px] text-muted-foreground self-center mr-1">Sugeridos:</span>
-                {["TODAS", "San Miguel", "Palermo", "Belgrano", "Florida", "Jose C Paz", "Ballester"].map(br => (
-                  <button
-                    key={br}
-                    type="button"
-                    className="text-[10px] border rounded-md px-1.5 py-0.5 bg-muted/40 hover:bg-muted-foreground/10 transition-colors"
-                    onClick={() => handleAddBranch(br)}
-                  >
-                    {br}
-                  </button>
-                ))}
+              <div className="mt-1">
+                {/* Tag row container with dynamic height for smooth single-row collapse/expand */}
+                <div
+                  className={`flex flex-wrap gap-1.5 overflow-hidden transition-all duration-300 ease-out ${
+                    showAllBranches ? "max-h-[18rem] overflow-visible" : "max-h-[2.8rem]"
+                  }`}
+                >
+                  {suggestedBranches.map((br) => {
+                    const selected = br === "TODAS"
+                      ? suggestedBranches.filter((item) => item !== "TODAS").every((item) =>
+                          form.branchesAffected.split(",").map((entry) => entry.trim()).includes(item)
+                        )
+                      : form.branchesAffected
+                          .split(",")
+                          .map((item) => item.trim())
+                          .includes(br);
+
+                    return (
+                      <button
+                        key={br}
+                        type="button"
+                        className={`text-[10px] border rounded-md px-2 py-1 transition-colors ${
+                          selected
+                            ? "bg-white text-black border-primary/40 shadow-sm dark:text-black"
+                            : "bg-muted/40 text-foreground hover:bg-muted-foreground/10"
+                        }`}
+                        onClick={() => handleToggleBranch(br)}
+                      >
+                        {br}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  className="mt-1 text-[11px] font-medium text-primary hover:underline"
+                  onClick={() => setShowAllBranches((prev) => !prev)}
+                >
+                  {showAllBranches ? "Mostrar menos" : "Mostrar más"}
+                </button>
               </div>
             </div>
 
             {/* Description */}
             <div className="grid gap-2">
-              <Label htmlFor="description">Descripción detallada del Trabajo *</Label>
+              <Label htmlFor="description">Descripción detallada del Trabajo <span className="text-red-500">*</span></Label>
               <textarea
+                ref={descriptionRef}
                 id="description"
                 placeholder="Indicar qué se realizó (ej: Reestablecimiento de base de datos tras corte de luz o monitoreo de carga en server durante promo)"
-                className="flex min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+                className="flex min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring resize-none overflow-hidden"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
@@ -1179,9 +1272,10 @@ export function GuardiasPage() {
             <div className="grid gap-2">
               <Label htmlFor="notes">Notas técnicas / Observaciones</Label>
               <textarea
+                ref={notesRef}
                 id="notes"
                 placeholder="Ej: Se coordinó con Fibertel, IP wan cambió a..."
-                className="flex min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+                className="flex min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring resize-none overflow-hidden"
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
               />
@@ -1203,12 +1297,12 @@ export function GuardiasPage() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+          <DialogFooter className="flex-row-reverse justify-end gap-2">
             <Button onClick={handleSave}>
               <Save className="size-4 mr-1.5" />
               Guardar Registro
             </Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
