@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { AppProvider, useApp } from "@/context/AppContext";

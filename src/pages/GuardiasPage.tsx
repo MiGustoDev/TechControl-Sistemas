@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { 
-  Plus, Search, Edit, Save, Trash2, Clock, Check, X, 
-  FileDown, Printer, Filter, Calendar, MapPin, 
+  Plus, Search, Edit, Save, Trash2, Clock, Check, 
+  FileDown, Printer, Filter, Calendar, 
   FileText, CheckCircle2, AlertCircle, User as UserIcon, Award, 
   ChevronLeft, ChevronRight, Building2
 } from "lucide-react";
@@ -25,7 +25,7 @@ import {
 import { useApp } from "@/context/AppContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { toast } from "sonner";
-import { SUCURSALES } from "@/data/mock";
+
 import { GUARDIA_TYPES, getGuardiaTypeShortLabel } from "@/data/guardiaTypes";
 import { formatDate, formatToday } from "@/lib/utils-app";
 import type { Guardia, User as AppUser } from "@/types";

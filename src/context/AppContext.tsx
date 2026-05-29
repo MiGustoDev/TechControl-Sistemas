@@ -1124,7 +1124,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [fetchData]);
 
-  const calculateHours = (date: string, startTime: string, endTime: string): number => {
+  const calculateHours = (startTime: string, endTime: string): number => {
     if (!startTime || !endTime) return 0;
     try {
       const [startH, startM] = startTime.split(":").map(Number);
@@ -1148,7 +1148,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async (g: Omit<Guardia, "id" | "createdAt" | "updatedAt" | "hours">) => {
       const id = `gd-${genId()}`;
       const createdAt = now();
-      const hours = calculateHours(g.date, g.startTime, g.endTime);
+      const hours = calculateHours(g.startTime, g.endTime);
       const newGuardia: Guardia = { ...g, id, hours, createdAt, updatedAt: createdAt };
 
       setGuardias((prev) => {
@@ -1176,7 +1176,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (g.id !== id) return g;
           const merged = { ...g, ...data, updatedAt: now() };
           if (data.startTime || data.endTime || data.date) {
-            merged.hours = calculateHours(merged.date, merged.startTime, merged.endTime);
+            merged.hours = calculateHours(merged.startTime, merged.endTime);
           }
           return merged;
         });
@@ -1188,7 +1188,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!current) return;
 
       const merged = { ...current, ...data };
-      const hours = calculateHours(merged.date, merged.startTime, merged.endTime);
+      const hours = calculateHours(merged.startTime, merged.endTime);
 
       const updateData: any = {
         updated_at: now(),

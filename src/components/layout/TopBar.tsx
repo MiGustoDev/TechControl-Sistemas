@@ -1,7 +1,6 @@
-import { Search, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/context/AppContext";
 import { useTheme } from "@/components/theme-provider";

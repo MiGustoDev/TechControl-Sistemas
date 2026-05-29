@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Plus, Search, Mail, MapPin, Edit, Save, Trash2, Laptop, Monitor, Hash, UserCircle, Clock, Award } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, Search, MapPin, Edit, Save, Trash2, Laptop, Monitor, UserCircle, Clock, Award } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useApp } from "@/context/AppContext";
@@ -179,7 +179,7 @@ export function PersonalPage() {
                       <h3 className="text-base font-bold leading-tight text-foreground flex items-center gap-1.5">
                         {u.fullName}
                         {isBoss && (
-                          <Award className="size-4 text-amber-500 fill-amber-500/20 shrink-0" title="Líder de Sistemas" />
+                          <Award className="size-4 text-amber-500 fill-amber-500/20 shrink-0" aria-label="Líder de Sistemas" />
                         )}
                       </h3>
                       <p className="text-xs font-semibold text-primary">{u.role || "Integrante del Equipo"}</p>
