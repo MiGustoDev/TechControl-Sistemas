@@ -5,7 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { useApp } from "@/context/AppContext";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -17,6 +27,7 @@ export function PersonalPage() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserType | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   
   const defaultForm = {
     username: "",
@@ -75,9 +86,14 @@ export function PersonalPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("¿Estás seguro de eliminar este registro?")) {
-      deleteUser(id);
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmId) {
+      deleteUser(deleteConfirmId);
       toast.success("Registro eliminado");
+      setDeleteConfirmId(null);
     }
   };
 
@@ -102,7 +118,7 @@ export function PersonalPage() {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="relative flex-1 min-w-48">
+        <div className="relative w-full max-w-md">
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por nombre, rol, usuario..."
@@ -169,7 +185,13 @@ export function PersonalPage() {
                         </div>
                       </div>
                       
-                      <Badge variant={u.active ? "default" : "secondary"} className="text-[10px] uppercase tracking-wider font-semibold">
+                      <Badge 
+                        variant={u.active ? "default" : "secondary"} 
+                        className={u.active 
+                          ? "bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30 text-[10px] uppercase tracking-wider font-semibold" 
+                          : "text-[10px] uppercase tracking-wider font-semibold"
+                        }
+                      >
                         {u.active ? "Activo" : "Inactivo"}
                       </Badge>
                     </div>
@@ -291,22 +313,26 @@ export function PersonalPage() {
         </div>
       )}
 
+      {/* Register / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editingUser ? "Editar Integrante de Sistemas" : "Registrar Integrante de Sistemas"}</DialogTitle>
+            <DialogDescription className="sr-only">
+              Formulario para {editingUser ? "editar los datos de un integrante" : "registrar un nuevo integrante"} del equipo de Sistemas IT.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="fullName">Nombre Completo *</Label>
+              <Label htmlFor="fullName">Nombre Completo <span className="text-red-500">*</span></Label>
               <Input id="fullName" placeholder="Ej. Facundo Carrizo" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="role">Rol de Sistemas *</Label>
+              <Label htmlFor="role">Rol de Sistemas <span className="text-red-500">*</span></Label>
               <Input id="role" placeholder="Ej. Analista de sistemas / Programador" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="username">Usuario / Fichaje *</Label>
+              <Label htmlFor="username">Usuario / Fichaje <span className="text-red-500">*</span></Label>
               <Input id="username" placeholder="Ej. facundo.carrizo" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
             </div>
             <div className="grid gap-2">
@@ -328,12 +354,40 @@ export function PersonalPage() {
               <Label htmlFor="active">Integrante activo</Label>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-row-reverse justify-end gap-2">
+            <Button onClick={handleSave}><Save className="size-4 mr-1.5" />Guardar Cambios</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}><Save className="size-4" />Guardar Cambios</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation AlertDialog */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+        <AlertDialogContent size="sm" className="border-destructive/20">
+          <AlertDialogHeader>
+            <div className="mx-auto mb-1 flex size-14 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <Trash2 className="size-6" />
+            </div>
+            <AlertDialogTitle className="text-center text-base font-bold">
+              Eliminar integrante
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-sm">
+              Esta acción no se puede deshacer. El registro será eliminado permanentemente del sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:justify-center">
+            <AlertDialogAction
+              variant="destructive"
+              className="w-full sm:w-auto"
+              onClick={confirmDelete}
+            >
+              <Trash2 className="size-4 mr-1.5" />
+              Eliminar
+            </AlertDialogAction>
+            <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

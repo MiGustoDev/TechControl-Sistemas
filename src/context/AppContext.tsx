@@ -771,12 +771,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         phone: newUser.phone,
         location: newUser.location,
         active: newUser.active,
+        role: newUser.role,
+        avatar_url: newUser.avatarUrl,
         created_at: newUser.createdAt,
         updated_at: newUser.updatedAt
       });
 
       if (error) {
-        toast.error("Error al guardar usuario");
+        console.error("Error creating user in Supabase:", error);
+        toast.error(`Error al guardar usuario: ${error.message}`);
         fetchData();
       }
     },
@@ -788,12 +791,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       prev.map((u) => (u.id === id ? { ...u, ...data, updatedAt: now() } : u))
     );
 
-    const updateData: any = { ...data, updated_at: now() };
-    if (data.fullName) updateData.full_name = data.fullName;
+    // Build a clean snake_case payload — never spread camelCase keys into Supabase
+    const updateData: Record<string, unknown> = { updated_at: now() };
+    if (data.fullName    !== undefined) updateData.full_name  = data.fullName;
+    if (data.username    !== undefined) updateData.username   = data.username;
+    if (data.email       !== undefined) updateData.email      = data.email;
+    if (data.phone       !== undefined) updateData.phone      = data.phone;
+    if (data.location    !== undefined) updateData.location   = data.location;
+    if (data.active      !== undefined) updateData.active     = data.active;
+    if (data.role        !== undefined) updateData.role       = data.role;
+    if (data.avatarUrl   !== undefined) updateData.avatar_url = data.avatarUrl;
 
     const { error } = await supabase.from("users").update(updateData).eq("id", id);
     if (error) {
-      toast.error("Error al actualizar usuario");
+      console.error("Error updating user in Supabase:", error);
+      toast.error(`Error al actualizar usuario: ${error.message}`);
       fetchData();
     }
   }, [fetchData]);

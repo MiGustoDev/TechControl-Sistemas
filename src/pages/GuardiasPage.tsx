@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1125,6 +1125,9 @@ export function GuardiasPage() {
             <DialogTitle>
               {editingGuardia ? "Modificar Registro de Guardia" : "Registrar Nueva Guardia de Sistemas"}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Formulario para {editingGuardia ? "modificar" : "registrar"} una guardia del personal de Sistemas IT.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -1337,9 +1340,9 @@ export function GuardiasPage() {
                 <Calendar className="size-5 text-primary" />
                 Guardias del día: {selectedCalDate ? formatDate(selectedCalDate) : ""}
               </DialogTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                 Registros activos y control operativo para esta jornada.
-              </p>
+              </DialogDescription>
             </div>
             {selectedCalDate && (
               <Button 
@@ -1533,7 +1536,6 @@ export function GuardiasPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:justify-center">
-            <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               className="w-full sm:w-auto"
@@ -1542,6 +1544,7 @@ export function GuardiasPage() {
               <Trash2 className="size-4 mr-1.5" />
               Eliminar
             </AlertDialogAction>
+            <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
