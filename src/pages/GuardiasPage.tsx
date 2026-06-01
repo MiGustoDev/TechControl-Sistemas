@@ -12,6 +12,16 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -80,6 +90,7 @@ export function GuardiasPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGuardia, setEditingGuardia] = useState<Guardia | null>(null);
   const [showAllBranches, setShowAllBranches] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Calendar states
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
@@ -399,8 +410,13 @@ export function GuardiasPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("¿Estás seguro de eliminar este registro de guardia?")) {
-      deleteGuardia(id);
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmId) {
+      deleteGuardia(deleteConfirmId);
+      setDeleteConfirmId(null);
     }
   };
 
@@ -1501,6 +1517,34 @@ export function GuardiasPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation AlertDialog */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+        <AlertDialogContent size="sm" className="border-destructive/20">
+          <AlertDialogHeader>
+            <div className="mx-auto mb-1 flex size-14 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <Trash2 className="size-6" />
+            </div>
+            <AlertDialogTitle className="text-center text-base font-bold">
+              Eliminar registro de guardia
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-sm">
+              Esta acción no se puede deshacer. El registro será eliminado permanentemente del sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:justify-center">
+            <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              className="w-full sm:w-auto"
+              onClick={confirmDelete}
+            >
+              <Trash2 className="size-4 mr-1.5" />
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
