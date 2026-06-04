@@ -107,6 +107,7 @@ export function GuardiasPage() {
     userName: "",
     type: "soporte" as any,
     description: "",
+    otherReason: "",
     branchesAffected: "",
     status: "pending_approval" as "pending_approval" | "approved",
     notes: ""
@@ -115,6 +116,7 @@ export function GuardiasPage() {
   const [form, setForm] = useState(defaultForm);
   const descriptionRef = useRef<HTMLTextAreaElement | null>(null);
   const notesRef = useRef<HTMLTextAreaElement | null>(null);
+  const otherReasonRef = useRef<HTMLTextAreaElement | null>(null);
 
 
   // ... (other code remains unchanged)
@@ -146,6 +148,8 @@ export function GuardiasPage() {
     "Balvanera",
     "Barrancas de Belgrano",
     "Bella Vista",
+    "Ballester",
+    "Belgrano",
     "Caballito",
     "Campana",
     "Cañitas",
@@ -154,9 +158,11 @@ export function GuardiasPage() {
     "Don Torcuato",
     "Escobar",
     "Floresta",
+    "Florida",
     "Gral Pacheco",
     "Hurlingham",
     "Ituzaingo",
+    "Jose C. Paz",
     "Los Polvorines",
     "Martinez",
     "Maschwitz",
@@ -166,11 +172,13 @@ export function GuardiasPage() {
     "Muñiz",
     "Munro",
     "Paternal",
+    "Palermo",
     "Pilar Centro",
     "Pilar Derqui",
     "Puerto Madero",
     "San Fernando",
     "San Martin",
+    "San Miguel",
     "Tigre",
     "Vicente Lopez",
     "Villa Adelina",
@@ -364,6 +372,7 @@ export function GuardiasPage() {
       type: "" as any,
       date: prefilledDate || new Date().toISOString().split("T")[0]
     });
+    setShowAllBranches(false);
     setDialogOpen(true);
   };
 
@@ -377,10 +386,12 @@ export function GuardiasPage() {
       userName: g.userName,
       type: g.type,
       description: g.description,
+      otherReason: g.otherReason || "",
       branchesAffected: g.branchesAffected || "",
       status: g.status,
       notes: g.notes || ""
     });
+    setShowAllBranches(false);
     setDialogOpen(true);
   };
 
@@ -398,6 +409,11 @@ export function GuardiasPage() {
   const handleSave = () => {
     if (!form.userId || !form.date || !form.startTime || !form.endTime || !form.type || !form.description) {
       toast.error("Completá los campos obligatorios (*)");
+      return;
+    }
+
+    if (form.type === "otro" && !form.otherReason?.trim()) {
+      toast.error("Especificá el motivo cuando el tipo es Otro motivo");
       return;
     }
 
@@ -431,14 +447,16 @@ export function GuardiasPage() {
 
   const autoResizeTextarea = (element: HTMLTextAreaElement | null) => {
     if (!element) return;
+    const minHeight = Number(element.dataset.minHeight) || 72;
     element.style.height = "auto";
-    element.style.height = `${Math.max(element.scrollHeight, 72)}px`;
+    element.style.height = `${Math.max(element.scrollHeight, minHeight)}px`;
   };
 
   useEffect(() => {
     autoResizeTextarea(descriptionRef.current);
     autoResizeTextarea(notesRef.current);
-  }, [form.description, form.notes, dialogOpen]);
+    autoResizeTextarea(otherReasonRef.current);
+  }, [form.description, form.notes, form.otherReason, dialogOpen]);
 
   const exportToPdf = async () => {
     if (filteredGuardias.length === 0) {
@@ -1200,7 +1218,11 @@ export function GuardiasPage() {
               <Select
                 value={form.type}
                 onValueChange={(value) =>
-                  setForm({ ...form, type: value as Guardia["type"] })
+                  setForm((prev) => ({
+                    ...prev,
+                    type: value as Guardia["type"],
+                    otherReason: value === "otro" ? prev.otherReason : "",
+                  }))
                 }
               >
                 <SelectTrigger id="type" className="h-auto min-h-9 py-2">
@@ -1225,6 +1247,28 @@ export function GuardiasPage() {
               </Select>
             </div>
 
+            <div
+              className={`grid gap-2 overflow-hidden transition-all duration-300 ease-out ${
+                form.type === "otro" ? "max-h-[12rem] opacity-100" : "max-h-0 opacity-0"
+              }`}
+            >
+              {form.type === "otro" ? (
+                <>
+                  <Label htmlFor="otherReason">Especificar motivo <span className="text-red-500">*</span></Label>
+                  <textarea
+                    ref={otherReasonRef}
+                    id="otherReason"
+                    data-min-height="44"
+                    rows={1}
+                    placeholder="Contá el motivo particular de la guardia..."
+                    className="min-h-[2.75rem] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring resize-none overflow-hidden"
+                    value={form.otherReason}
+                    onChange={(e) => setForm({ ...form, otherReason: e.target.value })}
+                  />
+                </>
+              ) : null}
+            </div>
+
             {/* Branches affected */}
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
@@ -1235,7 +1279,7 @@ export function GuardiasPage() {
                 {/* Tag row container with dynamic height for smooth single-row collapse/expand */}
                 <div
                   className={`flex flex-wrap gap-1.5 overflow-hidden transition-all duration-300 ease-out ${
-                    showAllBranches ? "max-h-[18rem] overflow-visible" : "max-h-[2.8rem]"
+                    showAllBranches ? "max-h-[18rem] overflow-visible" : "max-h-[2.25rem]"
                   }`}
                 >
                   {suggestedBranches.map((br) => {
@@ -1280,8 +1324,9 @@ export function GuardiasPage() {
               <textarea
                 ref={descriptionRef}
                 id="description"
+                data-min-height="72"
                 placeholder="Indicar qué se realizó (ej: Reestablecimiento de base de datos tras corte de luz o monitoreo de carga en server durante promo)"
-                className="flex min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring resize-none overflow-hidden"
+                className="flex min-h-[4.5rem] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring resize-none overflow-hidden"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
@@ -1293,21 +1338,23 @@ export function GuardiasPage() {
               <textarea
                 ref={notesRef}
                 id="notes"
+                data-min-height="44"
                 placeholder="Ej: Se coordinó con Fibertel, IP wan cambió a..."
-                className="flex min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring resize-none overflow-hidden"
+                rows={1}
+                className="flex min-h-[2.75rem] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring resize-none overflow-hidden"
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
               />
             </div>
 
             {/* Status (Pending/Approved) */}
-            <div className="flex items-center gap-2 mt-2 bg-muted/30 p-2.5 rounded-lg border border-muted/50">
+            <div className="flex items-center gap-2 mt-2">
               <input 
                 type="checkbox" 
                 id="statusCheck" 
                 checked={form.status === "approved"} 
                 onChange={(e) => setForm({ ...form, status: e.target.checked ? "approved" : "pending_approval" })}
-                className="size-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                className="h-4 w-4 rounded border-none bg-transparent accent-primary focus:ring-primary cursor-pointer"
               />
               <div className="grid">
                 <Label htmlFor="statusCheck" className="cursor-pointer font-bold text-xs">Aprobar Guardia Inmediatamente</Label>
