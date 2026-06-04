@@ -210,6 +210,7 @@ export interface Guardia {
   userName: string;
   type: "soporte" | "promocion" | "actualizacion" | "incidencia" | "otro";
   description: string;
+  otherReason?: string;
   branchesAffected?: string;
   status: "pending_approval" | "approved";
   notes?: string;
