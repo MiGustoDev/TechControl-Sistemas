@@ -148,6 +148,8 @@ export function GuardiasPage() {
     "Balvanera",
     "Barrancas de Belgrano",
     "Bella Vista",
+    "Ballester",
+    "Belgrano",
     "Caballito",
     "Campana",
     "Cañitas",
@@ -156,9 +158,11 @@ export function GuardiasPage() {
     "Don Torcuato",
     "Escobar",
     "Floresta",
+    "Florida",
     "Gral Pacheco",
     "Hurlingham",
     "Ituzaingo",
+    "Jose C. Paz",
     "Los Polvorines",
     "Martinez",
     "Maschwitz",
@@ -168,11 +172,13 @@ export function GuardiasPage() {
     "Muñiz",
     "Munro",
     "Paternal",
+    "Palermo",
     "Pilar Centro",
     "Pilar Derqui",
     "Puerto Madero",
     "San Fernando",
     "San Martin",
+    "San Miguel",
     "Tigre",
     "Vicente Lopez",
     "Villa Adelina",
@@ -366,6 +372,7 @@ export function GuardiasPage() {
       type: "" as any,
       date: prefilledDate || new Date().toISOString().split("T")[0]
     });
+    setShowAllBranches(false);
     setDialogOpen(true);
   };
 
@@ -384,6 +391,7 @@ export function GuardiasPage() {
       status: g.status,
       notes: g.notes || ""
     });
+    setShowAllBranches(false);
     setDialogOpen(true);
   };
 
@@ -1271,7 +1279,7 @@ export function GuardiasPage() {
                 {/* Tag row container with dynamic height for smooth single-row collapse/expand */}
                 <div
                   className={`flex flex-wrap gap-1.5 overflow-hidden transition-all duration-300 ease-out ${
-                    showAllBranches ? "max-h-[18rem] overflow-visible" : "max-h-[2.8rem]"
+                    showAllBranches ? "max-h-[18rem] overflow-visible" : "max-h-[2.25rem]"
                   }`}
                 >
                   {suggestedBranches.map((br) => {
