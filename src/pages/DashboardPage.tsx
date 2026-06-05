@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useApp } from "@/context/AppContext";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { LevelBar } from "@/components/shared/LevelBar";
+import { ConsumableUnits } from "@/components/shared/ConsumableUnits";
+import { PrinterSectorBanner } from "@/components/shared/PrinterSectorBanner";
+import { getTonerMinUnits, getImageUnitMinUnits, isTonerLow, isImageUnitLow, getPrinterStatusBadges } from "@/lib/utils-app";
 import {
   formatDateTime,
   formatToday,
@@ -15,8 +17,6 @@ import {
   orderStatusColor,
   orderPriorityColor,
   orderPriorityLabel,
-  printerStatusColor,
-  printerStatusLabel,
 } from "@/lib/utils-app";
 
 interface MetricCardProps {
@@ -69,7 +69,7 @@ export function DashboardPage() {
   const assignedNotebooks = notebooks.filter((n) => n.status === "in-use" || n.status === "loaned").length;
   const inRepairAssets = notebooks.filter((n) => n.status === "in-repair").length;
   const criticalPrinters = printers.filter(
-    (p) => p.status === "toner-low" || p.status === "image-unit-low" || p.status === "maintenance"
+    (p) => p.status === "toner-low" || p.status === "image-unit-low" || p.status === "toner-out" || p.status === "image-unit-out" || p.status === "maintenance"
   ).length;
   const totalTVs = dataliveTVs.length;
   const activeTVBranches = new Set(dataliveTVs.map((tv) => tv.branch)).size;
@@ -320,23 +320,26 @@ export function DashboardPage() {
               ) : (
                 <div className="space-y-3">
                   {alertPrinters.map((p) => (
-                    <div key={p.id} className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-medium">{p.name}</p>
-                          <p className="text-xs text-muted-foreground">{p.sector} · {p.branch}</p>
+                    <div key={p.id} className="space-y-2 rounded-lg border p-2">
+                      <PrinterSectorBanner sector={p.sector} branch={p.branch} size="compact" />
+                      <div className="flex items-center justify-between gap-2 px-1">
+                        <p className="text-sm font-medium">{p.name}</p>
+                        <div className="flex flex-wrap gap-1 justify-end max-w-[60%] shrink-0">
+                          {getPrinterStatusBadges(p).map((badge, idx) => (
+                            <StatusBadge
+                              key={idx}
+                              label={badge.label}
+                              colorClass={badge.colorClass}
+                              className="shrink-0"
+                            />
+                          ))}
                         </div>
-                        <StatusBadge
-                          label={printerStatusLabel(p.status)}
-                          colorClass={printerStatusColor(p.status)}
-                          className="shrink-0"
-                        />
                       </div>
-                      {p.status === "toner-low" && (
-                        <LevelBar level={p.tonerLevel} label="Toner" />
+                      {isTonerLow(p) && (
+                        <ConsumableUnits count={p.tonerUnits} min={getTonerMinUnits(p)} label="Toner" />
                       )}
-                      {p.status === "image-unit-low" && (
-                        <LevelBar level={p.imageUnitLevel} label="Unidad de imagen" />
+                      {isImageUnitLow(p) && (
+                        <ConsumableUnits count={p.imageUnitUnits} min={getImageUnitMinUnits(p)} label="Unidad de imagen" />
                       )}
                     </div>
                   ))}

@@ -12,7 +12,7 @@ export type Category =
 
 export type ItemStatus = "active" | "low" | "out" | "discontinued";
 
-export type PrinterStatus = "ok" | "toner-low" | "image-unit-low" | "maintenance" | "offline";
+export type PrinterStatus = "ok" | "toner-low" | "image-unit-low" | "toner-out" | "image-unit-out" | "maintenance" | "offline";
 
 export type NotebookStatus = "in-use" | "in-repair" | "in-stock" | "loaned" | "decommissioned";
 
@@ -61,9 +61,11 @@ export interface Printer {
   sector: string;
   status: PrinterStatus;
   tonerModel: string;
-  tonerLevel: number; // 0-100
+  tonerUnits: number;
+  tonerMinUnits?: number;
   imageUnitModel: string;
-  imageUnitLevel: number; // 0-100
+  imageUnitUnits: number;
+  imageUnitMinUnits?: number;
   lastTonerChange?: string;
   lastImageUnitChange?: string;
   notes?: string;
@@ -208,7 +210,7 @@ export interface Guardia {
   hours: number;
   userId: string;
   userName: string;
-  type: "soporte" | "promocion" | "actualizacion" | "incidencia" | "otro";
+  type: "soporte" | "promocion" | "actualizacion" | "incidencia" | "cambio_precios" | "otro";
   description: string;
   otherReason?: string;
   branchesAffected?: string;

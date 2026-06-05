@@ -33,6 +33,12 @@ export const GUARDIA_TYPES: {
     description: "Intervención urgente ante falla grave de infraestructura",
   },
   {
+    value: "cambio_precios",
+    label: "Cambio de precios",
+    shortLabel: "Cambio Precios",
+    description: "Soporte y control en actualización masiva de precios",
+  },
+  {
     value: "otro",
     label: "Otro motivo",
     shortLabel: "Otro",

@@ -12,7 +12,9 @@ import {
 } from "@/components/ui/table";
 import { useApp } from "@/context/AppContext";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { LevelBar } from "@/components/shared/LevelBar";
+import { ConsumableUnits } from "@/components/shared/ConsumableUnits";
+import { PrinterSectorBanner } from "@/components/shared/PrinterSectorBanner";
+import { getTonerMinUnits, getImageUnitMinUnits, isTonerLow, isImageUnitLow, getPrinterStatusBadges } from "@/lib/utils-app";
 import {
   categoryLabel,
   itemStatusLabel,
@@ -20,7 +22,6 @@ import {
   orderStatusLabel,
   orderStatusColor,
   printerStatusLabel,
-  printerStatusColor,
   notebookStatusLabel,
   notebookStatusColor,
   movementTypeLabel,
@@ -86,9 +87,9 @@ export function ReportsPage() {
   };
 
   const exportPrinters = () => {
-    const headers = ["Nombre", "Marca", "Modelo", "Sucursal", "Sector", "Estado", "Toner %", "Unidad Imagen %"];
+    const headers = ["Nombre", "Marca", "Modelo", "Sucursal", "Sector", "Estado", "Toners (u)", "Unidad Imagen (u)"];
     const rows = printers.map((p) =>
-      `"${p.name}","${p.brand}","${p.model}","${p.branch}","${p.sector}","${printerStatusLabel(p.status)}",${p.tonerLevel},${p.imageUnitLevel}`
+      `"${p.name}","${p.brand}","${p.model}","${p.branch}","${p.sector}","${printerStatusLabel(p.status)}",${p.tonerUnits},${p.imageUnitUnits}`
     );
     downloadCSV("impresoras.csv", headers, rows);
   };
@@ -241,19 +242,21 @@ export function ReportsPage() {
             ) : (
               <div className="space-y-4">
                 {criticalPrinters.map((p) => (
-                  <div key={p.id} className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <p className="font-medium text-sm">{p.name}</p>
-                        <p className="text-xs text-muted-foreground">{p.sector} · {p.branch}</p>
+                  <div key={p.id} className="space-y-2 rounded-lg border p-2">
+                    <PrinterSectorBanner sector={p.sector} branch={p.branch} size="compact" />
+                    <div className="flex items-center justify-between gap-2 px-1">
+                      <p className="font-medium text-sm">{p.name}</p>
+                      <div className="flex flex-wrap gap-1 justify-end max-w-[60%]">
+                        {getPrinterStatusBadges(p).map((badge, idx) => (
+                          <StatusBadge key={idx} label={badge.label} colorClass={badge.colorClass} />
+                        ))}
                       </div>
-                      <StatusBadge label={printerStatusLabel(p.status)} colorClass={printerStatusColor(p.status)} />
                     </div>
-                    {(p.status === "toner-low" || p.tonerLevel < 20) && (
-                      <LevelBar level={p.tonerLevel} label="Toner" />
+                    {isTonerLow(p) && (
+                      <ConsumableUnits count={p.tonerUnits} min={getTonerMinUnits(p)} label="Toner" />
                     )}
-                    {(p.status === "image-unit-low" || p.imageUnitLevel < 20) && p.imageUnitModel !== "N/A" && (
-                      <LevelBar level={p.imageUnitLevel} label="Unidad de imagen" />
+                    {isImageUnitLow(p) && (
+                      <ConsumableUnits count={p.imageUnitUnits} min={getImageUnitMinUnits(p)} label="Unidad de imagen" />
                     )}
                   </div>
                 ))}
