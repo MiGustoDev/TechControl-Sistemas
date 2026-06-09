@@ -80,6 +80,46 @@ function CollaboratorAvatar({
 }
 
 
+function isLastThursdayOfMonth(dateStr: string): boolean {
+  const date = new Date(dateStr + "T12:00:00");
+  if (isNaN(date.getTime())) return false;
+  if (date.getDay() !== 4) return false;
+  const nextWeek = new Date(date.getTime() + 7 * 24 * 60 * 60 * 1000);
+  return nextWeek.getMonth() !== date.getMonth();
+}
+
+function toDisplayDate(isoDate: string): string {
+  if (!isoDate) return "";
+  const parts = isoDate.split("-");
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return isoDate;
+}
+
+function toIsoDate(displayDate: string): string {
+  if (!displayDate) return "";
+  const parts = displayDate.split("/");
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+  return displayDate;
+}
+
+function getWeeklyTurn(dateStr: string): "facundo" | "ramiro" {
+  const date = new Date(dateStr + "T12:00:00");
+  if (isNaN(date.getTime())) return "facundo";
+  const refMonday = new Date("2026-01-05T12:00:00");
+  const diffTime = date.getTime() - refMonday.getTime();
+  const diffDays = Math.floor(diffTime / (24 * 60 * 60 * 1000));
+  const weekIndex = Math.floor(diffDays / 7);
+  const normalizedWeek = ((weekIndex % 2) + 2) % 2;
+  return normalizedWeek === 1 ? "facundo" : "ramiro";
+}
+
+
+
+
 export function GuardiasPage() {
   const { guardias, users, addGuardia, updateGuardia, deleteGuardia } = useApp();
   const [search, setSearch] = useState("");
@@ -97,10 +137,70 @@ export function GuardiasPage() {
   const [currentCalMonth, setCurrentCalMonth] = useState(new Date().getMonth());
   const [currentCalYear, setCurrentCalYear] = useState(new Date().getFullYear());
   const [selectedCalDate, setSelectedCalDate] = useState<string | null>(null);
+  const [showGuardias, setShowGuardias] = useState(true);
+  const [showEventos, setShowEventos] = useState(true);
+  const [showTurnos, setShowTurnos] = useState(true);
+
+  // Special events states
+  interface SpecialEvent {
+    id: string;
+    date: string;
+    name: string;
+    type: "onfire" | "break" | "promo" | "custom";
+  }
+
+  const [manualEvents, setManualEvents] = useState<SpecialEvent[]>(() => {
+    const saved = localStorage.getItem("techcontrol_special_events");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [
+      {
+        id: "default-mg-break",
+        date: "2026-06-09",
+        name: "☕ MG Break",
+        type: "break"
+      }
+    ];
+  });
+
+  const [eventDialogOpen, setEventDialogOpen] = useState(false);
+  const [eventForm, setEventForm] = useState<{
+    date: string;
+    name: string;
+    type: "onfire" | "break" | "promo" | "custom";
+  }>({
+    date: "",
+    name: "",
+    type: "break"
+  });
+
+  useEffect(() => {
+    localStorage.setItem("techcontrol_special_events", JSON.stringify(manualEvents));
+  }, [manualEvents]);
+
+  const getSpecialEvents = (dateStr: string) => {
+    const list: { name: string; type: "onfire" | "break" | "promo" | "custom" }[] = [];
+
+    if (isLastThursdayOfMonth(dateStr)) {
+      list.push({ name: "🔥 Jueves OnFire", type: "onfire" });
+    }
+
+    const matches = manualEvents.filter(e => e.date === dateStr);
+    for (const m of matches) {
+      list.push({ name: m.name, type: m.type });
+    }
+
+    return list;
+  };
 
   // Default form state
   const defaultForm = {
-    date: new Date().toISOString().split("T")[0],
+    date: toDisplayDate(new Date().toISOString().split("T")[0]),
     startTime: "18:00",
     endTime: "22:00",
     userId: "",
@@ -370,7 +470,7 @@ export function GuardiasPage() {
       userId: "",
       userName: "",
       type: "" as any,
-      date: prefilledDate || new Date().toISOString().split("T")[0]
+      date: toDisplayDate(prefilledDate || new Date().toISOString().split("T")[0])
     });
     setShowAllBranches(false);
     setDialogOpen(true);
@@ -379,7 +479,7 @@ export function GuardiasPage() {
   const openEdit = (g: Guardia) => {
     setEditingGuardia(g);
     setForm({
-      date: g.date,
+      date: toDisplayDate(g.date),
       startTime: g.startTime,
       endTime: g.endTime,
       userId: g.userId,
@@ -412,15 +512,31 @@ export function GuardiasPage() {
       return;
     }
 
+    const isoDate = toIsoDate(form.date);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate) || isNaN(new Date(isoDate + "T12:00:00").getTime())) {
+      toast.error("La fecha debe estar en formato DD/MM/AAAA (ej: 08/06/2026)");
+      return;
+    }
+
+    if (!/^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/.test(form.startTime) || !/^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/.test(form.endTime)) {
+      toast.error("El horario debe estar en formato de 24hs (HH:MM), ej: 18:00");
+      return;
+    }
+
     if (form.type === "otro" && !form.otherReason?.trim()) {
       toast.error("Especificá el motivo cuando el tipo es Otro motivo");
       return;
     }
 
+    const parsedForm = {
+      ...form,
+      date: isoDate
+    };
+
     if (editingGuardia) {
-      updateGuardia(editingGuardia.id, form);
+      updateGuardia(editingGuardia.id, parsedForm);
     } else {
-      addGuardia(form);
+      addGuardia(parsedForm);
     }
     setDialogOpen(false);
   };
@@ -484,6 +600,7 @@ export function GuardiasPage() {
       case "promocion": return "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-200 dark:border-purple-800";
       case "actualizacion": return "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800";
       case "incidencia": return "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-200 dark:border-rose-800";
+      case "cambio_precios": return "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800";
       default: return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700";
     }
   };
@@ -567,6 +684,34 @@ export function GuardiasPage() {
     return gridCells;
   }, [currentCalMonth, currentCalYear, startOffset, daysInMonth, daysInPrevMonth]);
 
+  const handleSaveEvent = () => {
+    if (!eventForm.date || !eventForm.name) {
+      toast.error("Completá los campos obligatorios (*)");
+      return;
+    }
+
+    const isoDate = toIsoDate(eventForm.date);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate) || isNaN(new Date(isoDate + "T12:00:00").getTime())) {
+      toast.error("La fecha debe estar en formato DD/MM/AAAA (ej: 09/06/2026)");
+      return;
+    }
+
+    const newEvent: SpecialEvent = {
+      id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+      date: isoDate,
+      name: eventForm.name,
+      type: eventForm.type
+    };
+
+    setManualEvents(prev => [...prev, newEvent]);
+    setEventDialogOpen(false);
+    
+    // Also reopen/refresh the selected date so the user immediately sees the event they added
+    setSelectedCalDate(isoDate);
+
+    toast.success("Evento especial registrado");
+  };
+
   return (
     <div className="space-y-6 p-6 print:p-0 print:space-y-4">
       {/* Page Header */}
@@ -577,16 +722,16 @@ export function GuardiasPage() {
             Registro, control operativo y visualización de horas de guardia trabajadas fuera de horario.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportToPdf}>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button variant="outline" size="sm" onClick={exportToPdf} className="w-full sm:w-auto">
             <FileDown className="size-4 mr-1.5" />
             Exportar PDF
           </Button>
-          <Button variant="outline" size="sm" onClick={handlePrint}>
+          <Button variant="outline" size="sm" onClick={handlePrint} className="w-full sm:w-auto">
             <Printer className="size-4 mr-1.5" />
             Imprimir Reporte
           </Button>
-          <Button onClick={() => openCreate()}>
+          <Button onClick={() => openCreate()} className="w-full sm:w-auto">
             <Plus className="size-4 mr-1.5" />
             Registrar Guardia
           </Button>
@@ -600,74 +745,74 @@ export function GuardiasPage() {
       </div>
 
       {/* KPI Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* 1. Horas totales de este mes */}
-        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-3 opacity-15">
-            <Calendar className="size-10 text-primary" />
+        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden p-3.5 sm:p-6 gap-2 sm:gap-6">
+          <div className="absolute top-0 right-0 p-2 sm:p-3 opacity-15">
+            <Calendar className="size-8 sm:size-10 text-primary" />
           </div>
-          <CardHeader className="pb-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Horas totales de este mes</p>
+          <CardHeader className="p-0">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Horas totales de este mes</p>
           </CardHeader>
-          <CardContent>
-            <h2 className="text-3xl font-extrabold tracking-tight text-foreground">{stats.hoursThisMonth.toFixed(1)} hs</h2>
-            <p className="text-xs text-muted-foreground mt-1">Aprobadas + pendientes</p>
+          <CardContent className="p-0">
+            <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight text-foreground">{stats.hoursThisMonth.toFixed(1)} hs</h2>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">Aprobadas + pendientes</p>
           </CardContent>
         </Card>
 
         {/* 2. Pendientes de aprobación */}
-        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-3 opacity-15">
-            <AlertCircle className="size-10 text-amber-500" />
+        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden p-3.5 sm:p-6 gap-2 sm:gap-6">
+          <div className="absolute top-0 right-0 p-2 sm:p-3 opacity-15">
+            <AlertCircle className="size-8 sm:size-10 text-amber-500" />
           </div>
-          <CardHeader className="pb-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pendientes Aprobación</p>
+          <CardHeader className="p-0">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Pendientes Aprobación</p>
           </CardHeader>
-          <CardContent>
-            <h2 className={`text-3xl font-extrabold tracking-tight ${stats.pending > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>
+          <CardContent className="p-0">
+            <h2 className={`text-xl sm:text-3xl font-extrabold tracking-tight ${stats.pending > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>
               {stats.pending} {stats.pending === 1 ? "guardia" : "guardias"}
             </h2>
-            <p className="text-xs text-muted-foreground mt-1">{stats.pendingHours.toFixed(1)} hs esperando revisión</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">{stats.pendingHours.toFixed(1)} hs esperando revisión</p>
           </CardContent>
         </Card>
 
         {/* 3. Hora Más Concurrente */}
-        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-3 opacity-15">
-            <Clock className="size-10 text-sky-500" />
+        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden p-3.5 sm:p-6 gap-2 sm:gap-6">
+          <div className="absolute top-0 right-0 p-2 sm:p-3 opacity-15">
+            <Clock className="size-8 sm:size-10 text-sky-500" />
           </div>
-          <CardHeader className="pb-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Hora Más Concurrente</p>
+          <CardHeader className="p-0">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Hora Más Concurrente</p>
           </CardHeader>
-          <CardContent className="min-w-0">
-            <h2 className="text-3xl font-extrabold tracking-tight text-sky-600 dark:text-sky-400 mt-1">
+          <CardContent className="p-0 min-w-0">
+            <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight text-sky-600 dark:text-sky-400">
               {stats.busiestHour !== -1 
                 ? `${stats.busiestHour.toString().padStart(2, "0")}:00 hs` 
                 : "Sin registros"
               }
             </h2>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
               {stats.maxHourCount} {stats.maxHourCount === 1 ? "guardia activa" : "guardias activas"}
             </p>
           </CardContent>
         </Card>
 
         {/* 4. Día Más Ajetreado */}
-        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-3 opacity-15">
-            <Award className="size-10 text-purple-500" />
+        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden p-3.5 sm:p-6 gap-2 sm:gap-6">
+          <div className="absolute top-0 right-0 p-2 sm:p-3 opacity-15">
+            <Award className="size-8 sm:size-10 text-purple-500" />
           </div>
-          <CardHeader className="pb-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Día Más Ajetreado</p>
+          <CardHeader className="p-0">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Día Más Ajetreado</p>
           </CardHeader>
-          <CardContent className="min-w-0">
-            <h2 className="text-2xl font-extrabold tracking-tight text-purple-600 dark:text-purple-400 mt-1">
+          <CardContent className="p-0 min-w-0">
+            <h2 className="text-lg sm:text-2xl font-extrabold tracking-tight text-purple-600 dark:text-purple-400">
               {stats.busiestDate !== "Sin registros" 
                 ? formatDate(stats.busiestDate) 
                 : "Sin registros"
               }
             </h2>
-            <p className="text-xs text-muted-foreground truncate mt-0.5">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate mt-0.5 sm:mt-1">
               {stats.busiestDate !== "Sin registros"
                 ? `${stats.busiestDateStats.hours.toFixed(1)} hs (${stats.busiestDateStats.count} ${stats.busiestDateStats.count === 1 ? "guardia" : "guardias"})`
                 : "No hay guardias registradas"
@@ -703,8 +848,8 @@ export function GuardiasPage() {
 
       {/* Main Content Layout */}
       <div className="grid gap-6 lg:grid-cols-3 items-start">
-        {/* Left / Guardias Content (Takes 2 Cols) */}
-        <div className="lg:col-span-2 space-y-4">
+        {/* Left / Guardias Content (Takes 2 Cols in list view, 3 Cols in calendar view) */}
+        <div className={`${viewMode === "calendar" ? "lg:col-span-3" : "lg:col-span-2"} space-y-4`}>
           {viewMode === "list" ? (
             <Card className="border-muted-foreground/10 bg-card/45 backdrop-blur-xs print:border-none print:shadow-none">
             <CardHeader className="pb-3 flex flex-row items-center justify-between print:hidden">
@@ -954,6 +1099,39 @@ export function GuardiasPage() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* Filtros de Visualización */}
+              <div className="flex flex-wrap items-center gap-4 mb-4 text-xs font-semibold print:hidden border-b border-muted-foreground/5 pb-3">
+                <span className="text-muted-foreground">Mostrar en Calendario:</span>
+                <div className="flex gap-2">
+                  <Button 
+                    variant={showGuardias ? "default" : "outline"} 
+                    size="xs" 
+                    className="h-7 text-xs gap-1" 
+                    onClick={() => setShowGuardias(!showGuardias)}
+                  >
+                    <Clock className="size-3.5" />
+                    Guardias
+                  </Button>
+                  <Button 
+                    variant={showEventos ? "default" : "outline"} 
+                    size="xs" 
+                    className="h-7 text-xs gap-1"
+                    onClick={() => setShowEventos(!showEventos)}
+                  >
+                    🔥 Eventos Especiales
+                  </Button>
+                  <Button 
+                    variant={showTurnos ? "default" : "outline"} 
+                    size="xs" 
+                    className="h-7 text-xs gap-1"
+                    onClick={() => setShowTurnos(!showTurnos)}
+                  >
+                    <UserIcon className="size-3.5" />
+                    Turnos Semanales
+                  </Button>
+                </div>
+              </div>
+
               {/* Calendar Grid Header */}
               <div className="grid grid-cols-7 gap-1 text-center font-bold text-xs text-muted-foreground mb-2 border-b border-muted-foreground/5 pb-1">
                 {WEEK_DAYS.map(d => (
@@ -966,39 +1144,58 @@ export function GuardiasPage() {
                 {cells.map((cell, idx) => {
                   const dayGuardias = guardias.filter(g => g.date === cell.dateStr);
                   const isToday = cell.dateStr === new Date().toISOString().split("T")[0];
+                  const weeklyTurn = getWeeklyTurn(cell.dateStr);
                   
                   return (
                     <div
                       key={idx}
                       onClick={() => {
-                        if (dayGuardias.length > 0) {
-                          setSelectedCalDate(cell.dateStr);
-                        } else {
-                          openCreate(cell.dateStr);
-                        }
+                        setSelectedCalDate(cell.dateStr);
                       }}
                       className={`group relative rounded-lg border p-1.5 flex flex-col justify-between transition-all cursor-pointer hover:border-primary/40 hover:bg-muted-foreground/5 ${
                         cell.isCurrentMonth
                           ? "bg-background/40 border-muted-foreground/10"
                           : "bg-background/10 border-muted-foreground/5 opacity-40 hover:opacity-80"
                       } ${isToday ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}
-                      title={dayGuardias.length > 0 ? "Hacé click para ver las guardias de este día" : "Hacé click para registrar una guardia en este día"}
+                      title="Hacé click para ver y registrar guardias de este día"
                     >
                       {/* Day Number and Add Icon */}
-                      <div className="flex justify-between items-start">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                          isToday 
-                            ? "bg-primary text-primary-foreground font-black" 
-                            : "text-muted-foreground"
-                        }`}>
-                          {cell.day}
-                        </span>
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                            isToday 
+                              ? "bg-primary text-primary-foreground font-black" 
+                              : "text-muted-foreground"
+                          }`}>
+                            {cell.day}
+                          </span>
+                          {showEventos && getSpecialEvents(cell.dateStr).map((evt, eIdx) => {
+                            let color = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
+                            if (evt.type === "break") {
+                              color = "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30";
+                            } else if (evt.type === "promo") {
+                              color = "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
+                            } else if (evt.type === "custom") {
+                              color = "bg-sky-500/20 text-sky-600 dark:text-sky-400 border-sky-500/30";
+                            }
+                            
+                            return (
+                              <span 
+                                key={eIdx}
+                                className={`text-[8px] ${color} border px-1 py-0.2 rounded font-extrabold uppercase tracking-wider animate-pulse shrink-0`}
+                                title={evt.name}
+                              >
+                                {evt.name}
+                              </span>
+                            );
+                          })}
+                        </div>
                         <Plus className="size-3 opacity-0 group-hover:opacity-60 transition-opacity text-primary shrink-0" />
                       </div>
                       
                       {/* Guardias in this day */}
-                      <div className="flex flex-col gap-1 overflow-y-auto max-h-[70px] mt-1 pr-0.5 scrollbar-thin">
-                        {dayGuardias.map(g => {
+                      <div className="flex flex-col gap-1 overflow-y-auto max-h-[50px] mt-1 pr-0.5 scrollbar-thin">
+                        {showGuardias && dayGuardias.map(g => {
                           let userColor = "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20";
                           if (g.userId === "usr-031") {
                             userColor = "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border-sky-100 dark:border-sky-900/50 hover:bg-sky-100/50 dark:hover:bg-sky-900/50";
@@ -1024,6 +1221,20 @@ export function GuardiasPage() {
                           );
                         })}
                       </div>
+
+                      {/* Turno Semanal */}
+                      {showTurnos && (
+                        <div 
+                          className={`text-[8px] font-bold py-0.5 px-1 rounded border text-center mt-1 truncate shrink-0 ${
+                            weeklyTurn === "facundo"
+                              ? "bg-sky-500/5 dark:bg-sky-500/10 text-sky-600/80 dark:text-sky-400/80 border-sky-500/15"
+                              : "bg-purple-500/5 dark:bg-purple-500/10 text-purple-600/80 dark:text-purple-400/80 border-purple-500/15"
+                          }`}
+                          title={`Esta semana es el turno de guardia de ${weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}`}
+                        >
+                          Turno: {weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1033,8 +1244,8 @@ export function GuardiasPage() {
         )}
       </div>
 
-        {/* Right / Boss Overview and Hours Summary (Takes 1 Col) */}
-        <div className="space-y-6">
+        {/* Right / Boss Overview and Hours Summary (Takes 1 Col in list view, 3 Cols in calendar view) */}
+        <div className={viewMode === "calendar" ? "lg:col-span-3 space-y-6" : "lg:col-span-1 space-y-6"}>
           <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm print:break-inside-avoid">
             <CardHeader>
               <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -1045,7 +1256,7 @@ export function GuardiasPage() {
                 Totalización de horas y guardias acumuladas por colaborador del equipo.
               </p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className={viewMode === "calendar" ? "grid gap-6 md:grid-cols-2 items-start" : "space-y-4"}>
               <div className="space-y-3">
                 {stats.devBreakdown.map((dev, index) => (
                   <div key={dev.name} className="flex items-center justify-between p-2.5 rounded-lg border border-muted-foreground/5 bg-background/30 hover:bg-background/60 transition-all">
@@ -1067,7 +1278,7 @@ export function GuardiasPage() {
                 )}
               </div>
 
-              <Separator />
+              {viewMode !== "calendar" && <Separator />}
 
               <div
                 className={`rounded-lg border p-3 text-xs space-y-2 ${
@@ -1187,7 +1398,8 @@ export function GuardiasPage() {
                 <Label htmlFor="date">Fecha <span className="text-red-500">*</span></Label>
                 <Input 
                   id="date" 
-                  type="date" 
+                  type="text" 
+                  placeholder="DD/MM/AAAA"
                   value={form.date} 
                   onChange={(e) => setForm({ ...form, date: e.target.value })} 
                 />
@@ -1196,7 +1408,8 @@ export function GuardiasPage() {
                 <Label htmlFor="startTime">Hora Inicio <span className="text-red-500">*</span></Label>
                 <Input 
                   id="startTime" 
-                  type="time" 
+                  type="text" 
+                  placeholder="HH:MM"
                   value={form.startTime} 
                   onChange={(e) => setForm({ ...form, startTime: e.target.value })} 
                 />
@@ -1205,7 +1418,8 @@ export function GuardiasPage() {
                 <Label htmlFor="endTime">Hora Fin <span className="text-red-500">*</span></Label>
                 <Input 
                   id="endTime" 
-                  type="time" 
+                  type="text" 
+                  placeholder="HH:MM"
                   value={form.endTime} 
                   onChange={(e) => setForm({ ...form, endTime: e.target.value })} 
                 />
@@ -1392,179 +1606,314 @@ export function GuardiasPage() {
               </DialogDescription>
             </div>
             {selectedCalDate && (
-              <Button 
-                onClick={() => {
-                  const dateToPass = selectedCalDate;
-                  setSelectedCalDate(null);
-                  openCreate(dateToPass);
-                }} 
-                size="sm" 
-                className="gap-1.5 h-8 mr-6 print:hidden"
-              >
-                <Plus className="size-3.5" /> 
-                Registrar Nueva
-              </Button>
+              <div className="flex items-center gap-2 mr-6 print:hidden">
+                <Button 
+                  onClick={() => {
+                    const dateToPass = selectedCalDate;
+                    setSelectedCalDate(null);
+                    openCreate(dateToPass);
+                  }} 
+                  size="sm" 
+                  className="gap-1.5 h-8 font-semibold"
+                >
+                  <Plus className="size-3.5" /> 
+                  Registrar Guardia
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setEventForm({
+                      date: toDisplayDate(selectedCalDate),
+                      name: "",
+                      type: "break"
+                    });
+                    setEventDialogOpen(true);
+                  }} 
+                  size="sm" 
+                  variant="outline"
+                  className="gap-1.5 h-8 border-primary/20 text-primary hover:bg-primary/5 font-semibold"
+                >
+                  <Plus className="size-3.5" /> 
+                  Agregar Evento
+                </Button>
+              </div>
             )}
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="space-y-6 py-2">
             {selectedCalDate && (() => {
               const dayGuardias = guardias.filter(g => g.date === selectedCalDate);
-              
-              if (dayGuardias.length === 0) {
-                return (
-                  <p className="text-sm text-center text-muted-foreground py-8">
-                    No hay guardias registradas para este día.
-                  </p>
-                );
-              }
+              const dayEvents = getSpecialEvents(selectedCalDate);
               
               return (
-                <div className="space-y-4">
-                  {dayGuardias.map((g) => {
-                    const isApproved = g.status === "approved";
-                    return (
-                      <Card 
-                        key={g.id} 
-                        className={`group relative overflow-hidden transition-all duration-200 hover:shadow-md border border-muted-foreground/10`}
-                      >
-                        {/* Status side bar indicator */}
-                        <div className={`absolute left-0 top-0 h-full w-1 ${isApproved ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
-                        
-                        <CardContent className="p-4 space-y-3">
-                          {/* Header of Guardia card */}
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <div className="space-y-1 min-w-[200px]">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-foreground text-sm flex items-center gap-1.5">
-                                  <UserIcon className="size-3.5 text-muted-foreground" />
-                                  {g.userName}
-                                </span>
-                                <Badge 
-                                  variant="outline" 
-                                  className={`text-[10px] h-5 py-0 px-2 uppercase tracking-wide font-semibold ${getGuardTypeBadgeColor(g.type)}`}
-                                >
-                                  {getGuardiaTypeShortLabel(g.type)}
-                                </Badge>
-                              </div>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="size-3" />
-                                  {formatDate(g.date)}
-                                </span>
-                                <span className="flex items-center gap-1 font-mono">
-                                  <Clock className="size-3" />
-                                  {g.startTime} - {g.endTime} ({g.hours} hs)
-                                </span>
-                              </div>
-                            </div>
+                <div className="space-y-6">
+                  {/* Eventos Especiales */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 border-b border-muted-foreground/10 pb-1.5">
+                      ✨ Eventos Especiales
+                    </h3>
+                    {dayEvents.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic pl-1 py-1">
+                        No hay eventos especiales registrados para este día.
+                      </p>
+                    ) : (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {dayEvents.map((evt, idx) => {
+                          const isManual = manualEvents.some(m => m.date === selectedCalDate && m.name === evt.name);
+                          const manualEventObj = manualEvents.find(m => m.date === selectedCalDate && m.name === evt.name);
+                          
+                          let badgeColor = "bg-rose-500/5 text-rose-600 dark:text-rose-400 border-rose-500/15";
+                          if (evt.type === "break") badgeColor = "bg-amber-500/5 text-amber-600 dark:text-amber-400 border-amber-500/15";
+                          else if (evt.type === "promo") badgeColor = "bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 border-emerald-500/15";
+                          else if (evt.type === "custom") badgeColor = "bg-sky-500/5 text-sky-600 dark:text-sky-400 border-sky-500/15";
 
-                            {/* Status Badge & Actions */}
-                            <div className="flex items-center gap-2">
-                              {/* Quick Approve Button for Boss */}
-                              {!isApproved ? (
-                                <Button 
-                                  variant="outline" 
-                                  size="xs" 
-                                  className="h-7 bg-emerald-50/50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 border-emerald-200 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900"
-                                  onClick={() => handleToggleStatus(g.id)}
-                                  title="Aprobar guardia"
-                                >
-                                  <Check className="size-3.5 mr-1" />
-                                  Aprobar
-                                </Button>
-                              ) : (
+                          return (
+                            <div 
+                              key={idx} 
+                              className={`flex items-center justify-between p-2 rounded-lg border bg-card/20 ${badgeColor}`}
+                            >
+                              <span className="text-xs font-bold flex items-center gap-1.5">
+                                {evt.name}
+                              </span>
+                              {isManual && manualEventObj && (
                                 <Button 
                                   variant="ghost" 
-                                  size="xs" 
-                                  className="h-7 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30"
-                                  onClick={() => handleToggleStatus(g.id)}
-                                  title="Revertir aprobación"
+                                  size="icon-xs" 
+                                  className="h-6 w-6 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
+                                  onClick={() => {
+                                    setManualEvents(prev => prev.filter(e => e.id !== manualEventObj.id));
+                                    toast.success("Evento eliminado");
+                                  }}
+                                  title="Eliminar evento"
                                 >
-                                  Desaprobar
+                                  <Trash2 className="size-3" />
                                 </Button>
                               )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
-                              <Badge 
-                                variant={isApproved ? "default" : "secondary"}
-                                className={`text-[10px] h-6 px-2 capitalize cursor-pointer ${
-                                  isApproved 
-                                    ? "bg-emerald-500 hover:bg-emerald-600 text-white" 
-                                    : "bg-amber-500/10 text-amber-700 dark:text-amber-400 dark:bg-amber-500/20 border border-amber-300 dark:border-amber-900"
-                                }`}
-                                onClick={() => handleToggleStatus(g.id)}
-                              >
-                                {isApproved ? (
-                                  <span className="flex items-center gap-1 font-semibold">
-                                    <CheckCircle2 className="size-3" />
-                                    Aprobado
-                                  </span>
-                                ) : (
-                                  <span className="flex items-center gap-1 font-semibold">
-                                    <Clock className="size-3" />
-                                    Pendiente
-                                  </span>
+                  {/* Guardias del Día */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 border-b border-muted-foreground/10 pb-1.5">
+                      👥 Guardias Registradas
+                    </h3>
+                    {dayGuardias.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic pl-1 py-1">
+                        No hay guardias registradas para este día.
+                      </p>
+                    ) : (
+                      <div className="space-y-4">
+                        {dayGuardias.map((g) => {
+                          const isApproved = g.status === "approved";
+                          return (
+                            <Card 
+                              key={g.id} 
+                              className={`group relative overflow-hidden transition-all duration-200 hover:shadow-md border border-muted-foreground/10`}
+                            >
+                              {/* Status side bar indicator */}
+                              <div className={`absolute left-0 top-0 h-full w-1 ${isApproved ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
+                              
+                              <CardContent className="p-4 space-y-3">
+                                {/* Header of Guardia card */}
+                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                  <div className="space-y-1 min-w-[200px]">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-foreground text-sm flex items-center gap-1.5">
+                                        <UserIcon className="size-3.5 text-muted-foreground" />
+                                        {g.userName}
+                                      </span>
+                                      <Badge 
+                                        variant="outline" 
+                                        className={`text-[10px] h-5 py-0 px-2 uppercase tracking-wide font-semibold ${getGuardTypeBadgeColor(g.type)}`}
+                                      >
+                                        {getGuardiaTypeShortLabel(g.type)}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                      <span className="flex items-center gap-1">
+                                        <Calendar className="size-3" />
+                                        {formatDate(g.date)}
+                                      </span>
+                                      <span className="flex items-center gap-1 font-mono">
+                                        <Clock className="size-3" />
+                                        {g.startTime} - {g.endTime} ({g.hours} hs)
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Status Badge & Actions */}
+                                  <div className="flex items-center gap-2">
+                                    {/* Quick Approve Button for Boss */}
+                                    {!isApproved ? (
+                                      <Button 
+                                        variant="outline" 
+                                        size="xs" 
+                                        className="h-7 bg-emerald-50/50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 border-emerald-200 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900"
+                                        onClick={() => handleToggleStatus(g.id)}
+                                        title="Aprobar guardia"
+                                      >
+                                        <Check className="size-3.5 mr-1" />
+                                        Aprobar
+                                      </Button>
+                                    ) : (
+                                      <Button 
+                                        variant="ghost" 
+                                        size="xs" 
+                                        className="h-7 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                                        onClick={() => handleToggleStatus(g.id)}
+                                        title="Revertir aprobación"
+                                      >
+                                        Desaprobar
+                                      </Button>
+                                    )}
+
+                                    <Badge 
+                                      variant={isApproved ? "default" : "secondary"}
+                                      className={`text-[10px] h-6 px-2 capitalize cursor-pointer ${
+                                        isApproved 
+                                          ? "bg-emerald-500 hover:bg-emerald-600 text-white" 
+                                          : "bg-amber-500/10 text-amber-700 dark:text-amber-400 dark:bg-amber-500/20 border border-amber-300 dark:border-amber-900"
+                                      }`}
+                                      onClick={() => handleToggleStatus(g.id)}
+                                    >
+                                      {isApproved ? (
+                                        <span className="flex items-center gap-1 font-semibold">
+                                          <CheckCircle2 className="size-3" />
+                                          Aprobado
+                                        </span>
+                                      ) : (
+                                        <span className="flex items-center gap-1 font-semibold">
+                                          <Clock className="size-3" />
+                                          Pendiente
+                                        </span>
+                                      )}
+                                    </Badge>
+                                  </div>
+                                </div>
+
+                                {/* Body details */}
+                                <div className="text-sm text-foreground/80 pl-5 border-l-2 border-muted/30">
+                                  <p className="font-medium whitespace-pre-wrap">{g.description}</p>
+                                  {g.notes && (
+                                    <p className="text-xs text-muted-foreground mt-2 italic bg-muted/20 p-2 rounded border border-muted/10">
+                                      <strong>Nota Técnica:</strong> {g.notes}
+                                    </p>
+                                  )}
+                                </div>
+
+                                {/* Footer details (Branches Affected) */}
+                                {g.branchesAffected && (
+                                  <div className="flex flex-wrap items-center gap-1 text-xs pl-5 text-muted-foreground">
+                                    <Building2 className="size-3.5 text-muted-foreground shrink-0" />
+                                    <span className="font-semibold mr-1">Alcance/Sucursales:</span>
+                                    <div className="flex flex-wrap gap-1">
+                                      {g.branchesAffected.split(",").map((br, idx) => (
+                                        <Badge key={idx} variant="outline" className="text-[10px] bg-background/50 border-muted-foreground/15">
+                                          {br.trim()}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
                                 )}
-                              </Badge>
-                            </div>
-                          </div>
 
-                          {/* Body details */}
-                          <div className="text-sm text-foreground/80 pl-5 border-l-2 border-muted/30">
-                            <p className="font-medium whitespace-pre-wrap">{g.description}</p>
-                            {g.notes && (
-                              <p className="text-xs text-muted-foreground mt-2 italic bg-muted/20 p-2 rounded border border-muted/10">
-                                <strong>Nota Técnica:</strong> {g.notes}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Footer details (Branches Affected) */}
-                          {g.branchesAffected && (
-                            <div className="flex flex-wrap items-center gap-1 text-xs pl-5 text-muted-foreground">
-                              <Building2 className="size-3.5 text-muted-foreground shrink-0" />
-                              <span className="font-semibold mr-1">Alcance/Sucursales:</span>
-                              <div className="flex flex-wrap gap-1">
-                                {g.branchesAffected.split(",").map((br, idx) => (
-                                  <Badge key={idx} variant="outline" className="text-[10px] bg-background/50 border-muted-foreground/15">
-                                    {br.trim()}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Action Buttons */}
-                          <div className="flex items-center justify-end gap-2 pt-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
-                            <Button 
-                              variant="ghost" 
-                              size="icon-xs" 
-                              onClick={() => {
-                                setSelectedCalDate(null);
-                                openEdit(g);
-                              }} 
-                              title="Editar guardia"
-                            >
-                              <Edit className="size-3.5" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon-xs" 
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10" 
-                              onClick={() => handleDelete(g.id)} 
-                              title="Eliminar registro"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                                {/* Action Buttons */}
+                                <div className="flex items-center justify-end gap-2 pt-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon-xs" 
+                                    onClick={() => {
+                                      setSelectedCalDate(null);
+                                      openEdit(g);
+                                    }} 
+                                    title="Editar guardia"
+                                  >
+                                    <Edit className="size-3.5" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon-xs" 
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10" 
+                                    onClick={() => handleDelete(g.id)} 
+                                    title="Eliminar registro"
+                                  >
+                                    <Trash2 className="size-3.5" />
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })()}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Registrar Evento Especial */}
+      <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Agregar Evento Especial</DialogTitle>
+            <DialogDescription>
+              Agregá un evento especial en el calendario (ej: MG Break, Jueves OnFire, Promociones).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="eventDate">Fecha <span className="text-red-500">*</span></Label>
+              <Input
+                id="eventDate"
+                type="text"
+                placeholder="DD/MM/AAAA"
+                value={eventForm.date}
+                onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="eventName">Nombre del Evento <span className="text-red-500">*</span></Label>
+              <Input
+                id="eventName"
+                type="text"
+                placeholder="Ej: ☕ MG Break Amistoso"
+                value={eventForm.name}
+                onChange={(e) => setEventForm({ ...eventForm, name: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="eventType">Tipo de Evento</Label>
+              <Select
+                value={eventForm.type}
+                onValueChange={(val: any) => setEventForm({ ...eventForm, type: val })}
+              >
+                <SelectTrigger id="eventType">
+                  <SelectValue placeholder="Seleccionar tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="break">☕ MG Break</SelectItem>
+                  <SelectItem value="onfire">🔥 Jueves OnFire</SelectItem>
+                  <SelectItem value="promo">🎯 Promo Importante</SelectItem>
+                  <SelectItem value="custom">⚙️ Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-row-reverse justify-end gap-2">
+            <Button onClick={handleSaveEvent}>
+              Guardar Evento
+            </Button>
+            <Button variant="outline" onClick={() => setEventDialogOpen(false)}>
+              Cancelar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

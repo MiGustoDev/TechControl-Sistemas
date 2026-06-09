@@ -25,6 +25,7 @@ import {
 } from "../data/mock";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { getEffectivePrinterStatus, getEffectivePrinterBranch } from "@/lib/utils-app";
 
 function guardiaFromDb(g: Record<string, unknown>): Guardia {
   return {
@@ -185,19 +186,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updatedAt: i.updated_at
       })));
 
-      if (pts) setPrinters(pts.map(p => ({
-        ...p,
-        tonerModel: p.toner_model,
-        tonerLevel: p.toner_level,
-        imageUnitModel: p.image_unit_model,
-        imageUnitLevel: p.image_unit_level,
-        lastTonerChange: p.last_toner_change,
-        lastImageUnitChange: p.last_image_unit_change,
-        ipAddress: p.ip_address,
-        serialNumber: p.serial_number,
-        createdAt: p.created_at,
-        updatedAt: p.updated_at
-      })));
+      if (pts) setPrinters(pts.map(p => {
+        const printerObj = {
+          ...p,
+          branch: getEffectivePrinterBranch(p.sector),
+          tonerModel: p.toner_model,
+          tonerUnits:
+            typeof p.toner_level === "number" && p.toner_level > 10
+              ? Math.max(0, Math.round(p.toner_level / 20))
+              : (p.toner_level ?? 0),
+          tonerMinUnits: p.toner_min_units ?? 1,
+          imageUnitModel: p.image_unit_model,
+          imageUnitUnits:
+            typeof p.image_unit_level === "number" && p.image_unit_level > 10
+              ? Math.max(0, Math.round(p.image_unit_level / 20))
+              : (p.image_unit_level ?? 0),
+          imageUnitMinUnits: p.image_unit_min_units ?? 1,
+          lastTonerChange: p.last_toner_change,
+          lastImageUnitChange: p.last_image_unit_change,
+          ipAddress: p.ip_address,
+          serialNumber: p.serial_number,
+          createdAt: p.created_at,
+          updatedAt: p.updated_at
+        };
+        printerObj.status = getEffectivePrinterStatus(printerObj);
+        return printerObj;
+      }));
 
       if (nbs) setNotebooks(nbs.map(n => ({
         ...n,
@@ -371,9 +385,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         sector: p.sector,
         status: p.status,
         toner_model: p.tonerModel,
-        toner_level: p.tonerLevel,
+        toner_level: p.tonerUnits,
         image_unit_model: p.imageUnitModel,
-        image_unit_level: p.imageUnitLevel,
+        image_unit_level: p.imageUnitUnits,
         last_toner_change: p.lastTonerChange,
         last_image_unit_change: p.lastImageUnitChange,
         notes: p.notes,
@@ -549,7 +563,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async (p: Omit<Printer, "id" | "createdAt" | "updatedAt">) => {
       const id = genId();
       const createdAt = now();
-      const newPrinter: Printer = { ...p, id, createdAt, updatedAt: createdAt };
+      const effectiveStatus = getEffectivePrinterStatus(p as any);
+      const effectiveBranch = getEffectivePrinterBranch(p.sector);
+      const newPrinter: Printer = { ...p, id, status: effectiveStatus, branch: effectiveBranch, createdAt, updatedAt: createdAt };
 
       setPrinters((prev) => [...prev, newPrinter]);
 
@@ -563,9 +579,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         sector: newPrinter.sector,
         status: newPrinter.status,
         toner_model: newPrinter.tonerModel,
-        toner_level: newPrinter.tonerLevel,
+        toner_level: newPrinter.tonerUnits,
         image_unit_model: newPrinter.imageUnitModel,
-        image_unit_level: newPrinter.imageUnitLevel,
+        image_unit_level: newPrinter.imageUnitUnits,
         last_toner_change: newPrinter.lastTonerChange,
         last_image_unit_change: newPrinter.lastImageUnitChange,
         notes: newPrinter.notes,
@@ -584,23 +600,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updatePrinter = useCallback(async (id: string, data: Partial<Printer>) => {
+    let updatedPrinterObj: Printer | undefined;
+
     setPrinters((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...data, updatedAt: now() } : p))
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        const merged = { ...p, ...data };
+        const effectiveStatus = getEffectivePrinterStatus(merged);
+        const effectiveBranch = getEffectivePrinterBranch(merged.sector);
+        updatedPrinterObj = { ...merged, status: effectiveStatus, branch: effectiveBranch, updatedAt: now() };
+        return updatedPrinterObj;
+      })
     );
 
-    const updateData: any = { ...data, updated_at: now() };
-    if (data.tonerModel) updateData.toner_model = data.tonerModel;
-    if (data.tonerLevel !== undefined) updateData.toner_level = data.tonerLevel;
-    if (data.imageUnitModel) updateData.image_unit_model = data.imageUnitModel;
-    if (data.imageUnitLevel !== undefined) updateData.image_unit_level = data.imageUnitLevel;
-    if (data.lastTonerChange) updateData.last_toner_change = data.lastTonerChange;
-    if (data.lastImageUnitChange) updateData.last_image_unit_change = data.lastImageUnitChange;
-    if (data.ipAddress) updateData.ip_address = data.ipAddress;
-    if (data.serialNumber) updateData.serial_number = data.serialNumber;
+    if (!updatedPrinterObj) return;
+
+    const updateData: Record<string, unknown> = { updated_at: now() };
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.code !== undefined) updateData.code = data.code;
+    if (data.brand !== undefined) updateData.brand = data.brand;
+    if (data.model !== undefined) updateData.model = data.model;
+    if (data.sector !== undefined) updateData.sector = data.sector;
+    
+    // Always persist calculated status and branch
+    updateData.status = updatedPrinterObj.status;
+    updateData.branch = updatedPrinterObj.branch;
+
+    if (data.tonerModel !== undefined) updateData.toner_model = data.tonerModel;
+    if (data.tonerUnits !== undefined) updateData.toner_level = data.tonerUnits;
+    if (data.imageUnitModel !== undefined) updateData.image_unit_model = data.imageUnitModel;
+    if (data.imageUnitUnits !== undefined) updateData.image_unit_level = data.imageUnitUnits;
+    if (data.lastTonerChange !== undefined) updateData.last_toner_change = data.lastTonerChange;
+    if (data.lastImageUnitChange !== undefined) updateData.last_image_unit_change = data.lastImageUnitChange;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.ipAddress !== undefined) updateData.ip_address = data.ipAddress;
+    if (data.serialNumber !== undefined) updateData.serial_number = data.serialNumber;
 
     const { error } = await supabase.from("printers").update(updateData).eq("id", id);
     if (error) {
-      toast.error("Error al actualizar impresora");
+      console.error("Supabase printers update:", error);
+      toast.error(error.message || "Error al actualizar impresora");
       fetchData();
     }
   }, [fetchData]);
