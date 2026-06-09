@@ -722,16 +722,16 @@ export function GuardiasPage() {
             Registro, control operativo y visualización de horas de guardia trabajadas fuera de horario.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportToPdf}>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button variant="outline" size="sm" onClick={exportToPdf} className="w-full sm:w-auto">
             <FileDown className="size-4 mr-1.5" />
             Exportar PDF
           </Button>
-          <Button variant="outline" size="sm" onClick={handlePrint}>
+          <Button variant="outline" size="sm" onClick={handlePrint} className="w-full sm:w-auto">
             <Printer className="size-4 mr-1.5" />
             Imprimir Reporte
           </Button>
-          <Button onClick={() => openCreate()}>
+          <Button onClick={() => openCreate()} className="w-full sm:w-auto">
             <Plus className="size-4 mr-1.5" />
             Registrar Guardia
           </Button>
@@ -745,74 +745,74 @@ export function GuardiasPage() {
       </div>
 
       {/* KPI Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* 1. Horas totales de este mes */}
-        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-3 opacity-15">
-            <Calendar className="size-10 text-primary" />
+        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden p-3.5 sm:p-6 gap-2 sm:gap-6">
+          <div className="absolute top-0 right-0 p-2 sm:p-3 opacity-15">
+            <Calendar className="size-8 sm:size-10 text-primary" />
           </div>
-          <CardHeader className="pb-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Horas totales de este mes</p>
+          <CardHeader className="p-0">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Horas totales de este mes</p>
           </CardHeader>
-          <CardContent>
-            <h2 className="text-3xl font-extrabold tracking-tight text-foreground">{stats.hoursThisMonth.toFixed(1)} hs</h2>
-            <p className="text-xs text-muted-foreground mt-1">Aprobadas + pendientes</p>
+          <CardContent className="p-0">
+            <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight text-foreground">{stats.hoursThisMonth.toFixed(1)} hs</h2>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">Aprobadas + pendientes</p>
           </CardContent>
         </Card>
 
         {/* 2. Pendientes de aprobación */}
-        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-3 opacity-15">
-            <AlertCircle className="size-10 text-amber-500" />
+        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden p-3.5 sm:p-6 gap-2 sm:gap-6">
+          <div className="absolute top-0 right-0 p-2 sm:p-3 opacity-15">
+            <AlertCircle className="size-8 sm:size-10 text-amber-500" />
           </div>
-          <CardHeader className="pb-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pendientes Aprobación</p>
+          <CardHeader className="p-0">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Pendientes Aprobación</p>
           </CardHeader>
-          <CardContent>
-            <h2 className={`text-3xl font-extrabold tracking-tight ${stats.pending > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>
+          <CardContent className="p-0">
+            <h2 className={`text-xl sm:text-3xl font-extrabold tracking-tight ${stats.pending > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>
               {stats.pending} {stats.pending === 1 ? "guardia" : "guardias"}
             </h2>
-            <p className="text-xs text-muted-foreground mt-1">{stats.pendingHours.toFixed(1)} hs esperando revisión</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">{stats.pendingHours.toFixed(1)} hs esperando revisión</p>
           </CardContent>
         </Card>
 
         {/* 3. Hora Más Concurrente */}
-        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-3 opacity-15">
-            <Clock className="size-10 text-sky-500" />
+        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden p-3.5 sm:p-6 gap-2 sm:gap-6">
+          <div className="absolute top-0 right-0 p-2 sm:p-3 opacity-15">
+            <Clock className="size-8 sm:size-10 text-sky-500" />
           </div>
-          <CardHeader className="pb-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Hora Más Concurrente</p>
+          <CardHeader className="p-0">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Hora Más Concurrente</p>
           </CardHeader>
-          <CardContent className="min-w-0">
-            <h2 className="text-3xl font-extrabold tracking-tight text-sky-600 dark:text-sky-400 mt-1">
+          <CardContent className="p-0 min-w-0">
+            <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight text-sky-600 dark:text-sky-400">
               {stats.busiestHour !== -1 
                 ? `${stats.busiestHour.toString().padStart(2, "0")}:00 hs` 
                 : "Sin registros"
               }
             </h2>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
               {stats.maxHourCount} {stats.maxHourCount === 1 ? "guardia activa" : "guardias activas"}
             </p>
           </CardContent>
         </Card>
 
         {/* 4. Día Más Ajetreado */}
-        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-3 opacity-15">
-            <Award className="size-10 text-purple-500" />
+        <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden p-3.5 sm:p-6 gap-2 sm:gap-6">
+          <div className="absolute top-0 right-0 p-2 sm:p-3 opacity-15">
+            <Award className="size-8 sm:size-10 text-purple-500" />
           </div>
-          <CardHeader className="pb-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Día Más Ajetreado</p>
+          <CardHeader className="p-0">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Día Más Ajetreado</p>
           </CardHeader>
-          <CardContent className="min-w-0">
-            <h2 className="text-2xl font-extrabold tracking-tight text-purple-600 dark:text-purple-400 mt-1">
+          <CardContent className="p-0 min-w-0">
+            <h2 className="text-lg sm:text-2xl font-extrabold tracking-tight text-purple-600 dark:text-purple-400">
               {stats.busiestDate !== "Sin registros" 
                 ? formatDate(stats.busiestDate) 
                 : "Sin registros"
               }
             </h2>
-            <p className="text-xs text-muted-foreground truncate mt-0.5">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate mt-0.5 sm:mt-1">
               {stats.busiestDate !== "Sin registros"
                 ? `${stats.busiestDateStats.hours.toFixed(1)} hs (${stats.busiestDateStats.count} ${stats.busiestDateStats.count === 1 ? "guardia" : "guardias"})`
                 : "No hay guardias registradas"
