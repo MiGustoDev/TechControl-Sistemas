@@ -713,7 +713,7 @@ export function GuardiasPage() {
   };
 
   return (
-    <div className="space-y-6 p-6 print:p-0 print:space-y-4">
+    <div className="space-y-6 p-3 sm:p-6 print:p-0 print:space-y-4 overflow-x-hidden">
       {/* Page Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 print:hidden">
         <div>
@@ -722,18 +722,21 @@ export function GuardiasPage() {
             Registro, control operativo y visualización de horas de guardia trabajadas fuera de horario.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <Button variant="outline" size="sm" onClick={exportToPdf} className="w-full sm:w-auto">
-            <FileDown className="size-4 mr-1.5" />
-            Exportar PDF
+        <div className="flex flex-row items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+          <Button variant="outline" size="sm" onClick={exportToPdf} className="flex-1 sm:flex-initial text-xs sm:text-sm px-2 sm:px-3">
+            <FileDown className="size-3.5 sm:size-4 mr-1 sm:mr-1.5 shrink-0" />
+            <span className="hidden sm:inline">Exportar PDF</span>
+            <span className="sm:hidden">Exportar</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={handlePrint} className="w-full sm:w-auto">
-            <Printer className="size-4 mr-1.5" />
-            Imprimir Reporte
+          <Button variant="outline" size="sm" onClick={handlePrint} className="flex-1 sm:flex-initial text-xs sm:text-sm px-2 sm:px-3">
+            <Printer className="size-3.5 sm:size-4 mr-1 sm:mr-1.5 shrink-0" />
+            <span className="hidden sm:inline">Imprimir Reporte</span>
+            <span className="sm:hidden">Imprimir</span>
           </Button>
-          <Button onClick={() => openCreate()} className="w-full sm:w-auto">
-            <Plus className="size-4 mr-1.5" />
-            Registrar Guardia
+          <Button onClick={() => openCreate()} className="flex-1 sm:flex-initial text-xs sm:text-sm px-2 sm:px-3">
+            <Plus className="size-3.5 sm:size-4 mr-1 sm:mr-1.5 shrink-0" />
+            <span className="hidden sm:inline">Registrar Guardia</span>
+            <span className="sm:hidden">Registrar</span>
           </Button>
         </div>
       </div>
@@ -860,62 +863,72 @@ export function GuardiasPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Filter controls */}
-              <div className="flex flex-wrap items-center gap-3 print:hidden">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center print:hidden w-full">
                 {/* Search */}
-                <div className="relative flex-1 min-w-[200px]">
+                <div className="relative flex-1 min-w-[200px] w-full">
                   <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Buscar descripción, sucursal..."
-                    className="pl-8 h-9 text-sm"
+                    className="pl-8 h-9 text-sm w-full"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
 
-                {/* Status filter */}
-                <div className="flex items-center gap-1.5">
-                  <Filter className="size-3.5 text-muted-foreground shrink-0" />
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-9 w-[160px] text-xs shadow-xs">
-                      <SelectValue placeholder="Todos los Estados" />
-                    </SelectTrigger>
-                    <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
-                      <SelectItem value="all">Todos los Estados</SelectItem>
-                      <SelectItem value="approved">Aprobado</SelectItem>
-                      <SelectItem value="pending_approval">Pendiente</SelectItem>
-                    </SelectContent>
-                  </Select>
+                {/* Filters Row */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 w-full sm:w-auto">
+                  {/* Status & Type on a single line on mobile */}
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    {/* Status filter */}
+                    <div className="flex items-center gap-1.5 flex-1 sm:flex-initial">
+                      <Filter className="size-3.5 text-muted-foreground shrink-0" />
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="h-9 w-full sm:w-[160px] text-xs shadow-xs">
+                          <SelectValue placeholder="Todos los Estados" />
+                        </SelectTrigger>
+                        <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                          <SelectItem value="all">Todos los Estados</SelectItem>
+                          <SelectItem value="approved">Aprobado</SelectItem>
+                          <SelectItem value="pending_approval">Pendiente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Type filter */}
+                    <div className="flex-1 sm:flex-initial">
+                      <Select value={typeFilter} onValueChange={setTypeFilter}>
+                        <SelectTrigger className="h-9 w-full sm:w-[150px] text-xs shadow-xs">
+                          <SelectValue placeholder="Todos los Tipos" />
+                        </SelectTrigger>
+                        <SelectContent position="popper" className="max-h-80 duration-150 ease-out">
+                          <SelectItem value="all">Todos los Tipos</SelectItem>
+                          {GUARDIA_TYPES.map((t) => (
+                            <SelectItem key={t.value} value={t.value}>
+                              {t.shortLabel}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Developer filter (separate line on mobile, inline on desktop) */}
+                  <div className="w-full sm:w-auto">
+                    <Select value={userFilter} onValueChange={setUserFilter}>
+                      <SelectTrigger className="h-9 w-full sm:w-[190px] text-xs shadow-xs">
+                        <SelectValue placeholder="Todos los Colaboradores" />
+                      </SelectTrigger>
+                      <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                        <SelectItem value="all">Todos los Colaboradores</SelectItem>
+                        {guardiaCollaborators.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.fullName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-
-                {/* Type filter */}
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="h-9 w-[150px] text-xs shadow-xs">
-                    <SelectValue placeholder="Todos los Tipos" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="max-h-80 duration-150 ease-out">
-                    <SelectItem value="all">Todos los Tipos</SelectItem>
-                    {GUARDIA_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.shortLabel}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Developer filter */}
-                <Select value={userFilter} onValueChange={setUserFilter}>
-                  <SelectTrigger className="h-9 w-[190px] text-xs shadow-xs">
-                    <SelectValue placeholder="Todos los Colaboradores" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
-                    <SelectItem value="all">Todos los Colaboradores</SelectItem>
-                    {guardiaCollaborators.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.fullName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
 
               <Separator className="print:hidden" />
@@ -1075,9 +1088,9 @@ export function GuardiasPage() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-muted-foreground/10 bg-card/45 backdrop-blur-xs print:border-none print:shadow-none">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between print:hidden border-b border-muted-foreground/5 mb-4">
-              <CardTitle className="text-base font-bold flex items-center gap-2">
+          <Card className="border-muted-foreground/10 bg-card/45 backdrop-blur-xs print:border-none print:shadow-none overflow-hidden">
+            <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 print:hidden border-b border-muted-foreground/5 mb-4">
+              <CardTitle className="text-base font-bold flex items-center gap-2 shrink-0">
                 <Calendar className="size-4 text-primary" />
                 Calendario de Guardias
               </CardTitle>
@@ -1100,9 +1113,9 @@ export function GuardiasPage() {
             </CardHeader>
             <CardContent>
               {/* Filtros de Visualización */}
-              <div className="flex flex-wrap items-center gap-4 mb-4 text-xs font-semibold print:hidden border-b border-muted-foreground/5 pb-3">
-                <span className="text-muted-foreground">Mostrar en Calendario:</span>
-                <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2 mb-4 text-xs font-semibold print:hidden border-b border-muted-foreground/5 pb-3">
+                <span className="text-muted-foreground w-full sm:w-auto">Mostrar en Calendario:</span>
+                <div className="flex flex-wrap gap-2">
                   <Button 
                     variant={showGuardias ? "default" : "outline"} 
                     size="xs" 
@@ -1118,7 +1131,7 @@ export function GuardiasPage() {
                     className="h-7 text-xs gap-1"
                     onClick={() => setShowEventos(!showEventos)}
                   >
-                    🔥 Eventos Especiales
+                    🔥 Eventos
                   </Button>
                   <Button 
                     variant={showTurnos ? "default" : "outline"} 
@@ -1127,20 +1140,20 @@ export function GuardiasPage() {
                     onClick={() => setShowTurnos(!showTurnos)}
                   >
                     <UserIcon className="size-3.5" />
-                    Turnos Semanales
+                    Turnos
                   </Button>
                 </div>
               </div>
 
               {/* Calendar Grid Header */}
-              <div className="grid grid-cols-7 gap-1 text-center font-bold text-xs text-muted-foreground mb-2 border-b border-muted-foreground/5 pb-1">
+              <div className="grid grid-cols-7 gap-0.5 sm:gap-1 text-center font-bold text-[10px] sm:text-xs text-muted-foreground mb-2 border-b border-muted-foreground/5 pb-1">
                 {WEEK_DAYS.map(d => (
-                  <div key={d} className="py-1">{d}</div>
+                  <div key={d} className="py-1 truncate px-0.5">{d}</div>
                 ))}
               </div>
               
               {/* Calendar Grid Cells */}
-              <div className="grid grid-cols-7 gap-1.5 auto-rows-[100px]">
+              <div className="grid grid-cols-7 gap-0.5 sm:gap-1.5 auto-rows-[80px] sm:auto-rows-[100px]">
                 {cells.map((cell, idx) => {
                   const dayGuardias = guardias.filter(g => g.date === cell.dateStr);
                   const isToday = cell.dateStr === new Date().toISOString().split("T")[0];
@@ -1152,15 +1165,15 @@ export function GuardiasPage() {
                       onClick={() => {
                         setSelectedCalDate(cell.dateStr);
                       }}
-                      className={`group relative rounded-lg border p-1.5 flex flex-col justify-between transition-all cursor-pointer hover:border-primary/40 hover:bg-muted-foreground/5 ${
+                      className={`group relative rounded border sm:rounded-lg border p-0.5 sm:p-1.5 flex flex-col justify-between transition-all cursor-pointer overflow-hidden hover:border-primary/40 hover:bg-muted-foreground/5 ${
                         cell.isCurrentMonth
                           ? "bg-background/40 border-muted-foreground/10"
                           : "bg-background/10 border-muted-foreground/5 opacity-40 hover:opacity-80"
-                      } ${isToday ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}
+                      } ${isToday ? "ring-1 sm:ring-2 ring-primary ring-offset-1 sm:ring-offset-2 ring-offset-background" : ""}`}
                       title="Hacé click para ver y registrar guardias de este día"
                     >
                       {/* Day Number and Add Icon */}
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center min-w-0 overflow-hidden">
                         <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
                             isToday 
@@ -1246,29 +1259,29 @@ export function GuardiasPage() {
 
         {/* Right / Boss Overview and Hours Summary (Takes 1 Col in list view, 3 Cols in calendar view) */}
         <div className={viewMode === "calendar" ? "lg:col-span-3 space-y-6" : "lg:col-span-1 space-y-6"}>
-          <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm print:break-inside-avoid">
+          <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm print:break-inside-avoid overflow-hidden">
             <CardHeader>
               <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Award className="size-4 text-primary" />
+                <Award className="size-4 text-primary shrink-0" />
                 Resumen para Jefe de Sistemas
               </CardTitle>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground break-words">
                 Totalización de horas y guardias acumuladas por colaborador del equipo.
               </p>
             </CardHeader>
             <CardContent className={viewMode === "calendar" ? "grid gap-6 md:grid-cols-2 items-start" : "space-y-4"}>
               <div className="space-y-3">
                 {stats.devBreakdown.map((dev, index) => (
-                  <div key={dev.name} className="flex items-center justify-between p-2.5 rounded-lg border border-muted-foreground/5 bg-background/30 hover:bg-background/60 transition-all">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-muted-foreground">#{index + 1}</span>
+                  <div key={dev.name} className="flex items-center justify-between p-2 sm:p-2.5 rounded-lg border border-muted-foreground/5 bg-background/30 hover:bg-background/60 transition-all gap-2">
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-xs font-bold text-muted-foreground shrink-0">#{index + 1}</span>
                         <span className="text-sm font-semibold truncate text-foreground">{dev.name}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">{dev.count} {dev.count === 1 ? "guardia registrada" : "guardias registradas"}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{dev.count} {dev.count === 1 ? "guardia registrada" : "guardias registradas"}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className="text-base font-extrabold text-primary font-mono">{dev.hours.toFixed(1)} hs</span>
+                      <span className="text-sm sm:text-base font-extrabold text-primary font-mono whitespace-nowrap">{dev.hours.toFixed(1)} hs</span>
                       <p className="text-[10px] text-muted-foreground mt-0.5">Liquidables</p>
                     </div>
                   </div>
@@ -1281,7 +1294,7 @@ export function GuardiasPage() {
               {viewMode !== "calendar" && <Separator />}
 
               <div
-                className={`rounded-lg border p-3 text-xs space-y-2 ${
+                className={`rounded-lg border p-3 text-xs space-y-2 overflow-hidden break-words ${
                   stats.pending > 0
                     ? "bg-amber-500/5 border-amber-500/20 text-amber-900 dark:text-amber-300"
                     : "bg-emerald-500/5 border-emerald-500/20 text-emerald-900 dark:text-emerald-300"
