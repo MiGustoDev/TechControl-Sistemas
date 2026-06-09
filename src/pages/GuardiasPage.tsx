@@ -1607,19 +1607,21 @@ export function GuardiasPage() {
           if (!open) setSelectedCalDate(null);
         }}
       >
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader className="flex flex-row items-center justify-between border-b border-muted-foreground/10 pb-4 mb-4">
-            <div>
-              <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                <Calendar className="size-5 text-primary" />
-                Guardias del día: {selectedCalDate ? formatDate(selectedCalDate) : ""}
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                Registros activos y control operativo para esta jornada.
-              </DialogDescription>
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="flex flex-col gap-3 border-b border-muted-foreground/10 pb-4 mb-4">
+            <div className="flex flex-row items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-base sm:text-lg font-bold flex items-center gap-2 flex-wrap">
+                  <Calendar className="size-4 sm:size-5 text-primary shrink-0" />
+                  <span>Guardias del día: {selectedCalDate ? formatDate(selectedCalDate) : ""}</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  Registros activos y control operativo para esta jornada.
+                </DialogDescription>
+              </div>
             </div>
             {selectedCalDate && (
-              <div className="flex items-center gap-2 mr-6 print:hidden">
+              <div className="flex items-center gap-2 print:hidden flex-wrap">
                 <Button 
                   onClick={() => {
                     const dateToPass = selectedCalDate;
@@ -1627,10 +1629,11 @@ export function GuardiasPage() {
                     openCreate(dateToPass);
                   }} 
                   size="sm" 
-                  className="gap-1.5 h-8 font-semibold"
+                  className="gap-1.5 h-8 font-semibold flex-1 sm:flex-initial"
                 >
-                  <Plus className="size-3.5" /> 
-                  Registrar Guardia
+                  <Plus className="size-3.5 shrink-0" /> 
+                  <span className="hidden sm:inline">Registrar Guardia</span>
+                  <span className="sm:hidden">Registrar</span>
                 </Button>
                 <Button 
                   onClick={() => {
@@ -1643,10 +1646,11 @@ export function GuardiasPage() {
                   }} 
                   size="sm" 
                   variant="outline"
-                  className="gap-1.5 h-8 border-primary/20 text-primary hover:bg-primary/5 font-semibold"
+                  className="gap-1.5 h-8 border-primary/20 text-primary hover:bg-primary/5 font-semibold flex-1 sm:flex-initial"
                 >
-                  <Plus className="size-3.5" /> 
-                  Agregar Evento
+                  <Plus className="size-3.5 shrink-0" /> 
+                  <span className="hidden sm:inline">Agregar Evento</span>
+                  <span className="sm:hidden">Evento</span>
                 </Button>
               </div>
             )}
