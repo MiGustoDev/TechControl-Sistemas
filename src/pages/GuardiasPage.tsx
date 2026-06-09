@@ -722,18 +722,21 @@ export function GuardiasPage() {
             Registro, control operativo y visualización de horas de guardia trabajadas fuera de horario.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <Button variant="outline" size="sm" onClick={exportToPdf} className="w-full sm:w-auto">
-            <FileDown className="size-4 mr-1.5" />
-            Exportar PDF
+        <div className="flex flex-row items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+          <Button variant="outline" size="sm" onClick={exportToPdf} className="flex-1 sm:flex-initial text-xs sm:text-sm px-2 sm:px-3">
+            <FileDown className="size-3.5 sm:size-4 mr-1 sm:mr-1.5 shrink-0" />
+            <span className="hidden sm:inline">Exportar PDF</span>
+            <span className="sm:hidden">Exportar</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={handlePrint} className="w-full sm:w-auto">
-            <Printer className="size-4 mr-1.5" />
-            Imprimir Reporte
+          <Button variant="outline" size="sm" onClick={handlePrint} className="flex-1 sm:flex-initial text-xs sm:text-sm px-2 sm:px-3">
+            <Printer className="size-3.5 sm:size-4 mr-1 sm:mr-1.5 shrink-0" />
+            <span className="hidden sm:inline">Imprimir Reporte</span>
+            <span className="sm:hidden">Imprimir</span>
           </Button>
-          <Button onClick={() => openCreate()} className="w-full sm:w-auto">
-            <Plus className="size-4 mr-1.5" />
-            Registrar Guardia
+          <Button onClick={() => openCreate()} className="flex-1 sm:flex-initial text-xs sm:text-sm px-2 sm:px-3">
+            <Plus className="size-3.5 sm:size-4 mr-1 sm:mr-1.5 shrink-0" />
+            <span className="hidden sm:inline">Registrar Guardia</span>
+            <span className="sm:hidden">Registrar</span>
           </Button>
         </div>
       </div>
@@ -860,62 +863,72 @@ export function GuardiasPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Filter controls */}
-              <div className="flex flex-wrap items-center gap-3 print:hidden">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center print:hidden w-full">
                 {/* Search */}
-                <div className="relative flex-1 min-w-[200px]">
+                <div className="relative flex-1 min-w-[200px] w-full">
                   <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Buscar descripción, sucursal..."
-                    className="pl-8 h-9 text-sm"
+                    className="pl-8 h-9 text-sm w-full"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
 
-                {/* Status filter */}
-                <div className="flex items-center gap-1.5">
-                  <Filter className="size-3.5 text-muted-foreground shrink-0" />
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-9 w-[160px] text-xs shadow-xs">
-                      <SelectValue placeholder="Todos los Estados" />
-                    </SelectTrigger>
-                    <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
-                      <SelectItem value="all">Todos los Estados</SelectItem>
-                      <SelectItem value="approved">Aprobado</SelectItem>
-                      <SelectItem value="pending_approval">Pendiente</SelectItem>
-                    </SelectContent>
-                  </Select>
+                {/* Filters Row */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 w-full sm:w-auto">
+                  {/* Status & Type on a single line on mobile */}
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    {/* Status filter */}
+                    <div className="flex items-center gap-1.5 flex-1 sm:flex-initial">
+                      <Filter className="size-3.5 text-muted-foreground shrink-0" />
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="h-9 w-full sm:w-[160px] text-xs shadow-xs">
+                          <SelectValue placeholder="Todos los Estados" />
+                        </SelectTrigger>
+                        <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                          <SelectItem value="all">Todos los Estados</SelectItem>
+                          <SelectItem value="approved">Aprobado</SelectItem>
+                          <SelectItem value="pending_approval">Pendiente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Type filter */}
+                    <div className="flex-1 sm:flex-initial">
+                      <Select value={typeFilter} onValueChange={setTypeFilter}>
+                        <SelectTrigger className="h-9 w-full sm:w-[150px] text-xs shadow-xs">
+                          <SelectValue placeholder="Todos los Tipos" />
+                        </SelectTrigger>
+                        <SelectContent position="popper" className="max-h-80 duration-150 ease-out">
+                          <SelectItem value="all">Todos los Tipos</SelectItem>
+                          {GUARDIA_TYPES.map((t) => (
+                            <SelectItem key={t.value} value={t.value}>
+                              {t.shortLabel}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Developer filter (separate line on mobile, inline on desktop) */}
+                  <div className="w-full sm:w-auto">
+                    <Select value={userFilter} onValueChange={setUserFilter}>
+                      <SelectTrigger className="h-9 w-full sm:w-[190px] text-xs shadow-xs">
+                        <SelectValue placeholder="Todos los Colaboradores" />
+                      </SelectTrigger>
+                      <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                        <SelectItem value="all">Todos los Colaboradores</SelectItem>
+                        {guardiaCollaborators.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.fullName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-
-                {/* Type filter */}
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="h-9 w-[150px] text-xs shadow-xs">
-                    <SelectValue placeholder="Todos los Tipos" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="max-h-80 duration-150 ease-out">
-                    <SelectItem value="all">Todos los Tipos</SelectItem>
-                    {GUARDIA_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.shortLabel}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Developer filter */}
-                <Select value={userFilter} onValueChange={setUserFilter}>
-                  <SelectTrigger className="h-9 w-[190px] text-xs shadow-xs">
-                    <SelectValue placeholder="Todos los Colaboradores" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
-                    <SelectItem value="all">Todos los Colaboradores</SelectItem>
-                    {guardiaCollaborators.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.fullName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
 
               <Separator className="print:hidden" />
