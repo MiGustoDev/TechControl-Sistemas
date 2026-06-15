@@ -39,6 +39,7 @@ import { toast } from "sonner";
 import { GUARDIA_TYPES, getGuardiaTypeShortLabel } from "@/data/guardiaTypes";
 import { formatDate, formatToday } from "@/lib/utils-app";
 import type { Guardia, User as AppUser } from "@/types";
+import { getHolidayInfo } from "@/data/holidays";
 
 function formatCollaboratorRole(user: AppUser) {
   if (user.role?.trim()) return user.role.trim();
@@ -140,6 +141,33 @@ export function GuardiasPage() {
   const [showGuardias, setShowGuardias] = useState(true);
   const [showEventos, setShowEventos] = useState(true);
   const [showTurnos, setShowTurnos] = useState(true);
+  const [showFeriados, setShowFeriados] = useState(true);
+
+  // Holiday Assignments states
+  const [holidayAssignments, setHolidayAssignments] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem("techcontrol_holiday_assignments");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return {};
+  });
+  const [holidayDialogOpen, setHolidayDialogOpen] = useState(false);
+  const [selectedHolidayDate, setSelectedHolidayDate] = useState<string | null>(null);
+  const [tempAssignedId, setTempAssignedId] = useState<string>("none");
+
+  useEffect(() => {
+    localStorage.setItem("techcontrol_holiday_assignments", JSON.stringify(holidayAssignments));
+  }, [holidayAssignments]);
+
+  useEffect(() => {
+    if (holidayDialogOpen && selectedHolidayDate) {
+      setTempAssignedId(holidayAssignments[selectedHolidayDate] || "none");
+    }
+  }, [holidayDialogOpen, selectedHolidayDate, holidayAssignments]);
 
   // Special events states
   interface SpecialEvent {
@@ -1142,6 +1170,14 @@ export function GuardiasPage() {
                     <UserIcon className="size-3.5" />
                     Turnos
                   </Button>
+                  <Button 
+                    variant={showFeriados ? "default" : "outline"} 
+                    size="xs" 
+                    className="h-7 text-xs gap-1"
+                    onClick={() => setShowFeriados(!showFeriados)}
+                  >
+                    🎉 Feriados
+                  </Button>
                 </div>
               </div>
 
@@ -1158,30 +1194,59 @@ export function GuardiasPage() {
                   const dayGuardias = guardias.filter(g => g.date === cell.dateStr);
                   const isToday = cell.dateStr === new Date().toISOString().split("T")[0];
                   const weeklyTurn = getWeeklyTurn(cell.dateStr);
+                  const holidayName = getHolidayInfo(cell.dateStr);
+                  const assignedUserId = holidayAssignments[cell.dateStr];
+                  const assignedUser = assignedUserId ? users.find(u => u.id === assignedUserId) : null;
                   
+                  // Construct hover title
+                  let cellTitle = "Hacé click para ver y registrar guardias de este día";
+                  if (holidayName && showFeriados) {
+                    cellTitle = `Feriado: ${holidayName}\nAsiste: ${assignedUser ? assignedUser.fullName : "Sin asignar"}\n\n${cellTitle}`;
+                  }
+
+                  // Background styles for holiday
+                  const holidayBgClass = (holidayName && showFeriados)
+                    ? cell.isCurrentMonth
+                      ? "bg-amber-500/10 border-amber-500/30 dark:bg-amber-950/20 dark:border-amber-900/40 hover:bg-amber-500/15"
+                      : "bg-amber-500/5 border-amber-500/20 dark:bg-amber-950/10 dark:border-amber-900/20 opacity-50 hover:opacity-80 hover:bg-amber-500/10"
+                    : cell.isCurrentMonth
+                      ? "bg-background/40 border-muted-foreground/10"
+                      : "bg-background/10 border-muted-foreground/5 opacity-40 hover:opacity-80";
+
                   return (
                     <div
                       key={idx}
                       onClick={() => {
                         setSelectedCalDate(cell.dateStr);
                       }}
-                      className={`group relative rounded border sm:rounded-lg border p-0.5 sm:p-1.5 flex flex-col justify-between transition-all cursor-pointer overflow-hidden hover:border-primary/40 hover:bg-muted-foreground/5 ${
-                        cell.isCurrentMonth
-                          ? "bg-background/40 border-muted-foreground/10"
-                          : "bg-background/10 border-muted-foreground/5 opacity-40 hover:opacity-80"
-                      } ${isToday ? "ring-1 sm:ring-2 ring-primary ring-offset-1 sm:ring-offset-2 ring-offset-background" : ""}`}
-                      title="Hacé click para ver y registrar guardias de este día"
+                      className={`group relative rounded border sm:rounded-lg border p-0.5 sm:p-1.5 flex flex-col justify-between transition-all cursor-pointer overflow-hidden hover:border-primary/40 hover:bg-muted-foreground/5 ${holidayBgClass} ${isToday ? "ring-1 sm:ring-2 ring-primary ring-offset-1 sm:ring-offset-2 ring-offset-background" : ""}`}
+                      title={cellTitle}
                     >
                       {/* Day Number and Add Icon */}
                       <div className="flex justify-between items-center min-w-0 overflow-hidden">
                         <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-                            isToday 
-                              ? "bg-primary text-primary-foreground font-black" 
-                              : "text-muted-foreground"
-                          }`}>
-                            {cell.day}
-                          </span>
+                          {holidayName && showFeriados ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation(); // Stop opening normal Day Dialog
+                                setSelectedHolidayDate(cell.dateStr);
+                                setHolidayDialogOpen(true);
+                              }}
+                              className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full shrink-0 transition-transform hover:scale-110 cursor-pointer bg-amber-500 text-white dark:bg-amber-600 dark:text-amber-100`}
+                              title={`Feriado: ${holidayName}. Hacé click para asignar o modificar el colaborador de guardia.`}
+                            >
+                              {cell.day}
+                            </button>
+                          ) : (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                              isToday 
+                                ? "bg-primary text-primary-foreground font-black" 
+                                : "text-muted-foreground"
+                            }`}>
+                              {cell.day}
+                            </span>
+                          )}
                           {showEventos && getSpecialEvents(cell.dateStr).map((evt, eIdx) => {
                             let color = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
                             if (evt.type === "break") {
@@ -1206,6 +1271,26 @@ export function GuardiasPage() {
                         <Plus className="size-3 opacity-0 group-hover:opacity-60 transition-opacity text-primary shrink-0" />
                       </div>
                       
+                      {/* Holiday Badge inside cell */}
+                      {holidayName && showFeriados && (
+                        <div 
+                          className="text-[8px] font-bold bg-amber-500/10 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-500/20 px-1 py-0.5 rounded-md truncate mt-1 select-none"
+                          title={`Feriado: ${holidayName}`}
+                        >
+                          🎉 {holidayName}
+                        </div>
+                      )}
+                      
+                      {assignedUser && showFeriados && (
+                        <div
+                          className="text-[8px] font-bold bg-emerald-500/15 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-500/20 px-1 py-0.5 rounded-md truncate mt-0.5 select-none flex items-center gap-0.5"
+                          title={`Colaborador asignado: ${assignedUser.fullName}`}
+                        >
+                          <UserIcon className="size-2 shrink-0" />
+                          <span>Asiste: {assignedUser.fullName.split(" ")[0]}</span>
+                        </div>
+                      )}
+
                       {/* Guardias in this day */}
                       <div className="flex flex-col gap-1 overflow-y-auto max-h-[50px] mt-1 pr-0.5 scrollbar-thin">
                         {showGuardias && dayGuardias.map(g => {
@@ -1929,6 +2014,79 @@ export function GuardiasPage() {
             </Button>
             <Button variant="outline" onClick={() => setEventDialogOpen(false)}>
               Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Asignar Colaborador en Feriado */}
+      <Dialog open={holidayDialogOpen} onOpenChange={setHolidayDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="size-5 text-amber-500" />
+              <span>Asignar Guardia - Día Feriado</span>
+            </DialogTitle>
+            <DialogDescription>
+              Seleccioná el colaborador que asistirá a trabajar durante este día feriado.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedHolidayDate && (() => {
+            const hName = getHolidayInfo(selectedHolidayDate);
+            
+            return (
+              <div className="grid gap-4 py-4">
+                <div className="space-y-1 bg-amber-500/5 dark:bg-amber-950/20 border border-amber-500/10 rounded-lg p-3 text-sm">
+                  <p className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <span>🎉</span> {hName}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-medium">
+                    Fecha: {formatDate(selectedHolidayDate)}
+                  </p>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="holidayCollaborator">Colaborador Asignado</Label>
+                  <Select
+                    value={tempAssignedId}
+                    onValueChange={setTempAssignedId}
+                  >
+                    <SelectTrigger id="holidayCollaborator">
+                      <SelectValue placeholder="Seleccionar colaborador" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                      <SelectItem value="none">❌ Sin asignar / Nadie</SelectItem>
+                      {guardiaCollaborators.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.fullName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            );
+          })()}
+
+          <DialogFooter className="flex-row-reverse justify-end gap-2">
+            <Button onClick={() => {
+              setHolidayAssignments(prev => {
+                const next = { ...prev };
+                if (tempAssignedId === "none") {
+                  delete next[selectedHolidayDate!];
+                } else {
+                  next[selectedHolidayDate!] = tempAssignedId;
+                }
+                return next;
+              });
+              setHolidayDialogOpen(false);
+              toast.success("Asignación de feriado guardada correctamente");
+            }}>
+              Guardar Asignación
+            </Button>
+            <Button variant="outline" onClick={() => setHolidayDialogOpen(false)}>
+              Cerrar
             </Button>
           </DialogFooter>
         </DialogContent>
