@@ -3,7 +3,7 @@ import {
   Plus, Search, Edit, Save, Trash2, Clock, Check, 
   FileDown, Printer, Filter, Calendar, 
   FileText, CheckCircle2, AlertCircle, User as UserIcon, Award, 
-  ChevronLeft, ChevronRight, Building2
+  ChevronLeft, ChevronRight, Building2, Maximize2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -118,8 +118,44 @@ function getWeeklyTurn(dateStr: string): "facundo" | "ramiro" {
   return normalizedWeek === 1 ? "facundo" : "ramiro";
 }
 
+interface SpecialEventTask {
+  id: string;
+  name: string;
+  completed: boolean;
+}
 
+interface SpecialEvent {
+  id: string;
+  date: string;
+  name: string;
+  type: "onfire" | "break" | "promo" | "custom";
+  tasks?: SpecialEventTask[];
+}
 
+function getDynamicEventStyle(tasks?: SpecialEventTask[]) {
+  if (!tasks || tasks.length === 0) {
+    return {
+      style: {
+        backgroundColor: "rgba(239, 68, 68, 0.12)",
+        color: "rgb(220, 38, 38)",
+        borderColor: "rgba(239, 68, 68, 0.3)"
+      },
+      percent: 0
+    };
+  }
+  const completed = tasks.filter(t => t.completed).length;
+  const pct = completed / tasks.length;
+  const hue = Math.round(pct * 120); // 0 (red) to 120 (green)
+  
+  return {
+    style: {
+      backgroundColor: `hsla(${hue}, 80%, 45%, 0.12)`,
+      color: `hsl(${hue}, 80%, 38%)`,
+      borderColor: `hsla(${hue}, 80%, 45%, 0.3)`
+    },
+    percent: Math.round(pct * 100)
+  };
+}
 
 export function GuardiasPage() {
   const { guardias, users, addGuardia, updateGuardia, deleteGuardia } = useApp();
@@ -170,13 +206,6 @@ export function GuardiasPage() {
   }, [holidayDialogOpen, selectedHolidayDate, holidayAssignments]);
 
   // Special events states
-  interface SpecialEvent {
-    id: string;
-    date: string;
-    name: string;
-    type: "onfire" | "break" | "promo" | "custom";
-  }
-
   const [manualEvents, setManualEvents] = useState<SpecialEvent[]>(() => {
     const saved = localStorage.getItem("techcontrol_special_events");
     if (saved) {
@@ -191,36 +220,98 @@ export function GuardiasPage() {
         id: "default-mg-break",
         date: "2026-06-09",
         name: "☕ MG Break",
-        type: "break"
+        type: "break",
+        tasks: []
       }
     ];
   });
 
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [eventForm, setEventForm] = useState<{
+    id?: string;
     date: string;
     name: string;
     type: "onfire" | "break" | "promo" | "custom";
+    tasks: SpecialEventTask[];
   }>({
     date: "",
     name: "",
-    type: "break"
+    type: "break",
+    tasks: []
   });
+
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [detailEvent, setDetailEvent] = useState<SpecialEvent | null>(null);
+
+  const openDetailEvent = (evt: SpecialEvent) => {
+    setDetailEvent(evt);
+    setDetailDialogOpen(true);
+  };
+
+  const toggleTaskInDetail = (taskId: string, completed: boolean) => {
+    if (!detailEvent) return;
+    const updatedTasks = (detailEvent.tasks || []).map(t => 
+      t.id === taskId ? { ...t, completed } : t
+    );
+    const updatedEvent = { ...detailEvent, tasks: updatedTasks };
+    setDetailEvent(updatedEvent);
+    setManualEvents(prev => prev.map(e => e.id === detailEvent.id ? updatedEvent : e));
+  };
+
+  const handleEditFromDetail = () => {
+    if (!detailEvent) return;
+    setDetailDialogOpen(false);
+    openEditEvent(detailEvent);
+  };
+
+  const handleDeleteFromDetail = () => {
+    if (!detailEvent) return;
+    setManualEvents(prev => prev.filter(e => e.id !== detailEvent.id));
+    setDetailDialogOpen(false);
+    toast.success("Evento eliminado");
+  };
+
+  const openCreateEvent = (prefilledDate?: string) => {
+    setEventForm({
+      date: toDisplayDate(prefilledDate || new Date().toISOString().split("T")[0]),
+      name: "",
+      type: "custom",
+      tasks: []
+    });
+    setEventDialogOpen(true);
+  };
+
+  const openEditEvent = (evt: SpecialEvent) => {
+    setEventForm({
+      id: evt.id,
+      date: toDisplayDate(evt.date),
+      name: evt.name,
+      type: evt.type,
+      tasks: evt.tasks || []
+    });
+    setEventDialogOpen(true);
+  };
 
   useEffect(() => {
     localStorage.setItem("techcontrol_special_events", JSON.stringify(manualEvents));
   }, [manualEvents]);
 
-  const getSpecialEvents = (dateStr: string) => {
-    const list: { name: string; type: "onfire" | "break" | "promo" | "custom" }[] = [];
+  const getSpecialEvents = (dateStr: string): SpecialEvent[] => {
+    const list: SpecialEvent[] = [];
 
     if (isLastThursdayOfMonth(dateStr)) {
-      list.push({ name: "🔥 Jueves OnFire", type: "onfire" });
+      list.push({
+        id: "last-thursday-onfire",
+        date: dateStr,
+        name: "🔥 Jueves OnFire",
+        type: "onfire",
+        tasks: []
+      });
     }
 
     const matches = manualEvents.filter(e => e.date === dateStr);
     for (const m of matches) {
-      list.push({ name: m.name, type: m.type });
+      list.push(m);
     }
 
     return list;
@@ -724,24 +815,297 @@ export function GuardiasPage() {
       return;
     }
 
-    const newEvent: SpecialEvent = {
-      id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-      date: isoDate,
-      name: eventForm.name,
-      type: eventForm.type
-    };
+    if (eventForm.id) {
+      setManualEvents(prev => prev.map(e => e.id === eventForm.id ? {
+        ...e,
+        date: isoDate,
+        name: eventForm.name,
+        type: eventForm.type,
+        tasks: eventForm.tasks
+      } : e));
+      toast.success("Evento especial actualizado");
+    } else {
+      const newEvent: SpecialEvent = {
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+        date: isoDate,
+        name: eventForm.name,
+        type: eventForm.type,
+        tasks: eventForm.tasks
+      };
+      setManualEvents(prev => [...prev, newEvent]);
+      toast.success("Evento especial registrado");
+    }
 
-    setManualEvents(prev => [...prev, newEvent]);
     setEventDialogOpen(false);
     
-    // Also reopen/refresh the selected date so the user immediately sees the event they added
+    // Also reopen/refresh the selected date so the user immediately sees the event they added/edited
     setSelectedCalDate(isoDate);
-
-    toast.success("Evento especial registrado");
   };
+
+  const isUrlFullscreen = typeof window !== "undefined" && window.location.search.includes("fullscreenCalendar=true");
 
   return (
     <div className="space-y-6 p-3 sm:p-6 print:p-0 print:space-y-4 overflow-x-hidden">
+      {isUrlFullscreen && (
+        <div className="fullscreen-overlay fixed inset-0 z-40 bg-background p-1 flex flex-col select-none overflow-hidden">
+          <style>{`
+            nav, header, aside, [class*="Sidebar"], [class*="Navbar"], [class*="Header"], [class*="layout"] {
+              display: none !important;
+            }
+            div.space-y-6 > *:not(.fullscreen-overlay) {
+              display: none !important;
+            }
+            body, html {
+              overflow: hidden !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: hsl(var(--background)) !important;
+            }
+          `}</style>
+
+          <Card className="flex-1 flex flex-col border-muted-foreground/10 bg-card/45 backdrop-blur-xs overflow-hidden h-full">
+            <CardHeader className="py-1 px-3 flex flex-row items-center justify-between gap-2 border-b border-muted-foreground/5 mb-1 shrink-0">
+              <div className="flex items-center gap-2">
+                <Calendar className="size-4 text-primary animate-pulse" />
+                <CardTitle className="text-sm font-bold">
+                  Calendario Operativo
+                </CardTitle>
+              </div>
+              
+              {/* Month Navigation */}
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon-xs" className="size-6" onClick={handlePrevMonth} title="Mes anterior">
+                  <ChevronLeft className="size-3.5" />
+                </Button>
+                <span className="text-xs font-bold min-w-[95px] text-center capitalize">
+                  {MONTH_NAMES[currentCalMonth]} {currentCalYear}
+                </span>
+                <Button variant="outline" size="icon-xs" className="size-6" onClick={handleNextMonth} title="Mes siguiente">
+                  <ChevronRight className="size-3.5" />
+                </Button>
+                <Button variant="ghost" size="xs" onClick={handleGoToday} className="text-xs font-semibold h-6 px-1.5">
+                  Hoy
+                </Button>
+                <Separator orientation="vertical" className="h-4 mx-0.5" />
+                <Button 
+                  variant="destructive" 
+                  size="xs" 
+                  onClick={() => window.close()} 
+                  className="text-xs font-semibold h-6 px-2"
+                  title="Cerrar pestaña"
+                >
+                  Cerrar Pestaña
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col min-h-0 p-1 pt-0">
+              {/* Filtros de Visualización */}
+              <div className="flex flex-wrap items-center gap-1.5 mb-1 text-xs font-semibold border-b border-muted-foreground/5 pb-1 shrink-0">
+                <span className="text-muted-foreground text-[10px]">Mostrar:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  <Button 
+                    variant={showGuardias ? "default" : "outline"} 
+                    size="xs" 
+                    className="h-6 text-[10.5px] gap-1 px-2" 
+                    onClick={() => setShowGuardias(!showGuardias)}
+                  >
+                    <Clock className="size-3" />
+                    Guardias
+                  </Button>
+                  <Button 
+                    variant={showEventos ? "default" : "outline"} 
+                    size="xs" 
+                    className="h-6 text-[10.5px] gap-1 px-2"
+                    onClick={() => setShowEventos(!showEventos)}
+                  >
+                    🔥 Eventos
+                  </Button>
+                  <Button 
+                    variant={showTurnos ? "default" : "outline"} 
+                    size="xs" 
+                    className="h-6 text-[10.5px] gap-1 px-2"
+                    onClick={() => setShowTurnos(!showTurnos)}
+                  >
+                    <UserIcon className="size-3" />
+                    Turnos
+                  </Button>
+                  <Button 
+                    variant={showFeriados ? "default" : "outline"} 
+                    size="xs" 
+                    className="h-6 text-[10.5px] gap-1 px-2"
+                    onClick={() => setShowFeriados(!showFeriados)}
+                  >
+                    🎉 Feriados
+                  </Button>
+                </div>
+              </div>
+
+              {/* Grid Container */}
+              <div className="flex-1 flex flex-col min-h-0">
+                {/* Calendar Grid Header */}
+                <div className="grid grid-cols-7 gap-1 text-center font-bold text-[10px] text-muted-foreground mb-1 border-b border-muted-foreground/5 pb-0.5 shrink-0">
+                  {WEEK_DAYS.map(d => (
+                    <div key={d} className="py-0.5 truncate">{d}</div>
+                  ))}
+                </div>
+                
+                {/* Calendar Grid Cells - Flex grow using style for absolute stretching */}
+                <div 
+                  className="flex-1 grid grid-cols-7 gap-1 min-h-0"
+                  style={{ gridTemplateRows: `repeat(${Math.ceil(cells.length / 7)}, 1fr)` }}
+                >
+                  {cells.map((cell, idx) => {
+                    const dayGuardias = guardias.filter(g => g.date === cell.dateStr);
+                    const isToday = cell.dateStr === new Date().toISOString().split("T")[0];
+                    const weeklyTurn = getWeeklyTurn(cell.dateStr);
+                    const holidayName = getHolidayInfo(cell.dateStr);
+                    const assignedUserId = holidayAssignments[cell.dateStr];
+                    const assignedUser = assignedUserId ? users.find(u => u.id === assignedUserId) : null;
+                    
+                    let cellTitle = "Hacé click para ver y registrar guardias de este día";
+                    if (holidayName && showFeriados) {
+                      cellTitle = `Feriado: ${holidayName}\nAsiste: ${assignedUser ? assignedUser.fullName : "Sin asignar"}\n\n${cellTitle}`;
+                    }
+
+                    const holidayBgClass = (holidayName && showFeriados)
+                      ? cell.isCurrentMonth
+                        ? "bg-amber-500/10 border-amber-500/30 dark:bg-amber-950/20 dark:border-amber-900/40 hover:bg-amber-500/15"
+                        : "bg-amber-500/5 border-amber-500/20 dark:bg-amber-950/10 dark:border-amber-900/20 opacity-50 hover:opacity-80 hover:bg-amber-500/10"
+                      : cell.isCurrentMonth
+                        ? "bg-background/40 border-muted-foreground/10"
+                        : "bg-background/10 border-muted-foreground/5 opacity-40 hover:opacity-80";
+
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          setSelectedCalDate(cell.dateStr);
+                        }}
+                        className={`group relative rounded-lg border p-1.5 flex flex-col justify-between transition-all cursor-pointer overflow-hidden hover:border-primary/40 hover:bg-muted-foreground/5 ${holidayBgClass} ${isToday ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}
+                        title={cellTitle}
+                      >
+                        <div className="flex justify-between items-center min-w-0 overflow-hidden">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                            {holidayName && showFeriados ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedHolidayDate(cell.dateStr);
+                                  setHolidayDialogOpen(true);
+                                }}
+                                className="text-[11px] font-extrabold px-2 py-0.5 rounded-full shrink-0 transition-transform hover:scale-110 cursor-pointer bg-amber-500 text-white dark:bg-amber-600 dark:text-amber-100"
+                                title={`Feriado: ${holidayName}. Asignar guardia.`}
+                              >
+                                {cell.day}
+                              </button>
+                            ) : (
+                              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                isToday 
+                                  ? "bg-primary text-primary-foreground font-black" 
+                                  : "text-muted-foreground"
+                              }`}>
+                                {cell.day}
+                              </span>
+                            )}
+                            {showEventos && getSpecialEvents(cell.dateStr).map((evt) => {
+                              let style = {};
+                              let className = "";
+                              if (evt.id === "last-thursday-onfire") {
+                                className = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
+                              } else {
+                                const dynamic = getDynamicEventStyle(evt.tasks);
+                                style = dynamic.style;
+                                className = "border";
+                              }
+                              
+                              return (
+                                <span 
+                                  key={evt.id}
+                                  style={style}
+                                  onClick={(e) => {
+                                    if (evt.id !== "last-thursday-onfire") {
+                                      e.stopPropagation();
+                                      openDetailEvent(evt);
+                                    }
+                                  }}
+                                  className={`text-[9px] ${className} px-2 py-0.5 rounded font-extrabold uppercase tracking-wider shrink-0 truncate max-w-full cursor-pointer hover:scale-105 transition-transform`}
+                                  title={`${evt.name} (${evt.tasks ? evt.tasks.filter(t => t.completed).length : 0}/${evt.tasks ? evt.tasks.length : 0} tareas)`}
+                                >
+                                  {evt.name}
+                                </span>
+                              );
+                            })}
+                          </div>
+                          <Plus className="size-3.5 opacity-0 group-hover:opacity-60 transition-opacity text-primary shrink-0" />
+                        </div>
+                        
+                        {holidayName && showFeriados && (
+                          <div className="text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded-md truncate mt-1 select-none">
+                            🎉 {holidayName}
+                          </div>
+                        )}
+                        
+                        {/* Render Guardias inside cell */}
+                        <div className="mt-1 space-y-1 overflow-y-auto flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                          {showGuardias && dayGuardias.map((g) => {
+                            const isApproved = g.status === "approved";
+                            const isSoporte = g.type === "soporte";
+                            return (
+                              <div 
+                                key={g.id} 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEdit(g);
+                                }}
+                                className={`text-[9.5px] px-1.5 py-0.5 rounded-sm font-semibold truncate border cursor-pointer transition-colors ${
+                                  isApproved 
+                                    ? isSoporte
+                                      ? "bg-emerald-500/15 border-emerald-500/20 text-emerald-700 dark:text-emerald-400 dark:bg-emerald-950/20 hover:bg-emerald-500/25"
+                                      : "bg-indigo-500/15 border-indigo-500/20 text-indigo-700 dark:text-indigo-400 dark:bg-indigo-950/20 hover:bg-indigo-500/25"
+                                    : "bg-amber-500/15 border-amber-500/25 text-amber-700 dark:text-amber-400 dark:bg-amber-950/20 hover:bg-amber-500/25"
+                                }`}
+                                title={`${g.userName}: ${g.startTime}-${g.endTime} (${g.hours} hs) - Click para editar`}
+                              >
+                                👤 {g.userName.split(" ")[0]} ({g.hours}h)
+                              </div>
+                            );
+                          })}
+
+                          {/* Render Weekly Turn inside cell */}
+                          {showTurnos && weeklyTurn && (
+                            <div 
+                              className={`text-[9px] border px-1.5 py-0.5 rounded-sm truncate select-none ${
+                                weeklyTurn === "facundo"
+                                  ? "bg-sky-500/5 dark:bg-sky-500/10 text-sky-600/80 dark:text-sky-400/80 border-sky-500/15"
+                                  : "bg-purple-500/5 dark:bg-purple-500/10 text-purple-600/80 dark:text-purple-400/80 border-purple-500/15"
+                              }`}
+                              title={`Esta semana es el turno de guardia de ${weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}`}
+                            >
+                              🔑 Turno: {weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}
+                            </div>
+                          )}
+
+                          {/* Render Assigned Holiday helper inside cell */}
+                          {showFeriados && holidayName && assignedUser && (
+                            <div 
+                              className="text-[9px] bg-amber-500/15 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-500/20 px-1.5 py-0.5 rounded-sm truncate select-none"
+                              title={`Asignado Feriado: ${assignedUser.fullName}`}
+                            >
+                              🛡️ Guardia: {assignedUser.fullName.split(" ")[0]}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 print:hidden">
         <div>
@@ -760,6 +1124,10 @@ export function GuardiasPage() {
             <Printer className="size-3.5 sm:size-4 mr-1 sm:mr-1.5 shrink-0" />
             <span className="hidden sm:inline">Imprimir Reporte</span>
             <span className="sm:hidden">Imprimir</span>
+          </Button>
+          <Button onClick={() => openCreateEvent()} variant="outline" className="flex-1 sm:flex-initial text-xs sm:text-sm px-2 sm:px-3 border border-primary/20">
+            <Plus className="size-3.5 sm:size-4 mr-1 sm:mr-1.5 shrink-0 text-primary" />
+            <span>Crear Evento</span>
           </Button>
           <Button onClick={() => openCreate()} className="flex-1 sm:flex-initial text-xs sm:text-sm px-2 sm:px-3">
             <Plus className="size-3.5 sm:size-4 mr-1 sm:mr-1.5 shrink-0" />
@@ -873,6 +1241,15 @@ export function GuardiasPage() {
           >
             <Calendar className="size-3.5 mr-1.5" />
             Vista de Calendario
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(window.location.origin + window.location.pathname + "?fullscreenCalendar=true", "_blank")}
+            className="font-semibold text-xs h-8 px-2.5"
+            title="Ver calendario en pestaña aparte"
+          >
+            <Maximize2 className="size-3.5" />
           </Button>
         </div>
       </div>
@@ -1247,21 +1624,29 @@ export function GuardiasPage() {
                               {cell.day}
                             </span>
                           )}
-                          {showEventos && getSpecialEvents(cell.dateStr).map((evt, eIdx) => {
-                            let color = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
-                            if (evt.type === "break") {
-                              color = "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30";
-                            } else if (evt.type === "promo") {
-                              color = "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
-                            } else if (evt.type === "custom") {
-                              color = "bg-sky-500/20 text-sky-600 dark:text-sky-400 border-sky-500/30";
+                          {showEventos && getSpecialEvents(cell.dateStr).map((evt) => {
+                            let style = {};
+                            let className = "";
+                            if (evt.id === "last-thursday-onfire") {
+                              className = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
+                            } else {
+                              const dynamic = getDynamicEventStyle(evt.tasks);
+                              style = dynamic.style;
+                              className = "border";
                             }
                             
                             return (
                               <span 
-                                key={eIdx}
-                                className={`text-[8px] ${color} border px-1 py-0.2 rounded font-extrabold uppercase tracking-wider animate-pulse shrink-0`}
-                                title={evt.name}
+                                key={evt.id}
+                                style={style}
+                                onClick={(e) => {
+                                  if (evt.id !== "last-thursday-onfire") {
+                                    e.stopPropagation();
+                                    openDetailEvent(evt);
+                                  }
+                                }}
+                                className={`text-[8.5px] ${className} px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wider shrink-0 truncate max-w-full cursor-pointer hover:scale-105 transition-transform`}
+                                title={`${evt.name} (${evt.tasks ? evt.tasks.filter(t => t.completed).length : 0}/${evt.tasks ? evt.tasks.length : 0} tareas)`}
                               >
                                 {evt.name}
                               </span>
@@ -1440,6 +1825,99 @@ export function GuardiasPage() {
                   {stats.totalHoursAll.toFixed(1)} hs totales en el sistema.
                 </p>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Card: Lista de Eventos Especiales */}
+          <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm print:break-inside-avoid overflow-hidden">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Calendar className="size-4 text-primary shrink-0" />
+                  Eventos Especiales
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Eventos planificados y cumplimiento de sus tareas.
+                </p>
+              </div>
+              <Button onClick={() => openCreateEvent()} size="xs" variant="outline" className="h-7 text-xs gap-1 font-semibold border-primary/20 hover:bg-primary/5">
+                <Plus className="size-3 text-primary" /> Evento
+              </Button>
+            </CardHeader>
+            <CardContent className={viewMode === "calendar" ? "grid gap-4 md:grid-cols-3 items-start" : "space-y-3"}>
+              {manualEvents.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic text-center py-4 col-span-full">
+                  No hay eventos registrados.
+                </p>
+              ) : (
+                [...manualEvents]
+                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                  .map((evt) => {
+                    const dynamic = getDynamicEventStyle(evt.tasks);
+                    const completedTasks = evt.tasks ? evt.tasks.filter(t => t.completed).length : 0;
+                    const totalTasks = evt.tasks ? evt.tasks.length : 0;
+                    
+                    return (
+                      <div 
+                        key={evt.id}
+                        style={dynamic.style}
+                        onClick={() => openDetailEvent(evt)}
+                        className="flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:shadow-xs transition-all gap-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs font-bold font-mono px-1.5 py-0.5 rounded-sm bg-background/50 border border-muted-foreground/10">
+                              {formatDate(evt.date)}
+                            </span>
+                            <Badge variant="outline" className="text-[9px] py-0 px-1 border-muted-foreground/20 font-bold bg-background/35 capitalize">
+                              {evt.type === "break" ? "☕ Break" : evt.type === "onfire" ? "🔥 OnFire" : evt.type === "promo" ? "🎯 Promo" : "⚙️ Custom"}
+                            </Badge>
+                          </div>
+                          <h4 className="text-sm font-bold text-foreground mt-1.5 truncate">
+                            {evt.name}
+                          </h4>
+                          
+                          <div className="flex items-center gap-2 mt-2">
+                            <div className="w-16 h-1.5 rounded-full bg-muted-foreground/10 overflow-hidden shrink-0">
+                              <div 
+                                className="h-full rounded-full transition-all duration-300"
+                                style={{ 
+                                  width: `${dynamic.percent}%`,
+                                  backgroundColor: dynamic.style.color
+                                }}
+                              />
+                            </div>
+                            <span className="text-[10px] font-semibold opacity-85">
+                              {totalTasks > 0 ? `${completedTasks}/${totalTasks} (${dynamic.percent}%)` : "Sin tareas"}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <Button 
+                            variant="ghost" 
+                            size="icon-xs" 
+                            className="h-7 w-7 hover:bg-background/40"
+                            onClick={() => openEditEvent(evt)}
+                          >
+                            <Edit className="size-3.5" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon-xs" 
+                            className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              setManualEvents(prev => prev.filter(e => e.id !== evt.id));
+                              toast.success("Evento eliminado");
+                            }}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
             </CardContent>
           </Card>
         </div>
@@ -1722,12 +2200,7 @@ export function GuardiasPage() {
                 </Button>
                 <Button 
                   onClick={() => {
-                    setEventForm({
-                      date: toDisplayDate(selectedCalDate),
-                      name: "",
-                      type: "break"
-                    });
-                    setEventDialogOpen(true);
+                    openCreateEvent(selectedCalDate);
                   }} 
                   size="sm" 
                   variant="outline"
@@ -1759,36 +2232,59 @@ export function GuardiasPage() {
                       </p>
                     ) : (
                       <div className="grid gap-2 sm:grid-cols-2">
-                        {dayEvents.map((evt, idx) => {
-                          const isManual = manualEvents.some(m => m.date === selectedCalDate && m.name === evt.name);
-                          const manualEventObj = manualEvents.find(m => m.date === selectedCalDate && m.name === evt.name);
+                        {dayEvents.map((evt) => {
+                          const isManual = evt.id !== "last-thursday-onfire";
+                          const dynamic = getDynamicEventStyle(evt.tasks);
                           
-                          let badgeColor = "bg-rose-500/5 text-rose-600 dark:text-rose-400 border-rose-500/15";
-                          if (evt.type === "break") badgeColor = "bg-amber-500/5 text-amber-600 dark:text-amber-400 border-amber-500/15";
-                          else if (evt.type === "promo") badgeColor = "bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 border-emerald-500/15";
-                          else if (evt.type === "custom") badgeColor = "bg-sky-500/5 text-sky-600 dark:text-sky-400 border-sky-500/15";
-
                           return (
                             <div 
-                              key={idx} 
-                              className={`flex items-center justify-between p-2 rounded-lg border bg-card/20 ${badgeColor}`}
+                              key={evt.id} 
+                              style={isManual ? dynamic.style : undefined}
+                              className={`flex items-center justify-between px-3 py-2.5 rounded-lg border bg-card/20 transition-all hover:bg-card/45 gap-3 cursor-pointer ${!isManual ? "bg-rose-500/5 text-rose-600 dark:text-rose-400 border-rose-500/15" : ""}`}
+                              onClick={() => {
+                                if (isManual) {
+                                  setSelectedCalDate(null);
+                                  openDetailEvent(evt);
+                                }
+                              }}
                             >
-                              <span className="text-xs font-bold flex items-center gap-1.5">
-                                {evt.name}
+                              <span className="text-xs font-bold flex flex-col gap-1 cursor-pointer flex-1 min-w-0">
+                                <span className="truncate">{evt.name}</span>
+                                {isManual && (
+                                  <span className="text-[10px] opacity-75 font-normal">
+                                    {evt.tasks && evt.tasks.length > 0 
+                                      ? `${evt.tasks.filter(t => t.completed).length}/${evt.tasks.length} tareas (${dynamic.percent}%)` 
+                                      : "Sin tareas"}
+                                  </span>
+                                )}
                               </span>
-                              {isManual && manualEventObj && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon-xs" 
-                                  className="h-6 w-6 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
-                                  onClick={() => {
-                                    setManualEvents(prev => prev.filter(e => e.id !== manualEventObj.id));
-                                    toast.success("Evento eliminado");
-                                  }}
-                                  title="Eliminar evento"
-                                >
-                                  <Trash2 className="size-3" />
-                                </Button>
+                              {isManual && (
+                                <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-xs"
+                                    className="h-7 w-7 text-foreground hover:bg-background/40"
+                                    onClick={() => {
+                                      setSelectedCalDate(null);
+                                      openEditEvent(evt);
+                                    }}
+                                    title="Editar evento"
+                                  >
+                                    <Edit className="size-3.5" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon-xs" 
+                                    className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                                    onClick={() => {
+                                      setManualEvents(prev => prev.filter(e => e.id !== evt.id));
+                                      toast.success("Evento eliminado");
+                                    }}
+                                    title="Eliminar evento"
+                                  >
+                                    <Trash2 className="size-3.5" />
+                                  </Button>
+                                </div>
                               )}
                             </div>
                           );
@@ -1958,17 +2454,19 @@ export function GuardiasPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Registrar Evento Especial */}
+      {/* Dialog: Registrar/Editar Evento Especial */}
       <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Agregar Evento Especial</DialogTitle>
+            <DialogTitle>{eventForm.id ? "Editar Evento Especial" : "Agregar Evento Especial"}</DialogTitle>
             <DialogDescription>
-              Agregá un evento especial en el calendario (ej: MG Break, Jueves OnFire, Promociones).
+              {eventForm.id 
+                ? "Modificá el evento especial y gestioná sus tareas." 
+                : "Agregá un evento especial en el calendario y definí sus tareas."}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
+          <div className="flex-1 overflow-y-auto py-2 pr-1 space-y-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="grid gap-2">
               <Label htmlFor="eventDate">Fecha <span className="text-red-500">*</span></Label>
               <Input
@@ -2006,16 +2504,232 @@ export function GuardiasPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Tareas List */}
+            <div className="space-y-2 border-t pt-3">
+              <Label className="font-bold text-sm flex items-center justify-between">
+                <span>Tareas del Evento</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {eventForm.tasks.filter(t => t.completed).length}/{eventForm.tasks.length} completadas
+                </span>
+              </Label>
+              
+              {/* Add Task Input */}
+              <div className="flex gap-2">
+                <Input
+                  id="newTaskInput"
+                  placeholder="Nueva tarea..."
+                  className="h-9 text-xs"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const val = e.currentTarget.value.trim();
+                      if (val) {
+                        setEventForm(prev => ({
+                          ...prev,
+                          tasks: [...prev.tasks, { id: `${Date.now()}-${Math.random()}`, name: val, completed: false }]
+                        }));
+                        e.currentTarget.value = "";
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-9 px-2"
+                  onClick={() => {
+                    const el = document.getElementById("newTaskInput") as HTMLInputElement;
+                    const val = el?.value.trim();
+                    if (val) {
+                      setEventForm(prev => ({
+                        ...prev,
+                        tasks: [...prev.tasks, { id: `${Date.now()}-${Math.random()}`, name: val, completed: false }]
+                      }));
+                      el.value = "";
+                    }
+                  }}
+                >
+                  <Plus className="size-3.5" />
+                </Button>
+              </div>
+
+              {/* List of current Tasks */}
+              <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
+                {eventForm.tasks.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic py-2 text-center bg-muted/10 rounded">
+                    Sin tareas cargadas para este evento.
+                  </p>
+                ) : (
+                  eventForm.tasks.map((task) => (
+                    <div 
+                      key={task.id} 
+                      className="flex items-center justify-between p-2 rounded-md border border-muted-foreground/10 bg-background/50 hover:bg-background/80 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={task.completed}
+                          onChange={(e) => {
+                            setEventForm(prev => ({
+                              ...prev,
+                              tasks: prev.tasks.map(t => t.id === task.id ? { ...t, completed: e.target.checked } : t)
+                            }));
+                          }}
+                          className="h-3.5 w-3.5 rounded border-muted accent-primary cursor-pointer"
+                        />
+                        <span className={`text-xs ${task.completed ? "line-through text-muted-foreground" : "text-foreground font-medium"}`}>
+                          {task.name}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                        onClick={() => {
+                          setEventForm(prev => ({
+                            ...prev,
+                            tasks: prev.tasks.filter(t => t.id !== task.id)
+                          }));
+                        }}
+                      >
+                        <Trash2 className="size-3" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
 
-          <DialogFooter className="flex-row-reverse justify-end gap-2">
+          <DialogFooter className="border-t pt-3 flex-row-reverse justify-end gap-2 shrink-0">
             <Button onClick={handleSaveEvent}>
-              Guardar Evento
+              {eventForm.id ? "Guardar Cambios" : "Guardar Evento"}
             </Button>
             <Button variant="outline" onClick={() => setEventDialogOpen(false)}>
               Cancelar
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Vista Detallada de Tareas del Evento */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="sm:max-w-[450px] max-h-[85vh] overflow-hidden flex flex-col border border-muted-foreground/10 bg-card/95 backdrop-blur-md">
+          {detailEvent && (() => {
+            const dynamic = getDynamicEventStyle(detailEvent.tasks);
+            const completedTasks = detailEvent.tasks ? detailEvent.tasks.filter(t => t.completed).length : 0;
+            const totalTasks = detailEvent.tasks ? detailEvent.tasks.length : 0;
+            
+            return (
+              <>
+                <DialogHeader className="border-b pb-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-sm bg-muted text-muted-foreground border border-muted-foreground/10">
+                      {formatDate(detailEvent.date)}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] py-0 px-2 uppercase font-semibold border-muted-foreground/20 bg-background/50">
+                      {detailEvent.type === "break" ? "☕ Break" : detailEvent.type === "onfire" ? "🔥 OnFire" : detailEvent.type === "promo" ? "🎯 Promo" : "⚙️ Custom"}
+                    </Badge>
+                  </div>
+                  <DialogTitle className="text-xl font-bold mt-2 text-foreground break-words">
+                    {detailEvent.name}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground mt-1">
+                    Control de tareas y estado del evento.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {/* Progress Section */}
+                <div className="py-4 border-b space-y-2">
+                  <div className="flex justify-between items-center text-xs font-semibold">
+                    <span className="text-muted-foreground">Progreso de Frentes</span>
+                    <span style={{ color: dynamic.style.color }} className="font-bold">
+                      {totalTasks > 0 ? `${completedTasks}/${totalTasks} (${dynamic.percent}%)` : "Sin tareas"}
+                    </span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                    <div 
+                      className="h-full rounded-full transition-all duration-300"
+                      style={{ 
+                        width: `${totalTasks > 0 ? dynamic.percent : 0}%`,
+                        backgroundColor: dynamic.style.color
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Tasks List */}
+                <div className="flex-1 overflow-y-auto py-4 space-y-2.5 [scrollbar-width:thin]">
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Tareas a Cumplir
+                  </h4>
+                  
+                  {!detailEvent.tasks || detailEvent.tasks.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic py-6 text-center bg-muted/20 rounded-lg">
+                      No hay tareas definidas para este evento. Hacé click en "Editar" para agregarlas.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {detailEvent.tasks.map((task) => (
+                        <div 
+                          key={task.id} 
+                          className="flex items-center gap-3 p-3 rounded-lg border border-muted-foreground/10 bg-background/40 hover:bg-background/70 transition-colors cursor-pointer select-none"
+                          onClick={() => toggleTaskInDetail(task.id, !task.completed)}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={task.completed}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              toggleTaskInDetail(task.id, e.target.checked);
+                            }}
+                            className="h-4 w-4 rounded border-muted accent-primary cursor-pointer shrink-0"
+                          />
+                          <span className={`text-sm ${task.completed ? "line-through text-muted-foreground font-normal" : "text-foreground font-medium"}`}>
+                            {task.name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <DialogFooter className="border-t pt-4 flex items-center justify-between sm:justify-between gap-2 shrink-0">
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20 h-9"
+                      onClick={handleDeleteFromDetail}
+                    >
+                      <Trash2 className="size-4 mr-1.5" />
+                      Eliminar
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-9"
+                      onClick={handleEditFromDetail}
+                    >
+                      <Edit className="size-4 mr-1.5" />
+                      Editar
+                    </Button>
+                  </div>
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    className="h-9 px-5"
+                    onClick={() => setDetailDialogOpen(false)}
+                  >
+                    Listo / Cerrar
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
