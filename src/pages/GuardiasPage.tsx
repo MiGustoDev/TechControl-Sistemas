@@ -40,6 +40,7 @@ import { GUARDIA_TYPES, getGuardiaTypeShortLabel } from "@/data/guardiaTypes";
 import { formatDate, formatToday } from "@/lib/utils-app";
 import type { Guardia, User as AppUser } from "@/types";
 import { getHolidayInfo } from "@/data/holidays";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
 function formatCollaboratorRole(user: AppUser) {
   if (user.role?.trim()) return user.role.trim();
@@ -55,6 +56,17 @@ function getInitials(name: string) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+function formatDateLong(dateStr: string) {
+  try {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
+    const formatted = date.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" });
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  } catch (e) {
+    return dateStr;
+  }
 }
 
 function CollaboratorAvatar({
@@ -845,14 +857,15 @@ export function GuardiasPage() {
   const isUrlFullscreen = typeof window !== "undefined" && window.location.search.includes("fullscreenCalendar=true");
 
   return (
-    <div className="space-y-6 p-3 sm:p-6 print:p-0 print:space-y-4 overflow-x-hidden">
+    <TooltipProvider delayDuration={150}>
+      <div className="guardias-page-container space-y-6 p-3 sm:p-6 print:p-0 print:space-y-4 overflow-x-hidden">
       {isUrlFullscreen && (
         <div className="fullscreen-overlay fixed inset-0 z-40 bg-background p-1 flex flex-col select-none overflow-hidden">
           <style>{`
             nav, header, aside, [class*="Sidebar"], [class*="Navbar"], [class*="Header"], [class*="layout"] {
               display: none !important;
             }
-            div.space-y-6 > *:not(.fullscreen-overlay) {
+            .guardias-page-container > *:not(.fullscreen-overlay) {
               display: none !important;
             }
             body, html {
@@ -961,142 +974,269 @@ export function GuardiasPage() {
                     const holidayName = getHolidayInfo(cell.dateStr);
                     const assignedUserId = holidayAssignments[cell.dateStr];
                     const assignedUser = assignedUserId ? users.find(u => u.id === assignedUserId) : null;
+                    const isLimitDay = cell.day === 25 && cell.isCurrentMonth;
                     
+                    // Construct hover title
                     let cellTitle = "Hacé click para ver y registrar guardias de este día";
+                    if (isLimitDay) {
+                      cellTitle = `⚠️ LÍMITE DE GUARDIAS: Último día para enviar guardias a Recursos Humanos.\n\n${cellTitle}`;
+                    }
                     if (holidayName && showFeriados) {
                       cellTitle = `Feriado: ${holidayName}\nAsiste: ${assignedUser ? assignedUser.fullName : "Sin asignar"}\n\n${cellTitle}`;
                     }
 
-                    const holidayBgClass = (holidayName && showFeriados)
-                      ? cell.isCurrentMonth
-                        ? "bg-amber-500/10 border-amber-500/30 dark:bg-amber-950/20 dark:border-amber-900/40 hover:bg-amber-500/15"
-                        : "bg-amber-500/5 border-amber-500/20 dark:bg-amber-950/10 dark:border-amber-900/20 opacity-50 hover:opacity-80 hover:bg-amber-500/10"
-                      : cell.isCurrentMonth
-                        ? "bg-background/40 border-muted-foreground/10"
-                        : "bg-background/10 border-muted-foreground/5 opacity-40 hover:opacity-80";
+                    // Background styles for holiday
+                    const cellBgClass = isLimitDay
+                      ? "limit-day-pulse border-amber-500/50 dark:border-amber-500/30"
+                      : (holidayName && showFeriados)
+                        ? cell.isCurrentMonth
+                          ? "bg-amber-500/10 border-amber-500/30 dark:bg-amber-950/20 dark:border-amber-900/40 hover:bg-amber-500/15"
+                          : "bg-amber-500/5 border-amber-500/20 dark:bg-amber-950/10 dark:border-amber-900/20 opacity-50 hover:opacity-80 hover:bg-amber-500/10"
+                        : cell.isCurrentMonth
+                          ? "bg-background/40 border-muted-foreground/10"
+                          : "bg-background/10 border-muted-foreground/5 opacity-40 hover:opacity-80";
 
                     return (
-                      <div
-                        key={idx}
-                        onClick={() => {
-                          setSelectedCalDate(cell.dateStr);
-                        }}
-                        className={`group relative rounded-lg border p-1.5 flex flex-col justify-between transition-all cursor-pointer overflow-hidden hover:border-primary/40 hover:bg-muted-foreground/5 ${holidayBgClass} ${isToday ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}
-                        title={cellTitle}
-                      >
-                        <div className="flex justify-between items-center min-w-0 overflow-hidden">
-                          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                            {holidayName && showFeriados ? (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedHolidayDate(cell.dateStr);
-                                  setHolidayDialogOpen(true);
-                                }}
-                                className="text-[11px] font-extrabold px-2 py-0.5 rounded-full shrink-0 transition-transform hover:scale-110 cursor-pointer bg-amber-500 text-white dark:bg-amber-600 dark:text-amber-100"
-                                title={`Feriado: ${holidayName}. Asignar guardia.`}
-                              >
-                                {cell.day}
-                              </button>
-                            ) : (
-                              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                                isToday 
-                                  ? "bg-primary text-primary-foreground font-black" 
-                                  : "text-muted-foreground"
-                              }`}>
-                                {cell.day}
-                              </span>
-                            )}
-                            {showEventos && getSpecialEvents(cell.dateStr).map((evt) => {
-                              let style = {};
-                              let className = "";
-                              if (evt.id === "last-thursday-onfire") {
-                                className = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
-                              } else {
-                                const dynamic = getDynamicEventStyle(evt.tasks);
-                                style = dynamic.style;
-                                className = "border";
+                      <Tooltip key={idx}>
+                        <TooltipTrigger asChild>
+                          <div
+                            onClick={() => {
+                              setSelectedCalDate(cell.dateStr);
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                            }}
+                            onDrop={async (e) => {
+                              e.preventDefault();
+                              const id = e.dataTransfer.getData("text/plain");
+                              if (id) {
+                                try {
+                                  await updateGuardia(id, { date: cell.dateStr });
+                                  toast.success("Guardia reasignada correctamente");
+                                } catch (err) {
+                                  toast.error("Error al reasignar la guardia");
+                                }
                               }
-                              
-                              return (
-                                <span 
-                                  key={evt.id}
-                                  style={style}
-                                  onClick={(e) => {
-                                    if (evt.id !== "last-thursday-onfire") {
+                            }}
+                            className={`group relative rounded-lg border p-1.5 flex flex-col justify-between gap-1 transition-all duration-200 cursor-pointer overflow-hidden hover:scale-[1.015] hover:shadow-xl hover:shadow-primary/5 hover:border-primary/50 hover:ring-1 hover:ring-primary/25 active:scale-[0.99] ${cellBgClass} ${isToday ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""} ${isLimitDay ? "pb-6" : ""}`}
+                          >
+                            {/* Day Number and Add Icon */}
+                            <div className="flex justify-between items-center min-w-0 overflow-hidden shrink-0">
+                              <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                                {holidayName && showFeriados ? (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
                                       e.stopPropagation();
-                                      openDetailEvent(evt);
-                                    }
-                                  }}
-                                  className={`text-[9px] ${className} px-2 py-0.5 rounded font-extrabold uppercase tracking-wider shrink-0 truncate max-w-full cursor-pointer hover:scale-105 transition-transform`}
-                                  title={`${evt.name} (${evt.tasks ? evt.tasks.filter(t => t.completed).length : 0}/${evt.tasks ? evt.tasks.length : 0} tareas)`}
-                                >
-                                  {evt.name}
-                                </span>
-                              );
-                            })}
-                          </div>
-                          <Plus className="size-3.5 opacity-0 group-hover:opacity-60 transition-opacity text-primary shrink-0" />
-                        </div>
-                        
-                        {holidayName && showFeriados && (
-                          <div className="text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded-md truncate mt-1 select-none">
-                            🎉 {holidayName}
-                          </div>
-                        )}
-                        
-                        {/* Render Guardias inside cell */}
-                        <div className="mt-1 space-y-1 overflow-y-auto flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                          {showGuardias && dayGuardias.map((g) => {
-                            const isApproved = g.status === "approved";
-                            const isSoporte = g.type === "soporte";
-                            return (
-                              <div 
-                                key={g.id} 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openEdit(g);
-                                }}
-                                className={`text-[9.5px] px-1.5 py-0.5 rounded-sm font-semibold truncate border cursor-pointer transition-colors ${
-                                  isApproved 
-                                    ? isSoporte
-                                      ? "bg-emerald-500/15 border-emerald-500/20 text-emerald-700 dark:text-emerald-400 dark:bg-emerald-950/20 hover:bg-emerald-500/25"
-                                      : "bg-indigo-500/15 border-indigo-500/20 text-indigo-700 dark:text-indigo-400 dark:bg-indigo-950/20 hover:bg-indigo-500/25"
-                                    : "bg-amber-500/15 border-amber-500/25 text-amber-700 dark:text-amber-400 dark:bg-amber-950/20 hover:bg-amber-500/25"
-                                }`}
-                                title={`${g.userName}: ${g.startTime}-${g.endTime} (${g.hours} hs) - Click para editar`}
-                              >
-                                👤 {g.userName.split(" ")[0]} ({g.hours}h)
+                                      setSelectedHolidayDate(cell.dateStr);
+                                      setHolidayDialogOpen(true);
+                                    }}
+                                    className="text-[11px] font-extrabold px-2 py-0.5 rounded-full shrink-0 transition-transform hover:scale-110 cursor-pointer bg-amber-500 text-white dark:bg-amber-600 dark:text-amber-100"
+                                    title={`Feriado: ${holidayName}. Asignar guardia.`}
+                                  >
+                                    {cell.day}
+                                  </button>
+                                ) : (
+                                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                    isToday 
+                                      ? "bg-primary text-primary-foreground font-black" 
+                                      : isLimitDay
+                                        ? "bg-amber-500 text-black font-black animate-pulse"
+                                        : "text-muted-foreground"
+                                  }`}>
+                                    {cell.day}
+                                  </span>
+                                )}
+                                {showEventos && getSpecialEvents(cell.dateStr).map((evt) => {
+                                  let style = {};
+                                  let className = "";
+                                  if (evt.id === "last-thursday-onfire") {
+                                    className = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
+                                  } else {
+                                    const dynamic = getDynamicEventStyle(evt.tasks);
+                                    style = dynamic.style;
+                                    className = "border";
+                                  }
+                                  
+                                  return (
+                                    <span 
+                                      key={evt.id}
+                                      style={style}
+                                      onClick={(e) => {
+                                        if (evt.id !== "last-thursday-onfire") {
+                                          e.stopPropagation();
+                                          openDetailEvent(evt);
+                                        }
+                                      }}
+                                      className={`text-[9px] ${className} px-2 py-0.5 rounded font-extrabold uppercase tracking-wider shrink-0 truncate max-w-full cursor-pointer hover:scale-105 transition-transform`}
+                                      title={`${evt.name} (${evt.tasks ? evt.tasks.filter(t => t.completed).length : 0}/${evt.tasks ? evt.tasks.length : 0} tareas)`}
+                                    >
+                                      {evt.name}
+                                    </span>
+                                  );
+                                })}
                               </div>
-                            );
-                          })}
-
-                          {/* Render Weekly Turn inside cell */}
-                          {showTurnos && weeklyTurn && (
-                            <div 
-                              className={`text-[9px] border px-1.5 py-0.5 rounded-sm truncate select-none ${
-                                weeklyTurn === "facundo"
-                                  ? "bg-sky-500/5 dark:bg-sky-500/10 text-sky-600/80 dark:text-sky-400/80 border-sky-500/15"
-                                  : "bg-purple-500/5 dark:bg-purple-500/10 text-purple-600/80 dark:text-purple-400/80 border-purple-500/15"
-                              }`}
-                              title={`Esta semana es el turno de guardia de ${weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}`}
-                            >
-                              🔑 Turno: {weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}
+                              <Plus className="size-3.5 opacity-0 group-hover:opacity-60 transition-opacity text-primary shrink-0" />
                             </div>
-                          )}
+                            
+                            {isLimitDay && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-amber-500/20 dark:bg-amber-950/60 border-t border-dashed border-amber-500/40 text-amber-600 dark:text-amber-400 text-[8.5px] font-extrabold py-0.5 text-center select-none tracking-wide uppercase animate-pulse z-10" title="Límite para enviar guardias a Recursos Humanos">
+                                ⚠️ LÍMITE GUARDIAS
+                              </div>
+                            )}
 
-                          {/* Render Assigned Holiday helper inside cell */}
-                          {showFeriados && holidayName && assignedUser && (
-                            <div 
-                              className="text-[9px] bg-amber-500/15 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-500/20 px-1.5 py-0.5 rounded-sm truncate select-none"
-                              title={`Asignado Feriado: ${assignedUser.fullName}`}
-                            >
-                              🛡️ Guardia: {assignedUser.fullName.split(" ")[0]}
+                            {/* Content Area */}
+                            <div className="flex-1 flex flex-col gap-1 mt-1 justify-end min-h-0">
+                              {/* Holiday Badge with Helper */}
+                              {holidayName && showFeriados && (
+                                <div className="rounded border border-amber-500/20 bg-amber-500/5 dark:bg-amber-950/20 p-1.5 space-y-0.5 select-none shrink-0" title={`Feriado: ${holidayName}`}>
+                                  <div className="text-[9px] font-extrabold text-amber-600 dark:text-amber-400 truncate">
+                                    🎉 {holidayName}
+                                  </div>
+                                  {assignedUser && (
+                                    <div className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                                      <UserIcon className="size-2 shrink-0" />
+                                      <span className="truncate">Asiste: {assignedUser.fullName.split(" ")[0]}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Guardias List */}
+                              {showGuardias && dayGuardias.length > 0 && (
+                                <div className="flex flex-col gap-1 overflow-y-auto max-h-[120px] pr-0.5 scrollbar-thin">
+                                  {dayGuardias.map((g) => {
+                                    const isApproved = g.status === "approved";
+                                    const isSoporte = g.type === "soporte";
+                                    return (
+                                      <button 
+                                        key={g.id} 
+                                        draggable={true}
+                                        onDragStart={(e) => {
+                                          e.stopPropagation();
+                                          e.dataTransfer.setData("text/plain", g.id);
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openEdit(g);
+                                        }}
+                                        className={`w-full text-left text-[9.5px] px-1.5 py-0.5 rounded-sm font-semibold truncate border transition-colors flex items-center justify-between gap-0.5 cursor-grab active:cursor-grabbing ${
+                                          isApproved 
+                                            ? isSoporte
+                                              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400 dark:bg-emerald-950/20 hover:bg-emerald-500/20"
+                                              : "bg-indigo-500/10 border-indigo-500/20 text-indigo-700 dark:text-indigo-400 dark:bg-indigo-950/20 hover:bg-indigo-500/20"
+                                            : "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400 dark:bg-amber-950/20 hover:bg-amber-500/20"
+                                        }`}
+                                        title={`${g.userName}: ${g.startTime}-${g.endTime} (${g.hours} hs) - Click para editar`}
+                                      >
+                                        <span className="truncate">👤 {g.userName.split(" ")[0]}</span>
+                                        <span className="shrink-0 text-[8px] opacity-75">{g.hours}h</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {/* Weekly Turn */}
+                              {showTurnos && weeklyTurn && (
+                                <div 
+                                  className={`text-[9.5px] border px-1.5 py-0.5 rounded-sm text-center truncate select-none shrink-0 ${
+                                    weeklyTurn === "facundo"
+                                      ? "bg-sky-500/5 dark:bg-sky-500/10 text-sky-600/80 dark:text-sky-400/80 border-sky-500/15"
+                                      : "bg-purple-500/5 dark:bg-purple-500/10 text-purple-600/80 dark:text-purple-400/80 border-purple-500/15"
+                                  }`}
+                                  title={`Esta semana es el turno de guardia de ${weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}`}
+                                >
+                                  🔑 Turno: {weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-popover text-popover-foreground border border-muted-foreground/20 shadow-xl w-64 p-3 rounded-lg space-y-2 z-50">
+                          <div className="space-y-1">
+                            <div className="font-bold text-xs flex justify-between items-center text-primary border-b border-muted-foreground/10 pb-1 mb-1.5">
+                              <span>{formatDateLong(cell.dateStr)}</span>
+                              {isToday && <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-black">HOY</span>}
+                            </div>
+                            
+                            {/* Límite Guardias */}
+                            {isLimitDay && (
+                              <div className="bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded p-1.5 text-[9.5px] font-bold flex items-center gap-1">
+                                <span>⚠️</span>
+                                <span>LÍMITE GUARDIAS: Reportar hoy</span>
+                              </div>
+                            )}
+
+                            {/* Holiday */}
+                            {holidayName && showFeriados && (
+                              <div className="bg-amber-500/5 border border-amber-500/20 text-amber-500 rounded p-1.5 text-[9.5px] font-bold space-y-0.5">
+                                <div>🎉 Feriado: {holidayName}</div>
+                                {assignedUser && (
+                                  <div className="text-[9px] text-emerald-500 flex items-center gap-0.5">
+                                    <span>👤 Asiste:</span>
+                                    <span className="font-extrabold">{assignedUser.fullName}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Weekly turn */}
+                            {showTurnos && weeklyTurn && (
+                              <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                <span>🔑</span>
+                                <span>Turno semanal: <strong className="text-foreground">{weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}</strong></span>
+                              </div>
+                            )}
+
+                            {/* Events */}
+                            {showEventos && getSpecialEvents(cell.dateStr).length > 0 && (
+                              <div className="space-y-1">
+                                <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-black">✨ Eventos</div>
+                                {getSpecialEvents(cell.dateStr).map(evt => (
+                                  <div key={evt.id} className="text-[10px] flex items-center gap-1 pl-1 border-l-2 border-primary/40 text-foreground">
+                                    <span className="font-medium">{evt.name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Guardias */}
+                            {showGuardias && dayGuardias.length > 0 && (
+                              <div className="space-y-1.5 pt-1">
+                                <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-black">👥 Guardias ({dayGuardias.length})</div>
+                                <div className="space-y-1 max-h-[100px] overflow-y-auto pr-0.5 scrollbar-thin">
+                                  {dayGuardias.map(g => {
+                                    const isApproved = g.status === "approved";
+                                    return (
+                                      <div key={g.id} className="text-[9.5px] flex items-center justify-between gap-1 p-1 rounded bg-muted-foreground/5 border border-muted-foreground/10">
+                                        <div className="flex items-center gap-1.5 truncate">
+                                          <div className="size-4 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-[8px] shrink-0">
+                                            {g.userName.slice(0, 2).toUpperCase()}
+                                          </div>
+                                          <span className="font-semibold truncate text-foreground">{g.userName.split(" ")[0]}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <span className="text-[9px] font-extrabold bg-primary/10 text-primary px-1 rounded">{g.hours}h</span>
+                                          <span className={`size-1.5 rounded-full ${isApproved ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
+                            {showGuardias && dayGuardias.length === 0 && !holidayName && (
+                              <div className="text-[10px] text-muted-foreground italic pl-1">No hay guardias registradas</div>
+                            )}
+                            
+                            <div className="text-[8px] text-muted-foreground/60 text-center pt-1 border-t border-muted-foreground/5 select-none">
+                              Click para ver y registrar (Arrastrá para reasignar)
+                            </div>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
                     );
                   })}
                 </div>
@@ -1560,7 +1700,7 @@ export function GuardiasPage() {
 
               {/* Calendar Grid Header */}
               <div className="grid grid-cols-7 gap-0.5 sm:gap-1 text-center font-bold text-[10px] sm:text-xs text-muted-foreground mb-2 border-b border-muted-foreground/5 pb-1">
-                {WEEK_DAYS.map(d => (
+                 {WEEK_DAYS.map(d => (
                   <div key={d} className="py-1 truncate px-0.5">{d}</div>
                 ))}
               </div>
@@ -1574,151 +1714,270 @@ export function GuardiasPage() {
                   const holidayName = getHolidayInfo(cell.dateStr);
                   const assignedUserId = holidayAssignments[cell.dateStr];
                   const assignedUser = assignedUserId ? users.find(u => u.id === assignedUserId) : null;
+                  const isLimitDay = cell.day === 25 && cell.isCurrentMonth;
                   
                   // Construct hover title
                   let cellTitle = "Hacé click para ver y registrar guardias de este día";
+                  if (isLimitDay) {
+                    cellTitle = `⚠️ LÍMITE DE GUARDIAS: Último día para enviar guardias a Recursos Humanos.\n\n${cellTitle}`;
+                  }
                   if (holidayName && showFeriados) {
                     cellTitle = `Feriado: ${holidayName}\nAsiste: ${assignedUser ? assignedUser.fullName : "Sin asignar"}\n\n${cellTitle}`;
                   }
 
                   // Background styles for holiday
-                  const holidayBgClass = (holidayName && showFeriados)
-                    ? cell.isCurrentMonth
-                      ? "bg-amber-500/10 border-amber-500/30 dark:bg-amber-950/20 dark:border-amber-900/40 hover:bg-amber-500/15"
-                      : "bg-amber-500/5 border-amber-500/20 dark:bg-amber-950/10 dark:border-amber-900/20 opacity-50 hover:opacity-80 hover:bg-amber-500/10"
-                    : cell.isCurrentMonth
-                      ? "bg-background/40 border-muted-foreground/10"
-                      : "bg-background/10 border-muted-foreground/5 opacity-40 hover:opacity-80";
+                  const cellBgClass = isLimitDay
+                    ? "limit-day-pulse border-amber-500/50 dark:border-amber-500/30"
+                    : (holidayName && showFeriados)
+                      ? cell.isCurrentMonth
+                        ? "bg-amber-500/10 border-amber-500/30 dark:bg-amber-950/20 dark:border-amber-900/40 hover:bg-amber-500/15"
+                        : "bg-amber-500/5 border-amber-500/20 dark:bg-amber-950/10 dark:border-amber-900/20 opacity-50 hover:opacity-80 hover:bg-amber-500/10"
+                      : cell.isCurrentMonth
+                        ? "bg-background/40 border-muted-foreground/10"
+                        : "bg-background/10 border-muted-foreground/5 opacity-40 hover:opacity-80";
 
                   return (
-                    <div
-                      key={idx}
-                      onClick={() => {
-                        setSelectedCalDate(cell.dateStr);
-                      }}
-                      className={`group relative rounded border sm:rounded-lg border p-0.5 sm:p-1.5 flex flex-col justify-between transition-all cursor-pointer overflow-hidden hover:border-primary/40 hover:bg-muted-foreground/5 ${holidayBgClass} ${isToday ? "ring-1 sm:ring-2 ring-primary ring-offset-1 sm:ring-offset-2 ring-offset-background" : ""}`}
-                      title={cellTitle}
-                    >
-                      {/* Day Number and Add Icon */}
-                      <div className="flex justify-between items-center min-w-0 overflow-hidden">
-                        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                          {holidayName && showFeriados ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation(); // Stop opening normal Day Dialog
-                                setSelectedHolidayDate(cell.dateStr);
-                                setHolidayDialogOpen(true);
-                              }}
-                              className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full shrink-0 transition-transform hover:scale-110 cursor-pointer bg-amber-500 text-white dark:bg-amber-600 dark:text-amber-100`}
-                              title={`Feriado: ${holidayName}. Hacé click para asignar o modificar el colaborador de guardia.`}
-                            >
-                              {cell.day}
-                            </button>
-                          ) : (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-                              isToday 
-                                ? "bg-primary text-primary-foreground font-black" 
-                                : "text-muted-foreground"
-                            }`}>
-                              {cell.day}
-                            </span>
-                          )}
-                          {showEventos && getSpecialEvents(cell.dateStr).map((evt) => {
-                            let style = {};
-                            let className = "";
-                            if (evt.id === "last-thursday-onfire") {
-                              className = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
-                            } else {
-                              const dynamic = getDynamicEventStyle(evt.tasks);
-                              style = dynamic.style;
-                              className = "border";
-                            }
-                            
-                            return (
-                              <span 
-                                key={evt.id}
-                                style={style}
-                                onClick={(e) => {
-                                  if (evt.id !== "last-thursday-onfire") {
-                                    e.stopPropagation();
-                                    openDetailEvent(evt);
-                                  }
-                                }}
-                                className={`text-[8.5px] ${className} px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wider shrink-0 truncate max-w-full cursor-pointer hover:scale-105 transition-transform`}
-                                title={`${evt.name} (${evt.tasks ? evt.tasks.filter(t => t.completed).length : 0}/${evt.tasks ? evt.tasks.length : 0} tareas)`}
-                              >
-                                {evt.name}
-                              </span>
-                            );
-                          })}
-                        </div>
-                        <Plus className="size-3 opacity-0 group-hover:opacity-60 transition-opacity text-primary shrink-0" />
-                      </div>
-                      
-                      {/* Holiday Badge inside cell */}
-                      {holidayName && showFeriados && (
-                        <div 
-                          className="text-[8px] font-bold bg-amber-500/10 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-500/20 px-1 py-0.5 rounded-md truncate mt-1 select-none"
-                          title={`Feriado: ${holidayName}`}
-                        >
-                          🎉 {holidayName}
-                        </div>
-                      )}
-                      
-                      {assignedUser && showFeriados && (
+                    <Tooltip key={idx}>
+                      <TooltipTrigger asChild>
                         <div
-                          className="text-[8px] font-bold bg-emerald-500/15 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-500/20 px-1 py-0.5 rounded-md truncate mt-0.5 select-none flex items-center gap-0.5"
-                          title={`Colaborador asignado: ${assignedUser.fullName}`}
+                          onClick={() => {
+                            setSelectedCalDate(cell.dateStr);
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                          }}
+                          onDrop={async (e) => {
+                            e.preventDefault();
+                            const id = e.dataTransfer.getData("text/plain");
+                            if (id) {
+                              try {
+                                await updateGuardia(id, { date: cell.dateStr });
+                                toast.success("Guardia reasignada correctamente");
+                              } catch (err) {
+                                toast.error("Error al reasignar la guardia");
+                              }
+                            }
+                          }}
+                          className={`group relative rounded border sm:rounded-lg border p-1 ${isLimitDay ? "pb-5 sm:pb-6" : ""} flex flex-col justify-between gap-1 transition-all duration-200 cursor-pointer overflow-hidden hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/5 hover:border-primary/50 hover:ring-1 hover:ring-primary/20 active:scale-[0.98] ${cellBgClass} ${isToday ? "ring-1 sm:ring-2 ring-primary ring-offset-1 sm:ring-offset-2 ring-offset-background" : ""}`}
                         >
-                          <UserIcon className="size-2 shrink-0" />
-                          <span>Asiste: {assignedUser.fullName.split(" ")[0]}</span>
-                        </div>
-                      )}
-
-                      {/* Guardias in this day */}
-                      <div className="flex flex-col gap-1 overflow-y-auto max-h-[50px] mt-1 pr-0.5 scrollbar-thin">
-                        {showGuardias && dayGuardias.map(g => {
-                          let userColor = "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20";
-                          if (g.userId === "usr-031") {
-                            userColor = "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border-sky-100 dark:border-sky-900/50 hover:bg-sky-100/50 dark:hover:bg-sky-900/50";
-                          } else if (g.userId === "usr-076") {
-                            userColor = "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-100 dark:border-purple-900/50 hover:bg-purple-100/50 dark:hover:bg-purple-900/50";
-                          } else if (g.userId === "usr-039") {
-                            userColor = "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-100 dark:border-amber-900/50 hover:bg-amber-100/50 dark:hover:bg-amber-900/50";
-                          }
+                          {/* Day Number and Add Icon */}
+                          <div className="flex justify-between items-center min-w-0 overflow-hidden shrink-0">
+                            <div className="flex items-center gap-1 min-w-0 flex-wrap">
+                              {holidayName && showFeriados ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Stop opening normal Day Dialog
+                                    setSelectedHolidayDate(cell.dateStr);
+                                    setHolidayDialogOpen(true);
+                                  }}
+                                  className={`text-[9.5px] font-extrabold px-1.5 py-0.5 rounded-full shrink-0 transition-transform hover:scale-110 cursor-pointer bg-amber-500 text-white dark:bg-amber-600 dark:text-amber-100`}
+                                  title={`Feriado: ${holidayName}. Hacé click para asignar o modificar el colaborador de guardia.`}
+                                >
+                                  {cell.day}
+                                </button>
+                              ) : (
+                                <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                                  isToday 
+                                    ? "bg-primary text-primary-foreground font-black" 
+                                    : isLimitDay
+                                      ? "bg-amber-500 text-black font-black animate-pulse"
+                                      : "text-muted-foreground"
+                                }`}>
+                                  {cell.day}
+                                </span>
+                              )}
+                              {showEventos && getSpecialEvents(cell.dateStr).map((evt) => {
+                                let style = {};
+                                let className = "";
+                                if (evt.id === "last-thursday-onfire") {
+                                  className = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
+                                } else {
+                                  const dynamic = getDynamicEventStyle(evt.tasks);
+                                  style = dynamic.style;
+                                  className = "border";
+                                }
+                                
+                                return (
+                                  <span 
+                                    key={evt.id}
+                                    style={style}
+                                    onClick={(e) => {
+                                      if (evt.id !== "last-thursday-onfire") {
+                                        e.stopPropagation();
+                                        openDetailEvent(evt);
+                                      }
+                                    }}
+                                    className={`text-[8px] ${className} px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wider shrink-0 truncate max-w-full cursor-pointer hover:scale-105 transition-transform`}
+                                    title={`${evt.name} (${evt.tasks ? evt.tasks.filter(t => t.completed).length : 0}/${evt.tasks ? evt.tasks.length : 0} tareas)`}
+                                  >
+                                    {evt.name}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                            <Plus className="size-3 opacity-0 group-hover:opacity-60 transition-opacity text-primary shrink-0" />
+                          </div>
                           
-                          return (
-                            <button
-                              key={g.id}
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevent opening create dialog
-                                openEdit(g);
-                              }}
-                              className={`w-full text-left text-[9px] font-bold py-0.5 px-1 rounded border transition-all truncate flex items-center justify-between gap-0.5 ${userColor}`}
-                              title={`${g.userName}: ${g.description} (${g.hours} hs) - Click para editar`}
-                            >
-                              <span className="truncate">{g.userName.split(" ")[0]}</span>
-                              <span className="shrink-0 text-[8px] opacity-75">{g.hours}h</span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                          {isLimitDay && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-amber-500/20 dark:bg-amber-950/60 border-t border-dashed border-amber-500/40 text-amber-600 dark:text-amber-400 text-[7.5px] sm:text-[8.5px] font-black py-0.5 text-center select-none tracking-wide uppercase animate-pulse z-10" title="Límite para enviar guardias a Recursos Humanos">
+                              ⚠️ LÍMITE GUARDIAS
+                            </div>
+                          )}
 
-                      {/* Turno Semanal */}
-                      {showTurnos && (
-                        <div 
-                          className={`text-[8px] font-bold py-0.5 px-1 rounded border text-center mt-1 truncate shrink-0 ${
-                            weeklyTurn === "facundo"
-                              ? "bg-sky-500/5 dark:bg-sky-500/10 text-sky-600/80 dark:text-sky-400/80 border-sky-500/15"
-                              : "bg-purple-500/5 dark:bg-purple-500/10 text-purple-600/80 dark:text-purple-400/80 border-purple-500/15"
-                          }`}
-                          title={`Esta semana es el turno de guardia de ${weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}`}
-                        >
-                          Turno: {weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}
+                          {/* Content Area */}
+                          <div className="flex-1 flex flex-col gap-1 mt-1 justify-end min-h-0">
+                            {/* Holiday Badge with Helper */}
+                            {holidayName && showFeriados && (
+                              <div className="rounded border border-amber-500/20 bg-amber-500/5 dark:bg-amber-950/20 p-1 space-y-0.5 select-none shrink-0" title={`Feriado: ${holidayName}`}>
+                                <div className="text-[8px] font-extrabold text-amber-600 dark:text-amber-400 truncate">
+                                  🎉 {holidayName}
+                                </div>
+                                {assignedUser && (
+                                  <div className="text-[7.5px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                                    <UserIcon className="size-2 shrink-0" />
+                                    <span className="truncate">Asiste: {assignedUser.fullName.split(" ")[0]}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Guardias in this day */}
+                            {showGuardias && dayGuardias.length > 0 && (
+                              <div className="flex flex-col gap-1 overflow-y-auto max-h-[50px] pr-0.5 scrollbar-thin">
+                                {dayGuardias.map(g => {
+                                  let userColor = "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20";
+                                  if (g.userId === "usr-031") {
+                                    userColor = "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border-sky-100 dark:border-sky-900/50 hover:bg-sky-100/50 dark:hover:bg-sky-900/50";
+                                  } else if (g.userId === "usr-076") {
+                                    userColor = "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-100 dark:border-purple-900/50 hover:bg-purple-100/50 dark:hover:bg-purple-900/50";
+                                  } else if (g.userId === "usr-039") {
+                                    userColor = "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-100 dark:border-amber-900/50 hover:bg-amber-100/50 dark:hover:bg-amber-900/50";
+                                  }
+                                  
+                                  return (
+                                    <button
+                                      key={g.id}
+                                      draggable={true}
+                                      onDragStart={(e) => {
+                                        e.stopPropagation();
+                                        e.dataTransfer.setData("text/plain", g.id);
+                                      }}
+                                      onClick={(e) => {
+                                        e.stopPropagation(); // Prevent opening create dialog
+                                        openEdit(g);
+                                      }}
+                                      className={`w-full text-left text-[8.5px] font-bold py-0.5 px-1 rounded border transition-all truncate flex items-center justify-between gap-0.5 cursor-grab active:cursor-grabbing ${userColor}`}
+                                      title={`${g.userName}: ${g.description} (${g.hours} hs) - Click para editar`}
+                                    >
+                                      <span className="truncate">{g.userName.split(" ")[0]}</span>
+                                      <span className="shrink-0 text-[7.5px] opacity-75">{g.hours}h</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Turno Semanal */}
+                            {showTurnos && weeklyTurn && (
+                              <div 
+                                className={`text-[8px] font-bold py-0.5 px-1 rounded border text-center truncate shrink-0 ${
+                                  weeklyTurn === "facundo"
+                                    ? "bg-sky-500/5 dark:bg-sky-500/10 text-sky-600/80 dark:text-sky-400/80 border-sky-500/15"
+                                    : "bg-purple-500/5 dark:bg-purple-500/10 text-purple-600/80 dark:text-purple-400/80 border-purple-500/15"
+                                }`}
+                                title={`Esta semana es el turno de guardia de ${weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}`}
+                              >
+                                Turno: {weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-popover text-popover-foreground border border-muted-foreground/20 shadow-xl w-64 p-3 rounded-lg space-y-2 z-50">
+                        <div className="space-y-1">
+                          <div className="font-bold text-xs flex justify-between items-center text-primary border-b border-muted-foreground/10 pb-1 mb-1.5">
+                            <span>{formatDateLong(cell.dateStr)}</span>
+                            {isToday && <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-black">HOY</span>}
+                          </div>
+                          
+                          {/* Límite Guardias */}
+                          {isLimitDay && (
+                            <div className="bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded p-1.5 text-[9.5px] font-bold flex items-center gap-1">
+                              <span>⚠️</span>
+                              <span>LÍMITE GUARDIAS: Reportar hoy</span>
+                            </div>
+                          )}
+
+                          {/* Holiday */}
+                          {holidayName && showFeriados && (
+                            <div className="bg-amber-500/5 border border-amber-500/20 text-amber-500 rounded p-1.5 text-[9.5px] font-bold space-y-0.5">
+                              <div>🎉 Feriado: {holidayName}</div>
+                              {assignedUser && (
+                                <div className="text-[9px] text-emerald-500 flex items-center gap-0.5">
+                                  <span>👤 Asiste:</span>
+                                  <span className="font-extrabold">{assignedUser.fullName}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Weekly turn */}
+                          {showTurnos && weeklyTurn && (
+                            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <span>🔑</span>
+                              <span>Turno semanal: <strong className="text-foreground">{weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}</strong></span>
+                            </div>
+                          )}
+
+                          {/* Events */}
+                          {showEventos && getSpecialEvents(cell.dateStr).length > 0 && (
+                            <div className="space-y-1">
+                              <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-black">✨ Eventos</div>
+                              {getSpecialEvents(cell.dateStr).map(evt => (
+                                <div key={evt.id} className="text-[10px] flex items-center gap-1 pl-1 border-l-2 border-primary/40 text-foreground">
+                                  <span className="font-medium">{evt.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Guardias */}
+                          {showGuardias && dayGuardias.length > 0 && (
+                            <div className="space-y-1.5 pt-1">
+                              <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-black">👥 Guardias ({dayGuardias.length})</div>
+                              <div className="space-y-1 max-h-[100px] overflow-y-auto pr-0.5 scrollbar-thin">
+                                {dayGuardias.map(g => {
+                                  const isApproved = g.status === "approved";
+                                  return (
+                                    <div key={g.id} className="text-[9.5px] flex items-center justify-between gap-1 p-1 rounded bg-muted-foreground/5 border border-muted-foreground/10">
+                                      <div className="flex items-center gap-1.5 truncate">
+                                        <div className="size-4 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-[8px] shrink-0">
+                                          {g.userName.slice(0, 2).toUpperCase()}
+                                        </div>
+                                        <span className="font-semibold truncate text-foreground">{g.userName.split(" ")[0]}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        <span className="text-[9px] font-extrabold bg-primary/10 text-primary px-1 rounded">{g.hours}h</span>
+                                        <span className={`size-1.5 rounded-full ${isApproved ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {showGuardias && dayGuardias.length === 0 && !holidayName && (
+                            <div className="text-[10px] text-muted-foreground italic pl-1">No hay guardias registradas</div>
+                          )}
+                          
+                          <div className="text-[8px] text-muted-foreground/60 text-center pt-1 border-t border-muted-foreground/5 select-none">
+                            Click para ver y registrar (Arrastrá para reasignar)
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
                   );
                 })}
               </div>
@@ -2833,6 +3092,7 @@ export function GuardiasPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

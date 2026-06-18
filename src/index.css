@@ -245,3 +245,65 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
     height: 0 !important;
   }
 }
+
+/* ============================================================
+   LIMIT DAY GLOW — Glowing pulse effect for guardias limit day (25th)
+   ============================================================ */
+@keyframes limit-day-glow {
+  0%, 100% {
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.35), inset 0 0 4px rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.5);
+    background-color: rgba(245, 158, 11, 0.04);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.75), inset 0 0 8px rgba(245, 158, 11, 0.35);
+    border-color: rgba(245, 158, 11, 0.9);
+    background-color: rgba(245, 158, 11, 0.12);
+  }
+}
+
+.limit-day-pulse {
+  animation: limit-day-glow 2.5s infinite ease-in-out;
+}
+
+/* ============================================================
+   CUSTOM SUBTLE SCROLLBARS
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.25);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.45);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.15);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.3);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.25) transparent;
+}
+
+.dark * {
+  scrollbar-color: rgba(156, 163, 175, 0.15) transparent;
+}
+
+
