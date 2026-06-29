@@ -3,7 +3,7 @@ import {
   Plus, Search, Edit, Save, Trash2, Clock, Check, 
   FileDown, Printer, Filter, Calendar, 
   FileText, CheckCircle2, AlertCircle, User as UserIcon, Award, 
-  ChevronLeft, ChevronRight, Building2, Maximize2
+  ChevronLeft, ChevronRight, Building2, Maximize2, History, TrendingUp, Users
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -130,6 +130,69 @@ function getWeeklyTurn(dateStr: string): "facundo" | "ramiro" {
   return normalizedWeek === 1 ? "facundo" : "ramiro";
 }
 
+// ── Período de cierre mensual ─────────────────────────────────────────────────
+// El período activo va del 26 del mes X al 25 del mes X+1.
+// Si hoy >= 26: período activo comienza el 26 de este mes.
+// Si hoy <= 25: período activo comienza el 26 del mes anterior.
+const PERIOD_MONTH_NAMES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+];
+
+function getActivePeriod(today: Date): { start: string; end: string; label: string } {
+  const day = today.getDate();
+  let startYear: number, startMonth: number; // 0-indexed
+  if (day >= 26) {
+    startYear = today.getFullYear();
+    startMonth = today.getMonth();
+  } else {
+    if (today.getMonth() === 0) {
+      startYear = today.getFullYear() - 1;
+      startMonth = 11;
+    } else {
+      startYear = today.getFullYear();
+      startMonth = today.getMonth() - 1;
+    }
+  }
+  const pad2 = (n: number) => n.toString().padStart(2, "0");
+  const start = `${startYear}-${pad2(startMonth + 1)}-26`;
+  const endMonth = (startMonth + 1) % 12;
+  const endYear = startMonth === 11 ? startYear + 1 : startYear;
+  const end = `${endYear}-${pad2(endMonth + 1)}-25`;
+  const label = `${PERIOD_MONTH_NAMES[endMonth]} ${endYear}`;
+  return { start, end, label };
+}
+
+/** Devuelve la etiqueta del período de cierre al que pertenece una guardia */
+function getGuardiaPeriodLabel(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  // Si el día es >= 26, el período cierra el mes siguiente
+  let endMonth: number, endYear: number;
+  if (d >= 26) {
+    endMonth = m % 12; // siguiente mes 0-indexed
+    endYear = m === 12 ? y + 1 : y;
+  } else {
+    endMonth = m - 1; // mismo mes 0-indexed
+    endYear = y;
+  }
+  return `${PERIOD_MONTH_NAMES[endMonth]} ${endYear}`;
+}
+
+/** Devuelve la clave de ordenamiento del período (YYYY-MM) */
+function getGuardiaPeriodSortKey(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  let endMonth: number, endYear: number;
+  if (d >= 26) {
+    endMonth = (m % 12) + 1;
+    endYear = m === 12 ? y + 1 : y;
+  } else {
+    endMonth = m;
+    endYear = y;
+  }
+  return `${endYear}-${endMonth.toString().padStart(2, "0")}`;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface SpecialEventTask {
   id: string;
   name: string;
@@ -190,6 +253,26 @@ export function GuardiasPage() {
   const [showEventos, setShowEventos] = useState(true);
   const [showTurnos, setShowTurnos] = useState(true);
   const [showFeriados, setShowFeriados] = useState(true);
+
+  // Historial modal
+  const [historialOpen, setHistorialOpen] = useState(false);
+  const [historialSearch, setHistorialSearch] = useState("");
+  const [historialUserFilter, setHistorialUserFilter] = useState("all");
+
+  // Período activo de cierre
+  const activePeriod = useMemo(() => getActivePeriod(new Date()), []);
+
+  // Guardias del período activo
+  const activeGuardias = useMemo(() =>
+    guardias.filter(g => g.date >= activePeriod.start && g.date <= activePeriod.end),
+    [guardias, activePeriod]
+  );
+
+  // Guardias históricas (fuera del período activo)
+  const historicalGuardias = useMemo(() =>
+    guardias.filter(g => g.date < activePeriod.start),
+    [guardias, activePeriod]
+  );
 
   // Holiday Assignments states
   const [holidayAssignments, setHolidayAssignments] = useState<Record<string, string>>(() => {
@@ -444,9 +527,9 @@ export function GuardiasPage() {
     });
   };
 
-  // Filtered Guardias
+  // Filtered Guardias — opera solo sobre el período activo
   const filteredGuardias = useMemo(() => {
-    return guardias.filter((g) => {
+    return activeGuardias.filter((g) => {
       const matchSearch = 
         g.userName.toLowerCase().includes(search.toLowerCase()) ||
         g.description.toLowerCase().includes(search.toLowerCase()) ||
@@ -459,42 +542,54 @@ export function GuardiasPage() {
 
       return matchSearch && matchStatus && matchType && matchUser;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [guardias, search, statusFilter, typeFilter, userFilter]);
+  }, [activeGuardias, search, statusFilter, typeFilter, userFilter]);
 
-  // Statistics / KPIs
+  // Guardias del historial filtradas por búsqueda y colaborador
+  const filteredHistorial = useMemo(() => {
+    return historicalGuardias.filter(g => {
+      const matchSearch = historialSearch === "" ||
+        g.userName.toLowerCase().includes(historialSearch.toLowerCase()) ||
+        g.description.toLowerCase().includes(historialSearch.toLowerCase()) ||
+        (g.branchesAffected ?? "").toLowerCase().includes(historialSearch.toLowerCase());
+      const matchUser = historialUserFilter === "all" || g.userId === historialUserFilter;
+      return matchSearch && matchUser;
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [historicalGuardias, historialSearch, historialUserFilter]);
+
+  // Historial agrupado por período de cierre
+  const historialByPeriod = useMemo(() => {
+    const groups: Record<string, { label: string; sortKey: string; guardias: typeof filteredHistorial }> = {};
+    for (const g of filteredHistorial) {
+      const sortKey = getGuardiaPeriodSortKey(g.date);
+      const label = getGuardiaPeriodLabel(g.date);
+      if (!groups[sortKey]) groups[sortKey] = { label, sortKey, guardias: [] };
+      groups[sortKey].guardias.push(g);
+    }
+    return Object.values(groups).sort((a, b) => b.sortKey.localeCompare(a.sortKey));
+  }, [filteredHistorial]);
+
+  // Statistics / KPIs — basadas en el período activo
   const stats = useMemo(() => {
     const total = filteredGuardias.length;
     const totalHours = filteredGuardias.reduce((acc, curr) => acc + curr.hours, 0);
     
-    const pendingGuardiasList = guardias.filter(g => g.status === "pending_approval");
+    const pendingGuardiasList = activeGuardias.filter(g => g.status === "pending_approval");
     const pending = pendingGuardiasList.length;
     const pendingHours = pendingGuardiasList.reduce((acc, curr) => acc + curr.hours, 0);
     
-    // Hours this month
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-    
-    const hoursThisMonth = guardias
-      .filter(g => {
-        const d = new Date(g.date);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-      })
+    // Hours this period
+    const hoursThisMonth = activeGuardias.reduce((acc, curr) => acc + curr.hours, 0);
+    const approvedHoursThisMonth = activeGuardias
+      .filter(g => g.status === "approved")
       .reduce((acc, curr) => acc + curr.hours, 0);
 
-    const approvedHoursThisMonth = guardias
-      .filter(g => {
-        const d = new Date(g.date);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear && g.status === "approved";
-      })
-      .reduce((acc, curr) => acc + curr.hours, 0);
-
-    // Last registered guardia
-    const sortedByDate = [...guardias].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // Last registered guardia (within active period)
+    const sortedByDate = [...activeGuardias].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     const lastGuardia = sortedByDate.length > 0 ? sortedByDate[0] : null;
 
-    // 1. Hora Más Concurrente
+    // 1. Hora Más Concurrente (período activo)
     const hourCounts: Record<number, number> = {};
-    guardias.forEach(g => {
+    activeGuardias.forEach(g => {
       try {
         const start = parseInt(g.startTime.split(":")[0], 10);
         let end = parseInt(g.endTime.split(":")[0], 10);
@@ -517,9 +612,9 @@ export function GuardiasPage() {
       }
     });
 
-    // 2. Día Más Ajetreado
+    // 2. Día Más Ajetreado (período activo)
     const dateMap: Record<string, { hours: number; count: number }> = {};
-    guardias.forEach(g => {
+    activeGuardias.forEach(g => {
       if (!dateMap[g.date]) {
         dateMap[g.date] = { hours: 0, count: 0 };
       }
@@ -535,9 +630,9 @@ export function GuardiasPage() {
       }
     });
 
-    // Developer hourly breakdown
+    // Developer hourly breakdown (período activo)
     const devMap: Record<string, { hours: number; count: number; name: string }> = {};
-    guardias.forEach(g => {
+    activeGuardias.forEach(g => {
       if (!devMap[g.userId]) {
         devMap[g.userId] = { hours: 0, count: 0, name: g.userName };
       }
@@ -548,11 +643,7 @@ export function GuardiasPage() {
     const devBreakdown = Object.values(devMap).sort((a, b) => b.hours - a.hours);
     const mostActive = devBreakdown.length > 0 ? devBreakdown[0].name : "Ninguno";
 
-    const monthGuardias = guardias.filter((g) => {
-      const d = new Date(g.date);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    });
-    const monthPending = monthGuardias.filter((g) => g.status === "pending_approval");
+    const monthPending = activeGuardias.filter((g) => g.status === "pending_approval");
     const monthPendingHours = monthPending.reduce((acc, g) => acc + g.hours, 0);
 
     const pendingByUserMap: Record<string, { name: string; count: number; hours: number }> = {};
@@ -567,10 +658,10 @@ export function GuardiasPage() {
       a.name.localeCompare(b.name, "es", { sensitivity: "base" })
     );
 
-    const approvedHoursAll = guardias
+    const approvedHoursAll = activeGuardias
       .filter((g) => g.status === "approved")
       .reduce((acc, g) => acc + g.hours, 0);
-    const totalHoursAll = guardias.reduce((acc, g) => acc + g.hours, 0);
+    const totalHoursAll = activeGuardias.reduce((acc, g) => acc + g.hours, 0);
 
     return {
       total,
@@ -592,7 +683,7 @@ export function GuardiasPage() {
       mostActive,
       devBreakdown,
     };
-  }, [filteredGuardias, guardias]);
+  }, [filteredGuardias, activeGuardias]);
 
   const openCreate = (prefilledDate?: string) => {
     setEditingGuardia(null);
@@ -1362,7 +1453,7 @@ export function GuardiasPage() {
       </div>
 
       {/* View Switcher Tabs */}
-      <div className="flex items-center justify-between border-b border-muted-foreground/10 pb-2 mb-2 print:hidden">
+      <div className="flex items-center justify-between gap-2 border-b border-muted-foreground/10 pb-2 mb-2 print:hidden">
         <div className="flex gap-2">
           <Button
             variant={viewMode === "list" ? "default" : "outline"}
@@ -1392,6 +1483,29 @@ export function GuardiasPage() {
             <Maximize2 className="size-3.5" />
           </Button>
         </div>
+
+        {/* Período activo + Botón Historial */}
+        <div className="flex items-center gap-2">
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground bg-muted/50 border border-muted-foreground/10 rounded-md px-2.5 h-8">
+            <Calendar className="size-3 shrink-0 text-primary" />
+            Período: <span className="text-foreground font-bold">{activePeriod.label}</span>
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setHistorialOpen(true)}
+            className="font-semibold text-xs h-8 gap-1.5 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+            title={`Ver historial completo de guardias (${historicalGuardias.length} guardias archivadas)`}
+          >
+            <History className="size-3.5 text-primary" />
+            Historial
+            {historicalGuardias.length > 0 && (
+              <span className="bg-primary/15 text-primary text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none">
+                {historicalGuardias.length}
+              </span>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Main Content Layout */}
@@ -1405,6 +1519,23 @@ export function GuardiasPage() {
                 <FileText className="size-4 text-primary" />
                 Registros de Guardia ({filteredGuardias.length})
               </CardTitle>
+              {/* Período activo indicator */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10.5px] font-semibold text-muted-foreground">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                  Período: <span className="text-foreground font-bold ml-0.5">{activePeriod.label}</span>
+                </span>
+                {historicalGuardias.length > 0 && (
+                  <button
+                    onClick={() => setHistorialOpen(true)}
+                    className="hidden sm:inline-flex items-center gap-1 text-[10.5px] font-semibold text-primary/80 hover:text-primary underline-offset-2 hover:underline transition-colors"
+                    title="Ver historial completo"
+                  >
+                    <History className="size-3" />
+                    Ver {historicalGuardias.length} en historial
+                  </button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Filter controls */}
@@ -3061,6 +3192,205 @@ export function GuardiasPage() {
             <Button variant="outline" onClick={() => setHolidayDialogOpen(false)}>
               Cerrar
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─────────────────────────────────────────────────────────────
+          MODAL: HISTORIAL DE GUARDIAS
+          ───────────────────────────────────────────────────────────── */}
+      <Dialog open={historialOpen} onOpenChange={(open) => {
+        setHistorialOpen(open);
+        if (!open) { setHistorialSearch(""); setHistorialUserFilter("all"); }
+      }}>
+        <DialogContent className="sm:max-w-[820px] max-h-[88vh] flex flex-col gap-0 p-0 overflow-hidden">
+          {/* Header */}
+          <DialogHeader className="px-6 pt-5 pb-4 border-b border-muted-foreground/10 shrink-0">
+            <DialogTitle className="flex items-center gap-2.5 text-base font-bold">
+              <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <History className="size-4 text-primary" />
+              </div>
+              <div>
+                <div>Historial de Guardias</div>
+                <p className="text-xs font-normal text-muted-foreground mt-0.5">
+                  Todos los registros anteriores al período activo · Organizado por cierre mensual
+                </p>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Filters bar */}
+          <div className="flex flex-col sm:flex-row gap-2 px-6 py-3 border-b border-muted-foreground/10 shrink-0 bg-muted/20">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Buscar en el historial..."
+                value={historialSearch}
+                onChange={e => setHistorialSearch(e.target.value)}
+                className="w-full pl-8 pr-3 h-8 text-xs rounded-md border border-input bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+              />
+            </div>
+            <Select value={historialUserFilter} onValueChange={setHistorialUserFilter}>
+              <SelectTrigger className="h-8 w-full sm:w-[190px] text-xs">
+                <SelectValue placeholder="Todos los colaboradores" />
+              </SelectTrigger>
+              <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                <SelectItem value="all">Todos los colaboradores</SelectItem>
+                {guardiaCollaborators.map(u => (
+                  <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Global summary chips */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-muted border border-muted-foreground/15 rounded-md px-2 h-8 text-muted-foreground">
+                <Clock className="size-3 text-primary" />
+                {historicalGuardias.reduce((a, g) => a + g.hours, 0).toFixed(1)} hs totales
+              </span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-muted border border-muted-foreground/15 rounded-md px-2 h-8 text-muted-foreground">
+                <FileText className="size-3 text-primary" />
+                {historicalGuardias.length} guardias
+              </span>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
+            {historialByPeriod.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+                <div className="size-14 rounded-full bg-muted flex items-center justify-center">
+                  <History className="size-6 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-foreground">Sin historial</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {historialSearch || historialUserFilter !== "all"
+                      ? "No hay resultados con los filtros seleccionados."
+                      : "No hay guardias de períodos anteriores registradas aún."}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              historialByPeriod.map(period => {
+                const periodHours = period.guardias.reduce((a, g) => a + g.hours, 0);
+                const approvedCount = period.guardias.filter(g => g.status === "approved").length;
+                const pendingCount = period.guardias.filter(g => g.status === "pending_approval").length;
+
+                // Breakdown por colaborador
+                const colabMap: Record<string, { name: string; hours: number; count: number; approved: number }> = {};
+                period.guardias.forEach(g => {
+                  if (!colabMap[g.userId]) colabMap[g.userId] = { name: g.userName, hours: 0, count: 0, approved: 0 };
+                  colabMap[g.userId].hours += g.hours;
+                  colabMap[g.userId].count += 1;
+                  if (g.status === "approved") colabMap[g.userId].approved += 1;
+                });
+                const colabs = Object.values(colabMap).sort((a, b) => b.hours - a.hours);
+
+                return (
+                  <div key={period.sortKey} className="rounded-xl border border-muted-foreground/10 bg-card/50 overflow-hidden">
+                    {/* Period header */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-muted/30 border-b border-muted-foreground/10">
+                      <div className="flex items-center gap-2.5">
+                        <div className="size-7 rounded-md bg-primary/15 flex items-center justify-center shrink-0">
+                          <Calendar className="size-3.5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm text-foreground">Período: {period.label}</p>
+                          <p className="text-[10px] text-muted-foreground font-medium">
+                            {period.guardias.length} guardia{period.guardias.length !== 1 ? "s" : ""} · Cierre el 25
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold bg-primary/10 text-primary border border-primary/20 rounded-md px-2.5 py-1">
+                          <Clock className="size-3" />
+                          {periodHours.toFixed(1)} hs
+                        </span>
+                        {approvedCount > 0 && (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 rounded-md px-2 py-1">
+                            <CheckCircle2 className="size-3" />
+                            {approvedCount} aprobada{approvedCount !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {pendingCount > 0 && (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 rounded-md px-2 py-1">
+                            <AlertCircle className="size-3" />
+                            {pendingCount} pendiente{pendingCount !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Collaborator breakdown */}
+                    {colabs.length > 0 && (
+                      <div className="px-4 py-2.5 border-b border-muted-foreground/8 bg-muted/10 flex flex-wrap gap-2">
+                        {colabs.map(c => (
+                          <div key={c.name} className="flex items-center gap-1.5 text-[11px] font-semibold bg-background border border-muted-foreground/15 rounded-full px-2.5 py-1">
+                            <div className="size-4 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-[8px] font-black shrink-0">
+                              {getInitials(c.name)}
+                            </div>
+                            <span className="text-foreground">{c.name.split(" ")[0]}</span>
+                            <span className="text-primary font-bold">{c.hours.toFixed(1)} hs</span>
+                            <span className="text-muted-foreground">({c.count})</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Guardias list */}
+                    <div className="divide-y divide-muted-foreground/8">
+                      {period.guardias.map(g => {
+                        const isApproved = g.status === "approved";
+                        return (
+                          <div
+                            key={g.id}
+                            className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2.5 hover:bg-muted/20 transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className={`size-1.5 rounded-full shrink-0 ${isApproved ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
+                              <CollaboratorAvatar userName={g.userName} avatarUrl={users.find(u => u.id === g.userId)?.avatarUrl} />
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-foreground truncate">{g.userName}</p>
+                                <p className="text-[10px] text-muted-foreground truncate max-w-[260px]">{g.description}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 ml-auto">
+                              <span className="text-[11px] text-muted-foreground font-medium">{formatDate(g.date)}</span>
+                              <span className="text-[10px] text-muted-foreground">{g.startTime}–{g.endTime}</span>
+                              <span className="text-[11px] font-bold bg-primary/10 text-primary border border-primary/15 rounded px-1.5 py-0.5">{g.hours}h</span>
+                              <Badge
+                                variant="outline"
+                                className={`text-[9px] py-0 px-1.5 h-5 font-bold ${isApproved
+                                  ? "border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/8"
+                                  : "border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/8"
+                                }`}
+                              >
+                                {isApproved ? "Aprobada" : "Pendiente"}
+                              </Badge>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer */}
+          <DialogFooter className="px-6 py-3 border-t border-muted-foreground/10 shrink-0 bg-muted/10">
+            <div className="flex items-center justify-between w-full gap-2">
+              <p className="text-[11px] text-muted-foreground">
+                {historialByPeriod.length} período{historialByPeriod.length !== 1 ? "s" : ""} archivado{historialByPeriod.length !== 1 ? "s" : ""}
+                {" · "} período activo: <strong className="text-foreground">{activePeriod.label}</strong>
+              </p>
+              <Button size="sm" className="h-8 px-5" onClick={() => setHistorialOpen(false)}>
+                Cerrar
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
