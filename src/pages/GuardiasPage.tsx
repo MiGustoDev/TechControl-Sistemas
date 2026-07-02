@@ -3,7 +3,7 @@ import {
   Plus, Search, Edit, Save, Trash2, Clock, Check, 
   FileDown, Printer, Filter, Calendar, 
   FileText, CheckCircle2, AlertCircle, User as UserIcon, Award, 
-  ChevronLeft, ChevronRight, Building2, Maximize2, History, TrendingUp, Users
+  ChevronLeft, ChevronRight, Building2, Maximize2, History
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -131,9 +131,9 @@ function getWeeklyTurn(dateStr: string): "facundo" | "ramiro" {
 }
 
 // ── Período de cierre mensual ─────────────────────────────────────────────────
-// El período activo va del 26 del mes X al 25 del mes X+1.
-// Si hoy >= 26: período activo comienza el 26 de este mes.
-// Si hoy <= 25: período activo comienza el 26 del mes anterior.
+// El período activo va del 25 del mes X al 24 del mes X+1.
+// Si hoy >= 25: período activo comienza el 25 de este mes.
+// Si hoy <= 24: período activo comienza el 25 del mes anterior.
 const PERIOD_MONTH_NAMES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
@@ -142,7 +142,7 @@ const PERIOD_MONTH_NAMES = [
 function getActivePeriod(today: Date): { start: string; end: string; label: string } {
   const day = today.getDate();
   let startYear: number, startMonth: number; // 0-indexed
-  if (day >= 26) {
+  if (day >= 25) {
     startYear = today.getFullYear();
     startMonth = today.getMonth();
   } else {
@@ -155,10 +155,10 @@ function getActivePeriod(today: Date): { start: string; end: string; label: stri
     }
   }
   const pad2 = (n: number) => n.toString().padStart(2, "0");
-  const start = `${startYear}-${pad2(startMonth + 1)}-26`;
+  const start = `${startYear}-${pad2(startMonth + 1)}-25`;
   const endMonth = (startMonth + 1) % 12;
   const endYear = startMonth === 11 ? startYear + 1 : startYear;
-  const end = `${endYear}-${pad2(endMonth + 1)}-25`;
+  const end = `${endYear}-${pad2(endMonth + 1)}-24`;
   const label = `${PERIOD_MONTH_NAMES[endMonth]} ${endYear}`;
   return { start, end, label };
 }
@@ -166,9 +166,9 @@ function getActivePeriod(today: Date): { start: string; end: string; label: stri
 /** Devuelve la etiqueta del período de cierre al que pertenece una guardia */
 function getGuardiaPeriodLabel(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
-  // Si el día es >= 26, el período cierra el mes siguiente
+  // Si el día es >= 25, el período cierra el mes siguiente (el 24 del mes siguiente)
   let endMonth: number, endYear: number;
-  if (d >= 26) {
+  if (d >= 25) {
     endMonth = m % 12; // siguiente mes 0-indexed
     endYear = m === 12 ? y + 1 : y;
   } else {
@@ -182,7 +182,7 @@ function getGuardiaPeriodLabel(dateStr: string): string {
 function getGuardiaPeriodSortKey(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   let endMonth: number, endYear: number;
-  if (d >= 26) {
+  if (d >= 25) {
     endMonth = (m % 12) + 1;
     endYear = m === 12 ? y + 1 : y;
   } else {
@@ -1065,12 +1065,12 @@ export function GuardiasPage() {
                     const holidayName = getHolidayInfo(cell.dateStr);
                     const assignedUserId = holidayAssignments[cell.dateStr];
                     const assignedUser = assignedUserId ? users.find(u => u.id === assignedUserId) : null;
-                    const isLimitDay = cell.day === 25 && cell.isCurrentMonth;
+                    const isLimitDay = cell.day === 24 && cell.isCurrentMonth;
                     
                     // Construct hover title
                     let cellTitle = "Hacé click para ver y registrar guardias de este día";
                     if (isLimitDay) {
-                      cellTitle = `⚠️ LÍMITE DE GUARDIAS: Último día para enviar guardias a Recursos Humanos.\n\n${cellTitle}`;
+                      cellTitle = `⚠️ CORTE DE PERÍODO: Último día para registrar guardias en el período actual (corta a las 23:59 hs).\n\n${cellTitle}`;
                     }
                     if (holidayName && showFeriados) {
                       cellTitle = `Feriado: ${holidayName}\nAsiste: ${assignedUser ? assignedUser.fullName : "Sin asignar"}\n\n${cellTitle}`;
@@ -1171,8 +1171,8 @@ export function GuardiasPage() {
                             </div>
                             
                             {isLimitDay && (
-                              <div className="absolute bottom-0 left-0 right-0 bg-amber-500/20 dark:bg-amber-950/60 border-t border-dashed border-amber-500/40 text-amber-600 dark:text-amber-400 text-[8.5px] font-extrabold py-0.5 text-center select-none tracking-wide uppercase animate-pulse z-10" title="Límite para enviar guardias a Recursos Humanos">
-                                ⚠️ LÍMITE GUARDIAS
+                              <div className="absolute bottom-0 left-0 right-0 bg-amber-500/20 dark:bg-amber-950/60 border-t border-dashed border-amber-500/40 text-amber-600 dark:text-amber-400 text-[8.5px] font-extrabold py-0.5 text-center select-none tracking-wide uppercase animate-pulse z-10" title="Corte de período: Último día para registrar guardias">
+                                ⚠️ CORTE PERÍODO
                               </div>
                             )}
 
@@ -1255,7 +1255,7 @@ export function GuardiasPage() {
                             {isLimitDay && (
                               <div className="bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded p-1.5 text-[9.5px] font-bold flex items-center gap-1">
                                 <span>⚠️</span>
-                                <span>LÍMITE GUARDIAS: Reportar hoy</span>
+                                <span>CORTE: Último día del período</span>
                               </div>
                             )}
 
@@ -1845,12 +1845,12 @@ export function GuardiasPage() {
                   const holidayName = getHolidayInfo(cell.dateStr);
                   const assignedUserId = holidayAssignments[cell.dateStr];
                   const assignedUser = assignedUserId ? users.find(u => u.id === assignedUserId) : null;
-                  const isLimitDay = cell.day === 25 && cell.isCurrentMonth;
+                  const isLimitDay = cell.day === 24 && cell.isCurrentMonth;
                   
                   // Construct hover title
                   let cellTitle = "Hacé click para ver y registrar guardias de este día";
                   if (isLimitDay) {
-                    cellTitle = `⚠️ LÍMITE DE GUARDIAS: Último día para enviar guardias a Recursos Humanos.\n\n${cellTitle}`;
+                    cellTitle = `⚠️ CORTE DE PERÍODO: Último día para registrar guardias en el período actual (corta a las 23:59 hs).\n\n${cellTitle}`;
                   }
                   if (holidayName && showFeriados) {
                     cellTitle = `Feriado: ${holidayName}\nAsiste: ${assignedUser ? assignedUser.fullName : "Sin asignar"}\n\n${cellTitle}`;
@@ -1951,8 +1951,8 @@ export function GuardiasPage() {
                           </div>
                           
                           {isLimitDay && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-amber-500/20 dark:bg-amber-950/60 border-t border-dashed border-amber-500/40 text-amber-600 dark:text-amber-400 text-[7.5px] sm:text-[8.5px] font-black py-0.5 text-center select-none tracking-wide uppercase animate-pulse z-10" title="Límite para enviar guardias a Recursos Humanos">
-                              ⚠️ LÍMITE GUARDIAS
+                            <div className="absolute bottom-0 left-0 right-0 bg-amber-500/20 dark:bg-amber-950/60 border-t border-dashed border-amber-500/40 text-amber-600 dark:text-amber-400 text-[7.5px] sm:text-[8.5px] font-black py-0.5 text-center select-none tracking-wide uppercase animate-pulse z-10" title="Corte de período: Último día para registrar guardias">
+                              ⚠️ CORTE PERÍODO
                             </div>
                           )}
 
@@ -2032,11 +2032,11 @@ export function GuardiasPage() {
                             {isToday && <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-black">HOY</span>}
                           </div>
                           
-                          {/* Límite Guardias */}
+                          {/* Corte de Período */}
                           {isLimitDay && (
                             <div className="bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded p-1.5 text-[9.5px] font-bold flex items-center gap-1">
                               <span>⚠️</span>
-                              <span>LÍMITE GUARDIAS: Reportar hoy</span>
+                              <span>CORTE: Último día del período</span>
                             </div>
                           )}
 
@@ -3299,7 +3299,7 @@ export function GuardiasPage() {
                         <div>
                           <p className="font-bold text-sm text-foreground">Período: {period.label}</p>
                           <p className="text-[10px] text-muted-foreground font-medium">
-                            {period.guardias.length} guardia{period.guardias.length !== 1 ? "s" : ""} · Cierre el 25
+                            {period.guardias.length} guardia{period.guardias.length !== 1 ? "s" : ""} · Corte el 24 (23:59hs)
                           </p>
                         </div>
                       </div>
