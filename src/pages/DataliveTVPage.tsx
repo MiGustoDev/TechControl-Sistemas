@@ -23,12 +23,14 @@ interface TVBranchCardProps {
 
 function TVBranchCard({ branch, devices, onEdit, onDelete }: TVBranchCardProps) {
   const [copied, setCopied] = useState(false);
+  const hasRealDevices = devices.some(tv => tv.name !== "Próximamente");
+  const visibleDevices = hasRealDevices ? devices.filter(tv => tv.name !== "Próximamente") : devices;
 
   const handleCopyAll = () => {
-    if (devices.length === 0) return;
+    if (visibleDevices.length === 0) return;
 
     // Sort devices by name (TV1, TV2, etc)
-    const sortedDevices = [...devices].sort((a, b) => 
+    const sortedDevices = [...visibleDevices].sort((a, b) => 
       a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
     );
 
@@ -38,7 +40,7 @@ function TVBranchCard({ branch, devices, onEdit, onDelete }: TVBranchCardProps) 
     
     navigator.clipboard.writeText(text);
     setCopied(true);
-    toast.success(`Info de ${branch} copiada (${devices.length} dispositivos)`);
+    toast.success(`Info de ${branch} copiada (${visibleDevices.length} dispositivos)`);
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -52,7 +54,7 @@ function TVBranchCard({ branch, devices, onEdit, onDelete }: TVBranchCardProps) 
             </div>
             <div>
               <h3 className="font-semibold leading-tight">{branch}</h3>
-              <p className="text-xs text-muted-foreground">{devices.length} {devices.length === 1 ? 'Dispositivo' : 'Dispositivos'}</p>
+              <p className="text-xs text-muted-foreground">{visibleDevices.length} {visibleDevices.length === 1 ? 'Dispositivo' : 'Dispositivos'}</p>
             </div>
           </div>
           <Button 
@@ -68,7 +70,7 @@ function TVBranchCard({ branch, devices, onEdit, onDelete }: TVBranchCardProps) 
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4 pt-4 pb-4">
         <div className="grid grid-cols-1 gap-2">
-          {devices.map((tv) => {
+          {visibleDevices.map((tv) => {
             const isSoon = tv.name === "Próximamente";
             return (
               <div 
@@ -178,7 +180,7 @@ export function DataliveTVPage() {
     return acc;
   }, {} as Record<string, DataliveTV[]>);
 
-  const totalDevices = dataliveTVs.length;
+  const totalDevices = dataliveTVs.filter(tv => tv.name !== "Próximamente").length;
   const totalBranches = new Set(dataliveTVs.map(tv => tv.branch)).size;
 
   const openCreate = () => {
