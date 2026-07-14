@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { 
   Printer, Laptop, ShoppingCart, TriangleAlert as AlertTriangle, 
-  Monitor, Tv, ChevronRight, Package, Clock, Users 
+  Monitor, Tv, ChevronRight, Package, Clock, Users, Calendar 
 } from "lucide-react";
 import {
   Sidebar,
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useApp } from "@/context/AppContext";
+import { Button } from "@/components/ui/button";
 
 export function AppSidebar() {
   const { 
@@ -31,7 +32,8 @@ export function AppSidebar() {
     notebooks, 
     monitors, 
     dataliveTVs,
-    guardias 
+    guardias,
+    setGuardiasViewMode
   } = useApp();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -60,21 +62,38 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div 
-          onClick={() => setCurrentPage("guardias")}
-          className={`flex items-center cursor-pointer hover:bg-muted/50 p-1.5 rounded-lg transition-colors ${
-            isCollapsed ? "justify-center px-0" : "gap-2.5 px-2"
-          } py-2`}
-          title="Ir a Guardias IT"
-        >
-          <div className={`flex ${isCollapsed ? "size-8" : "size-9"} shrink-0 items-center justify-center rounded-lg overflow-hidden bg-white border border-border transition-all`}>
-            <img src={`${import.meta.env.BASE_URL}LOGOcircular.png`} alt="Logo" className="size-full object-contain p-0.5" />
+        <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between gap-1"} w-full`}>
+          <div 
+            onClick={() => setCurrentPage("guardias")}
+            className={`flex items-center cursor-pointer hover:bg-muted/50 p-1.5 rounded-lg transition-colors flex-1 min-w-0 ${
+              isCollapsed ? "justify-center px-0" : "gap-2.5 px-2"
+            } py-2`}
+            title="Ir a Guardias IT"
+          >
+            <div className={`flex ${isCollapsed ? "size-8" : "size-9"} shrink-0 items-center justify-center rounded-lg overflow-hidden bg-white border border-border transition-all`}>
+              <img src={`${import.meta.env.BASE_URL}LOGOcircular.png`} alt="Logo" className="size-full object-contain p-0.5" />
+            </div>
+            {!isCollapsed && (
+              <div className="grid leading-tight text-left min-w-0">
+                <span className="truncate text-sm font-bold text-foreground">Sistemas IT</span>
+                <span className="truncate text-xs text-muted-foreground">Centro de Operaciones</span>
+              </div>
+            )}
           </div>
           {!isCollapsed && (
-            <div className="grid leading-tight">
-              <span className="truncate text-sm font-bold text-foreground">Sistemas IT</span>
-              <span className="truncate text-xs text-muted-foreground">Centro de Operaciones</span>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 rounded-lg text-muted-foreground hover:text-foreground shrink-0 hover:bg-muted/50"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentPage("guardias");
+                setGuardiasViewMode("calendar");
+              }}
+              title="Abrir Calendario de Guardias"
+            >
+              <Calendar className="size-4" />
+            </Button>
           )}
         </div>
       </SidebarHeader>

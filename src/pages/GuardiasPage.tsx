@@ -3,7 +3,8 @@ import {
   Plus, Search, Edit, Save, Trash2, Clock, Check, 
   FileDown, Printer, Filter, Calendar, 
   FileText, CheckCircle2, AlertCircle, User as UserIcon, Award, 
-  ChevronLeft, ChevronRight, Building2, Maximize2, History
+  ChevronLeft, ChevronRight, Building2, Maximize2, History,
+  Key
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -99,6 +100,14 @@ function isLastThursdayOfMonth(dateStr: string): boolean {
   if (date.getDay() !== 4) return false;
   const nextWeek = new Date(date.getTime() + 7 * 24 * 60 * 60 * 1000);
   return nextWeek.getMonth() !== date.getMonth();
+}
+
+function isFirstWednesdayOfMonth(dateStr: string): boolean {
+  const date = new Date(dateStr + "T12:00:00");
+  if (isNaN(date.getTime())) return false;
+  if (date.getDay() !== 3) return false; // 3 is Wednesday
+  const prevWeek = new Date(date.getTime() - 7 * 24 * 60 * 60 * 1000);
+  return prevWeek.getMonth() !== date.getMonth();
 }
 
 function toDisplayDate(isoDate: string): string {
@@ -233,7 +242,20 @@ function getDynamicEventStyle(tasks?: SpecialEventTask[]) {
 }
 
 export function GuardiasPage() {
-  const { guardias, users, addGuardia, updateGuardia, deleteGuardia } = useApp();
+  const { 
+    guardias, 
+    users, 
+    addGuardia, 
+    updateGuardia, 
+    deleteGuardia,
+    holidayAssignments,
+    turnOverrides,
+    setHolidayAssignment,
+    setTurnOverride,
+    clearTurnOverride,
+    guardiasViewMode,
+    setGuardiasViewMode
+  } = useApp();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -245,7 +267,8 @@ export function GuardiasPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Calendar states
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const viewMode = guardiasViewMode;
+  const setViewMode = setGuardiasViewMode;
   const [currentCalMonth, setCurrentCalMonth] = useState(new Date().getMonth());
   const [currentCalYear, setCurrentCalYear] = useState(new Date().getFullYear());
   const [selectedCalDate, setSelectedCalDate] = useState<string | null>(null);
@@ -274,25 +297,9 @@ export function GuardiasPage() {
     [guardias, activePeriod]
   );
 
-  // Holiday Assignments states
-  const [holidayAssignments, setHolidayAssignments] = useState<Record<string, string>>(() => {
-    const saved = localStorage.getItem("techcontrol_holiday_assignments");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return {};
-  });
   const [holidayDialogOpen, setHolidayDialogOpen] = useState(false);
   const [selectedHolidayDate, setSelectedHolidayDate] = useState<string | null>(null);
   const [tempAssignedId, setTempAssignedId] = useState<string>("none");
-
-  useEffect(() => {
-    localStorage.setItem("techcontrol_holiday_assignments", JSON.stringify(holidayAssignments));
-  }, [holidayAssignments]);
 
   useEffect(() => {
     if (holidayDialogOpen && selectedHolidayDate) {
@@ -400,6 +407,16 @@ export function GuardiasPage() {
         date: dateStr,
         name: "🔥 Jueves OnFire",
         type: "onfire",
+        tasks: []
+      });
+    }
+
+    if (isFirstWednesdayOfMonth(dateStr)) {
+      list.push({
+        id: "first-wednesday-break",
+        date: dateStr,
+        name: "☕ MG Break",
+        type: "break",
         tasks: []
       });
     }
@@ -947,6 +964,20 @@ export function GuardiasPage() {
 
   const isUrlFullscreen = typeof window !== "undefined" && window.location.search.includes("fullscreenCalendar=true");
 
+  // Calculating Today's Turn variables for the weekly shift card
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }, []);
+
+  const todayOriginalTurn = getWeeklyTurn(todayStr);
+  const todayOverriddenTurn = turnOverrides[todayStr];
+  const todayHasOverride = todayOverriddenTurn && todayOverriddenTurn !== todayOriginalTurn;
+  const currentTurnOwner = todayHasOverride ? todayOverriddenTurn : todayOriginalTurn;
+
   return (
     <TooltipProvider delayDuration={150}>
       <div className="guardias-page-container space-y-6 p-3 sm:p-6 print:p-0 print:space-y-4 overflow-x-hidden">
@@ -1061,7 +1092,10 @@ export function GuardiasPage() {
                   {cells.map((cell, idx) => {
                     const dayGuardias = guardias.filter(g => g.date === cell.dateStr);
                     const isToday = cell.dateStr === new Date().toISOString().split("T")[0];
-                    const weeklyTurn = getWeeklyTurn(cell.dateStr);
+                    const originalTurn = getWeeklyTurn(cell.dateStr);
+                    const overriddenTurn = turnOverrides[cell.dateStr];
+                    const hasOverride = overriddenTurn && overriddenTurn !== originalTurn;
+                    const weeklyTurn = hasOverride ? overriddenTurn : originalTurn;
                     const holidayName = getHolidayInfo(cell.dateStr);
                     const assignedUserId = holidayAssignments[cell.dateStr];
                     const assignedUser = assignedUserId ? users.find(u => u.id === assignedUserId) : null;
@@ -1143,6 +1177,8 @@ export function GuardiasPage() {
                                   let className = "";
                                   if (evt.id === "last-thursday-onfire") {
                                     className = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
+                                  } else if (evt.id === "first-wednesday-break") {
+                                    className = "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30";
                                   } else {
                                     const dynamic = getDynamicEventStyle(evt.tasks);
                                     style = dynamic.style;
@@ -1154,7 +1190,7 @@ export function GuardiasPage() {
                                       key={evt.id}
                                       style={style}
                                       onClick={(e) => {
-                                        if (evt.id !== "last-thursday-onfire") {
+                                        if (evt.id !== "last-thursday-onfire" && evt.id !== "first-wednesday-break") {
                                           e.stopPropagation();
                                           openDetailEvent(evt);
                                         }
@@ -1229,16 +1265,29 @@ export function GuardiasPage() {
                               )}
 
                               {/* Weekly Turn */}
-                              {showTurnos && weeklyTurn && (
+                              {showTurnos && originalTurn && (
                                 <div 
-                                  className={`text-[9.5px] border px-1.5 py-0.5 rounded-sm text-center truncate select-none shrink-0 ${
+                                  className={`text-[9.5px] border px-1.5 py-0.5 rounded-sm text-center select-none shrink-0 flex items-center justify-center gap-1 ${
                                     weeklyTurn === "facundo"
                                       ? "bg-sky-500/5 dark:bg-sky-500/10 text-sky-600/80 dark:text-sky-400/80 border-sky-500/15"
                                       : "bg-purple-500/5 dark:bg-purple-500/10 text-purple-600/80 dark:text-purple-400/80 border-purple-500/15"
                                   }`}
-                                  title={`Esta semana es el turno de guardia de ${weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}`}
+                                  title={
+                                    hasOverride
+                                      ? `Turno modificado. Original: ${originalTurn === "facundo" ? "Facundo" : "Ramiro"} ➡️ Nuevo: ${overriddenTurn === "facundo" ? "Facundo" : "Ramiro"}`
+                                      : `Esta semana es el turno de guardia de ${originalTurn === "facundo" ? "Facundo" : "Ramiro"}`
+                                  }
                                 >
-                                  🔑 Turno: {weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}
+                                  <span>🔑 Turno:</span>
+                                  {hasOverride ? (
+                                    <span className="flex items-center gap-1">
+                                      <span className="line-through opacity-50">{originalTurn === "facundo" ? "Facu" : "Rami"}</span>
+                                      <span>➡️</span>
+                                      <span className="font-bold">{overriddenTurn === "facundo" ? "Facu" : "Rami"}</span>
+                                    </span>
+                                  ) : (
+                                    <span>{originalTurn === "facundo" ? "Facundo" : "Ramiro"}</span>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -1273,10 +1322,19 @@ export function GuardiasPage() {
                             )}
 
                             {/* Weekly turn */}
-                            {showTurnos && weeklyTurn && (
+                            {showTurnos && originalTurn && (
                               <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                                 <span>🔑</span>
-                                <span>Turno semanal: <strong className="text-foreground">{weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}</strong></span>
+                                <span>Turno semanal: </span>
+                                {hasOverride ? (
+                                  <span className="flex items-center gap-1">
+                                    <span className="line-through opacity-50">{originalTurn === "facundo" ? "Facundo" : "Ramiro"}</span>
+                                    <span>➡️</span>
+                                    <strong className="text-foreground">{overriddenTurn === "facundo" ? "Facundo" : "Ramiro"}</strong>
+                                  </span>
+                                ) : (
+                                  <strong className="text-foreground">{originalTurn === "facundo" ? "Facundo" : "Ramiro"}</strong>
+                                )}
                               </div>
                             )}
 
@@ -1427,26 +1485,34 @@ export function GuardiasPage() {
           </CardContent>
         </Card>
 
-        {/* 4. Día Más Ajetreado */}
+        {/* 4. Responsable del Turno Semanal */}
         <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden p-3.5 sm:p-6 gap-2 sm:gap-6">
           <div className="absolute top-0 right-0 p-2 sm:p-3 opacity-15">
-            <Award className="size-8 sm:size-10 text-purple-500" />
+            <Key className="size-8 sm:size-10 text-purple-500" />
           </div>
           <CardHeader className="p-0">
-            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Día Más Ajetreado</p>
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Turno de la Semana</p>
           </CardHeader>
           <CardContent className="p-0 min-w-0">
-            <h2 className="text-lg sm:text-2xl font-extrabold tracking-tight text-purple-600 dark:text-purple-400">
-              {stats.busiestDate !== "Sin registros" 
-                ? formatDate(stats.busiestDate) 
-                : "Sin registros"
-              }
+            <h2 className={`text-lg sm:text-2xl font-extrabold tracking-tight ${
+              currentTurnOwner === "facundo"
+                ? "text-sky-600 dark:text-sky-400"
+                : "text-purple-600 dark:text-purple-400"
+            }`}>
+              {currentTurnOwner === "facundo" ? "Facundo Carrizo" : "Ramiro Lacci"}
             </h2>
             <p className="text-[10px] sm:text-xs text-muted-foreground truncate mt-0.5 sm:mt-1">
-              {stats.busiestDate !== "Sin registros"
-                ? `${stats.busiestDateStats.hours.toFixed(1)} hs (${stats.busiestDateStats.count} ${stats.busiestDateStats.count === 1 ? "guardia" : "guardias"})`
-                : "No hay guardias registradas"
-              }
+              {todayHasOverride ? (
+                <span className="flex items-center gap-1">
+                  <span className="line-through opacity-60">
+                    {todayOriginalTurn === "facundo" ? "Facu" : "Ramiro"}
+                  </span>
+                  <span>➡️</span>
+                  <span className="font-semibold text-foreground">Reasignado</span>
+                </span>
+              ) : (
+                <span>Turno automático por cronograma</span>
+              )}
             </p>
           </CardContent>
         </Card>
@@ -1841,7 +1907,10 @@ export function GuardiasPage() {
                 {cells.map((cell, idx) => {
                   const dayGuardias = guardias.filter(g => g.date === cell.dateStr);
                   const isToday = cell.dateStr === new Date().toISOString().split("T")[0];
-                  const weeklyTurn = getWeeklyTurn(cell.dateStr);
+                  const originalTurn = getWeeklyTurn(cell.dateStr);
+                  const overriddenTurn = turnOverrides[cell.dateStr];
+                  const hasOverride = overriddenTurn && overriddenTurn !== originalTurn;
+                  const weeklyTurn = hasOverride ? overriddenTurn : originalTurn;
                   const holidayName = getHolidayInfo(cell.dateStr);
                   const assignedUserId = holidayAssignments[cell.dateStr];
                   const assignedUser = assignedUserId ? users.find(u => u.id === assignedUserId) : null;
@@ -1923,6 +1992,8 @@ export function GuardiasPage() {
                                 let className = "";
                                 if (evt.id === "last-thursday-onfire") {
                                   className = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
+                                } else if (evt.id === "first-wednesday-break") {
+                                  className = "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30";
                                 } else {
                                   const dynamic = getDynamicEventStyle(evt.tasks);
                                   style = dynamic.style;
@@ -1934,7 +2005,7 @@ export function GuardiasPage() {
                                     key={evt.id}
                                     style={style}
                                     onClick={(e) => {
-                                      if (evt.id !== "last-thursday-onfire") {
+                                      if (evt.id !== "last-thursday-onfire" && evt.id !== "first-wednesday-break") {
                                         e.stopPropagation();
                                         openDetailEvent(evt);
                                       }
@@ -2010,16 +2081,29 @@ export function GuardiasPage() {
                             )}
 
                             {/* Turno Semanal */}
-                            {showTurnos && weeklyTurn && (
+                            {showTurnos && originalTurn && (
                               <div 
-                                className={`text-[8px] font-bold py-0.5 px-1 rounded border text-center truncate shrink-0 ${
+                                className={`text-[8px] font-bold py-0.5 px-1 rounded border text-center select-none shrink-0 flex items-center justify-center gap-0.5 ${
                                   weeklyTurn === "facundo"
                                     ? "bg-sky-500/5 dark:bg-sky-500/10 text-sky-600/80 dark:text-sky-400/80 border-sky-500/15"
                                     : "bg-purple-500/5 dark:bg-purple-500/10 text-purple-600/80 dark:text-purple-400/80 border-purple-500/15"
                                 }`}
-                                title={`Esta semana es el turno de guardia de ${weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}`}
+                                title={
+                                  hasOverride
+                                    ? `Turno modificado. Original: ${originalTurn === "facundo" ? "Facundo" : "Ramiro"} ➡️ Nuevo: ${overriddenTurn === "facundo" ? "Facundo" : "Ramiro"}`
+                                    : `Esta semana es el turno de guardia de ${originalTurn === "facundo" ? "Facundo" : "Ramiro"}`
+                                }
                               >
-                                Turno: {weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}
+                                <span>Turno:</span>
+                                {hasOverride ? (
+                                  <span className="flex items-center gap-0.5">
+                                    <span className="line-through opacity-50">{originalTurn === "facundo" ? "Facu" : "Rami"}</span>
+                                    <span>➡️</span>
+                                    <span className="font-extrabold">{overriddenTurn === "facundo" ? "Facu" : "Rami"}</span>
+                                  </span>
+                                ) : (
+                                  <span>{originalTurn === "facundo" ? "Facundo" : "Ramiro"}</span>
+                                )}
                               </div>
                             )}
                           </div>
@@ -2054,10 +2138,19 @@ export function GuardiasPage() {
                           )}
 
                           {/* Weekly turn */}
-                          {showTurnos && weeklyTurn && (
+                          {showTurnos && originalTurn && (
                             <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                               <span>🔑</span>
-                              <span>Turno semanal: <strong className="text-foreground">{weeklyTurn === "facundo" ? "Facundo" : "Ramiro"}</strong></span>
+                              <span>Turno semanal: </span>
+                              {hasOverride ? (
+                                <span className="flex items-center gap-1">
+                                  <span className="line-through opacity-50">{originalTurn === "facundo" ? "Facundo" : "Ramiro"}</span>
+                                  <span>➡️</span>
+                                  <strong className="text-foreground">{overriddenTurn === "facundo" ? "Facundo" : "Ramiro"}</strong>
+                                </span>
+                              ) : (
+                                <strong className="text-foreground">{originalTurn === "facundo" ? "Facundo" : "Ramiro"}</strong>
+                              )}
                             </div>
                           )}
 
@@ -2608,9 +2701,88 @@ export function GuardiasPage() {
             {selectedCalDate && (() => {
               const dayGuardias = guardias.filter(g => g.date === selectedCalDate);
               const dayEvents = getSpecialEvents(selectedCalDate);
+              const originalTurn = getWeeklyTurn(selectedCalDate);
+              const overriddenTurn = turnOverrides[selectedCalDate];
+              const hasOverride = overriddenTurn && overriddenTurn !== originalTurn;
               
               return (
                 <div className="space-y-6">
+                  {/* Responsable del Turno Semanal */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 border-b border-muted-foreground/10 pb-1.5">
+                      🔑 Responsable del Turno
+                    </h3>
+                    <Card className="border border-muted-foreground/10 bg-card/30">
+                      <CardContent className="p-3 flex items-center justify-between gap-4 flex-wrap">
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground font-medium">Asignación para esta jornada:</p>
+                          <div className="flex items-center gap-2">
+                            {hasOverride ? (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="line-through text-xs text-muted-foreground font-semibold">
+                                  {originalTurn === "facundo" ? "Facundo" : "Ramiro"} (Original)
+                                </span>
+                                <span className="text-xs text-muted-foreground">➡️</span>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                  overriddenTurn === "facundo"
+                                    ? "bg-sky-500/10 text-sky-600 dark:text-sky-400"
+                                    : "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                                }`}>
+                                  {overriddenTurn === "facundo" ? "Facundo" : "Ramiro"} (Reasignado)
+                                </span>
+                              </div>
+                            ) : (
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                originalTurn === "facundo"
+                                  ? "bg-sky-500/10 text-sky-600 dark:text-sky-400"
+                                  : "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                              }`}>
+                                {originalTurn === "facundo" ? "Facundo" : "Ramiro"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Control buttons to override */}
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            variant={overriddenTurn === "facundo" ? "default" : "outline"}
+                            size="xs"
+                            className="h-8 font-semibold text-xs"
+                            onClick={async () => {
+                              await setTurnOverride(selectedCalDate!, "facundo");
+                            }}
+                          >
+                            Facundo
+                          </Button>
+                          <Button
+                            variant={overriddenTurn === "ramiro" ? "default" : "outline"}
+                            size="xs"
+                            className="h-8 font-semibold text-xs"
+                            onClick={async () => {
+                              await setTurnOverride(selectedCalDate!, "ramiro");
+                            }}
+                          >
+                            Ramiro
+                          </Button>
+                          {hasOverride && (
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              className="h-8 text-destructive hover:bg-destructive/10 text-xs"
+                              onClick={async () => {
+                                await clearTurnOverride(selectedCalDate!);
+                              }}
+                              title="Restaurar turno original"
+                            >
+                              Restaurar
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
                   {/* Eventos Especiales */}
                   <div className="space-y-2">
                     <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 border-b border-muted-foreground/10 pb-1.5">
@@ -2623,14 +2795,22 @@ export function GuardiasPage() {
                     ) : (
                       <div className="grid gap-2 sm:grid-cols-2">
                         {dayEvents.map((evt) => {
-                          const isManual = evt.id !== "last-thursday-onfire";
+                          const isManual = evt.id !== "last-thursday-onfire" && evt.id !== "first-wednesday-break";
                           const dynamic = getDynamicEventStyle(evt.tasks);
+                          const isOnfire = evt.id === "last-thursday-onfire";
+                          const isBreak = evt.id === "first-wednesday-break";
+                          let systemClass = "";
+                          if (isOnfire) {
+                            systemClass = "bg-rose-500/5 text-rose-600 dark:text-rose-400 border-rose-500/15";
+                          } else if (isBreak) {
+                            systemClass = "bg-amber-500/5 text-amber-600 dark:text-amber-400 border-amber-500/15";
+                          }
                           
                           return (
                             <div 
                               key={evt.id} 
                               style={isManual ? dynamic.style : undefined}
-                              className={`flex items-center justify-between px-3 py-2.5 rounded-lg border bg-card/20 transition-all hover:bg-card/45 gap-3 cursor-pointer ${!isManual ? "bg-rose-500/5 text-rose-600 dark:text-rose-400 border-rose-500/15" : ""}`}
+                              className={`flex items-center justify-between px-3 py-2.5 rounded-lg border bg-card/20 transition-all hover:bg-card/45 gap-3 cursor-pointer ${systemClass}`}
                               onClick={() => {
                                 if (isManual) {
                                   setSelectedCalDate(null);
@@ -3174,16 +3354,8 @@ export function GuardiasPage() {
           })()}
 
           <DialogFooter className="flex-row-reverse justify-end gap-2">
-            <Button onClick={() => {
-              setHolidayAssignments(prev => {
-                const next = { ...prev };
-                if (tempAssignedId === "none") {
-                  delete next[selectedHolidayDate!];
-                } else {
-                  next[selectedHolidayDate!] = tempAssignedId;
-                }
-                return next;
-              });
+            <Button onClick={async () => {
+              await setHolidayAssignment(selectedHolidayDate!, tempAssignedId);
               setHolidayDialogOpen(false);
               toast.success("Asignación de feriado guardada correctamente");
             }}>

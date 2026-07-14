@@ -128,6 +128,13 @@ interface AppContextValue {
   updateGuardia: (id: string, data: Partial<Guardia>) => void;
   deleteGuardia: (id: string) => void;
 
+  // Holiday and Turn Overrides
+  holidayAssignments: Record<string, string>;
+  turnOverrides: Record<string, "facundo" | "ramiro">;
+  setHolidayAssignment: (date: string, userId: string) => Promise<void>;
+  setTurnOverride: (date: string, user: "facundo" | "ramiro") => Promise<void>;
+  clearTurnOverride: (date: string) => Promise<void>;
+
   // Navigation state
   currentPage: string;
   setCurrentPage: (page: string) => void;
@@ -135,6 +142,8 @@ interface AppContextValue {
   setSelectedId: (id: string | null) => void;
   loading: boolean;
   migrateAllData: () => Promise<void>;
+  guardiasViewMode: "list" | "calendar";
+  setGuardiasViewMode: (mode: "list" | "calendar") => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -152,6 +161,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentPage, setCurrentPage] = useState("guardias");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [guardiasViewMode, setGuardiasViewMode] = useState<"list" | "calendar">("list");
+
+  // New settings states
+  const [holidayAssignments, setHolidayAssignments] = useState<Record<string, string>>({});
+  const [turnOverrides, setTurnOverrides] = useState<Record<string, "facundo" | "ramiro">>({});
+  const [hasDbHolidayAssignments, setHasDbHolidayAssignments] = useState(true);
+  const [hasDbTurnOverrides, setHasDbTurnOverrides] = useState(true);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -328,6 +344,72 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.warn("Could not load guardias from Supabase:", err);
       }
+
+      // Fetch holiday assignments
+      let dbHolidayAssignments: Record<string, string> = {};
+      let hasHolidayDb = true;
+      try {
+        const { data: has, error: hasError } = await supabase.from("holiday_assignments").select("*");
+        if (hasError) {
+          if (hasError.code === "PGRST205" || hasError.message?.includes("does not exist")) {
+            hasHolidayDb = false;
+          } else {
+            console.warn("Error querying holiday_assignments:", hasError);
+          }
+        } else if (has) {
+          dbHolidayAssignments = has.reduce((acc, curr) => {
+            acc[curr.date] = curr.user_id;
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      } catch (err) {
+        hasHolidayDb = false;
+      }
+
+      // Fetch turn overrides
+      let dbTurnOverrides: Record<string, "facundo" | "ramiro"> = {};
+      let hasTurnDb = true;
+      try {
+        const { data: tos, error: tosError } = await supabase.from("turn_overrides").select("*");
+        if (tosError) {
+          if (tosError.code === "PGRST205" || tosError.message?.includes("does not exist")) {
+            hasTurnDb = false;
+          } else {
+            console.warn("Error querying turn_overrides:", tosError);
+          }
+        } else if (tos) {
+          dbTurnOverrides = tos.reduce((acc, curr) => {
+            acc[curr.date] = curr.assigned_user as "facundo" | "ramiro";
+            return acc;
+          }, {} as Record<string, "facundo" | "ramiro">);
+        }
+      } catch (err) {
+        hasTurnDb = false;
+      }
+
+      // Fallbacks / Load values
+      if (hasHolidayDb) {
+        setHolidayAssignments(dbHolidayAssignments);
+        localStorage.setItem("techcontrol_holiday_assignments", JSON.stringify(dbHolidayAssignments));
+      } else {
+        const saved = localStorage.getItem("techcontrol_holiday_assignments");
+        if (saved) {
+          try { setHolidayAssignments(JSON.parse(saved)); } catch (e) {}
+        }
+      }
+
+      if (hasTurnDb) {
+        setTurnOverrides(dbTurnOverrides);
+        localStorage.setItem("techcontrol_turn_overrides", JSON.stringify(dbTurnOverrides));
+      } else {
+        const saved = localStorage.getItem("techcontrol_turn_overrides");
+        if (saved) {
+          try { setTurnOverrides(JSON.parse(saved)); } catch (e) {}
+        }
+      }
+
+      setHasDbHolidayAssignments(hasHolidayDb);
+      setHasDbTurnOverrides(hasTurnDb);
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -1161,6 +1243,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [fetchData]
   );
 
+  const setHolidayAssignment = useCallback(async (date: string, userId: string) => {
+    setHolidayAssignments(prev => {
+      const next = { ...prev };
+      if (userId === "none") {
+        delete next[date];
+      } else {
+        next[date] = userId;
+      }
+      localStorage.setItem("techcontrol_holiday_assignments", JSON.stringify(next));
+      return next;
+    });
+
+    if (hasDbHolidayAssignments) {
+      if (userId === "none") {
+        const { error } = await supabase.from("holiday_assignments").delete().eq("date", date);
+        if (error) console.error("Error deleting holiday_assignment:", error);
+      } else {
+        const { error } = await supabase.from("holiday_assignments").upsert({ date, user_id: userId });
+        if (error) console.error("Error upserting holiday_assignment:", error);
+      }
+    }
+  }, [hasDbHolidayAssignments]);
+
+  const setTurnOverride = useCallback(async (date: string, user: "facundo" | "ramiro") => {
+    setTurnOverrides(prev => {
+      const next = { ...prev, [date]: user };
+      localStorage.setItem("techcontrol_turn_overrides", JSON.stringify(next));
+      return next;
+    });
+
+    if (hasDbTurnOverrides) {
+      const { error } = await supabase.from("turn_overrides").upsert({ date, assigned_user: user });
+      if (error) console.error("Error upserting turn_override:", error);
+    }
+  }, [hasDbTurnOverrides]);
+
+  const clearTurnOverride = useCallback(async (date: string) => {
+    setTurnOverrides(prev => {
+      const next = { ...prev };
+      delete next[date];
+      localStorage.setItem("techcontrol_turn_overrides", JSON.stringify(next));
+      return next;
+    });
+
+    if (hasDbTurnOverrides) {
+      const { error } = await supabase.from("turn_overrides").delete().eq("date", date);
+      if (error) console.error("Error deleting turn_override:", error);
+    }
+  }, [hasDbTurnOverrides]);
+
   return (
     <AppContext.Provider
       value={{
@@ -1200,12 +1332,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addGuardia,
         updateGuardia,
         deleteGuardia,
+        holidayAssignments,
+        turnOverrides,
+        setHolidayAssignment,
+        setTurnOverride,
+        clearTurnOverride,
         currentPage,
         setCurrentPage,
         selectedId,
         setSelectedId,
         loading,
         migrateAllData,
+        guardiasViewMode,
+        setGuardiasViewMode,
       }}
     >
       {children}
