@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { 
   Plus, Search, Edit, Save, Trash2, Clock, Check, 
   FileDown, Printer, Filter, Calendar, 
@@ -36,6 +36,7 @@ import {
 import { useApp } from "@/context/AppContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 import { GUARDIA_TYPES, getGuardiaTypeShortLabel } from "@/data/guardiaTypes";
 import { formatDate, formatToday } from "@/lib/utils-app";
@@ -214,6 +215,8 @@ interface SpecialEvent {
   name: string;
   type: "onfire" | "break" | "promo" | "custom";
   tasks?: SpecialEventTask[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 function getDynamicEventStyle(tasks?: SpecialEventTask[]) {
@@ -312,20 +315,13 @@ export function GuardiasPage() {
     const saved = localStorage.getItem("techcontrol_special_events");
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (e) {
         console.error(e);
       }
     }
-    return [
-      {
-        id: "default-mg-break",
-        date: "2026-06-09",
-        name: "☕ MG Break",
-        type: "break",
-        tasks: []
-      }
-    ];
+    return [];
   });
 
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
@@ -345,6 +341,63 @@ export function GuardiasPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<SpecialEvent | null>(null);
 
+  const syncSpecialEventsFromSupabase = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from("special_events").select("*").order("date", { ascending: true });
+      if (error) {
+        if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+          console.warn("La tabla special_events aún no existe en Supabase. Ejecutá el SQL de supabase_setup.sql para compartir los eventos entre usuarios.");
+        } else {
+          console.warn("No se pudieron cargar los eventos especiales desde Supabase:", error);
+        }
+        return;
+      }
+
+      const mapped = (data ?? []).map((row: any) => ({
+        id: row.id as string,
+        date: row.date as string,
+        name: row.name as string,
+        type: row.type as SpecialEvent["type"],
+        tasks: Array.isArray(row.tasks) ? row.tasks : [],
+        createdAt: row.created_at as string | undefined,
+        updatedAt: row.updated_at as string | undefined,
+      }));
+
+      setManualEvents(mapped);
+      localStorage.setItem("techcontrol_special_events", JSON.stringify(mapped));
+    } catch (err) {
+      console.warn("No se pudo sincronizar eventos especiales desde Supabase:", err);
+    }
+  }, []);
+
+  const saveSpecialEventToSupabase = useCallback(async (event: SpecialEvent) => {
+    const payload = {
+      id: event.id,
+      date: event.date,
+      name: event.name,
+      type: event.type,
+      tasks: event.tasks ?? [],
+      created_at: event.createdAt ?? new Date().toISOString(),
+      updated_at: event.updatedAt ?? new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from("special_events").upsert(payload, { onConflict: "id" });
+    if (error) {
+      console.warn("No se pudo guardar el evento especial en Supabase:", error);
+      return false;
+    }
+    return true;
+  }, []);
+
+  const deleteSpecialEventFromSupabase = useCallback(async (eventId: string) => {
+    const { error } = await supabase.from("special_events").delete().eq("id", eventId);
+    if (error) {
+      console.warn("No se pudo eliminar el evento especial desde Supabase:", error);
+      return false;
+    }
+    return true;
+  }, []);
+
   const openDetailEvent = (evt: SpecialEvent) => {
     setDetailEvent(evt);
     setDetailDialogOpen(true);
@@ -355,9 +408,14 @@ export function GuardiasPage() {
     const updatedTasks = (detailEvent.tasks || []).map(t => 
       t.id === taskId ? { ...t, completed } : t
     );
-    const updatedEvent = { ...detailEvent, tasks: updatedTasks };
+    const updatedEvent = { ...detailEvent, tasks: updatedTasks, updatedAt: new Date().toISOString() };
     setDetailEvent(updatedEvent);
-    setManualEvents(prev => prev.map(e => e.id === detailEvent.id ? updatedEvent : e));
+    setManualEvents(prev => {
+      const next = prev.map(e => e.id === detailEvent.id ? updatedEvent : e);
+      localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
+      return next;
+    });
+    void saveSpecialEventToSupabase(updatedEvent);
   };
 
   const handleEditFromDetail = () => {
@@ -368,8 +426,13 @@ export function GuardiasPage() {
 
   const handleDeleteFromDetail = () => {
     if (!detailEvent) return;
-    setManualEvents(prev => prev.filter(e => e.id !== detailEvent.id));
+    setManualEvents(prev => {
+      const next = prev.filter(e => e.id !== detailEvent.id);
+      localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
+      return next;
+    });
     setDetailDialogOpen(false);
+    void deleteSpecialEventFromSupabase(detailEvent.id);
     toast.success("Evento eliminado");
   };
 
@@ -397,6 +460,14 @@ export function GuardiasPage() {
   useEffect(() => {
     localStorage.setItem("techcontrol_special_events", JSON.stringify(manualEvents));
   }, [manualEvents]);
+
+  useEffect(() => {
+    void syncSpecialEventsFromSupabase();
+    const intervalId = window.setInterval(() => {
+      void syncSpecialEventsFromSupabase();
+    }, 10000);
+    return () => window.clearInterval(intervalId);
+  }, [syncSpecialEventsFromSupabase]);
 
   const getSpecialEvents = (dateStr: string): SpecialEvent[] => {
     const list: SpecialEvent[] = [];
@@ -936,13 +1007,20 @@ export function GuardiasPage() {
     }
 
     if (eventForm.id) {
-      setManualEvents(prev => prev.map(e => e.id === eventForm.id ? {
-        ...e,
+      const updatedEvent: SpecialEvent = {
+        id: eventForm.id,
         date: isoDate,
         name: eventForm.name,
         type: eventForm.type,
-        tasks: eventForm.tasks
-      } : e));
+        tasks: eventForm.tasks,
+        updatedAt: new Date().toISOString(),
+      };
+      setManualEvents(prev => {
+        const next = prev.map(e => e.id === eventForm.id ? updatedEvent : e);
+        localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
+        return next;
+      });
+      void saveSpecialEventToSupabase(updatedEvent);
       toast.success("Evento especial actualizado");
     } else {
       const newEvent: SpecialEvent = {
@@ -950,9 +1028,16 @@ export function GuardiasPage() {
         date: isoDate,
         name: eventForm.name,
         type: eventForm.type,
-        tasks: eventForm.tasks
+        tasks: eventForm.tasks,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
-      setManualEvents(prev => [...prev, newEvent]);
+      setManualEvents(prev => {
+        const next = [...prev, newEvent];
+        localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
+        return next;
+      });
+      void saveSpecialEventToSupabase(newEvent);
       toast.success("Evento especial registrado");
     }
 
@@ -2390,7 +2475,12 @@ export function GuardiasPage() {
                             size="icon-xs" 
                             className="h-7 w-7 text-destructive hover:bg-destructive/10"
                             onClick={() => {
-                              setManualEvents(prev => prev.filter(e => e.id !== evt.id));
+                              setManualEvents(prev => {
+                                const next = prev.filter(e => e.id !== evt.id);
+                                localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
+                                return next;
+                              });
+                              void deleteSpecialEventFromSupabase(evt.id);
                               toast.success("Evento eliminado");
                             }}
                           >
@@ -2847,7 +2937,12 @@ export function GuardiasPage() {
                                     size="icon-xs" 
                                     className="h-7 w-7 text-destructive hover:bg-destructive/10"
                                     onClick={() => {
-                                      setManualEvents(prev => prev.filter(e => e.id !== evt.id));
+                                      setManualEvents(prev => {
+                                        const next = prev.filter(e => e.id !== evt.id);
+                                        localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
+                                        return next;
+                                      });
+                                      void deleteSpecialEventFromSupabase(evt.id);
                                       toast.success("Evento eliminado");
                                     }}
                                     title="Eliminar evento"

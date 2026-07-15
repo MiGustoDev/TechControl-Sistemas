@@ -169,6 +169,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [hasDbHolidayAssignments, setHasDbHolidayAssignments] = useState(true);
   const [hasDbTurnOverrides, setHasDbTurnOverrides] = useState(true);
 
+  const syncGuardiasFromSupabase = useCallback(async (sourceUsers: User[] = users) => {
+    try {
+      const { data: gds, error: gdsError } = await supabase.from("guardias").select("*");
+      const allowedUserNames = new Set(["Facundo Carrizo", "Ramiro Lacci", "Gustavo Gonzalez"]);
+      const fallbackGuardias = initialGuardias.filter((g) => allowedUserNames.has(g.userName));
+      const validUserIds = new Set(sourceUsers.map((u) => u.id));
+
+      const sourceGuardias = gds && !gdsError
+        ? gds.map((g) => guardiaFromDb(g as Record<string, unknown>)).filter((g) => validUserIds.has(g.userId))
+        : fallbackGuardias;
+
+      const mappedGuardias = dedupeGuardias(sourceGuardias.filter((g) => validUserIds.has(g.userId)));
+      setGuardias(mappedGuardias);
+      localStorage.setItem("techcontrol_guardias", JSON.stringify(mappedGuardias));
+
+      if (gdsError) {
+        console.warn("Supabase guardias query returned error (table might not exist yet):", gdsError);
+      }
+      return mappedGuardias;
+    } catch (err) {
+      console.warn("Could not load guardias from Supabase:", err);
+      return null;
+    }
+  }, [users]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     let dbUsers: User[] = [];
@@ -323,27 +348,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })));
 
       // Fetch guardias separately to handle missing table gracefully
-      try {
-        const { data: gds, error: gdsError } = await supabase.from("guardias").select("*");
-        const allowedUserNames = new Set(["Facundo Carrizo", "Ramiro Lacci", "Gustavo Gonzalez"]);
-        const fallbackGuardias = initialGuardias.filter((g) => allowedUserNames.has(g.userName));
-        const validUserIds = new Set((dbUsers.length > 0 ? dbUsers : fallbackUsers).map((u) => u.id));
-
-        const sourceGuardias = gds && !gdsError
-          ? gds.map((g) => guardiaFromDb(g as Record<string, unknown>)).filter((g) => validUserIds.has(g.userId))
-          : fallbackGuardias;
-
-        const mappedGuardias = dedupeGuardias(sourceGuardias.filter((g) => validUserIds.has(g.userId)));
-
-        setGuardias(mappedGuardias);
-        localStorage.setItem("techcontrol_guardias", JSON.stringify(mappedGuardias));
-
-        if (gdsError) {
-          console.warn("Supabase guardias query returned error (table might not exist yet):", gdsError);
-        }
-      } catch (err) {
-        console.warn("Could not load guardias from Supabase:", err);
-      }
+      await syncGuardiasFromSupabase(dbUsers.length > 0 ? dbUsers : fallbackUsers);
 
       // Fetch holiday assignments
       let dbHolidayAssignments: Record<string, string> = {};
@@ -422,6 +427,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      syncGuardiasFromSupabase(users);
+    }, 10000);
+
+    return () => window.clearInterval(intervalId);
+  }, [syncGuardiasFromSupabase, users]);
 
   const migrateAllData = async () => {
     setLoading(true);
@@ -1173,10 +1186,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.warn("Error inserting guardia into Supabase:", error);
         toast.info("Guardia guardada localmente");
       } else {
+        await syncGuardiasFromSupabase(users);
         toast.success("Guardia registrada con éxito");
       }
     },
-    [fetchData]
+    [syncGuardiasFromSupabase, users]
   );
 
   const updateGuardia = useCallback(
@@ -1219,10 +1233,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.warn("Error updating guardia in Supabase:", error);
       } else {
+        await syncGuardiasFromSupabase(users);
         toast.success("Guardia actualizada");
       }
     },
-    [guardias, fetchData]
+    [guardias, syncGuardiasFromSupabase, users]
   );
 
   const deleteGuardia = useCallback(
@@ -1237,10 +1252,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.warn("Error deleting guardia from Supabase:", error);
       } else {
+        await syncGuardiasFromSupabase(users);
         toast.success("Guardia eliminada");
       }
     },
-    [fetchData]
+    [syncGuardiasFromSupabase, users]
   );
 
   const setHolidayAssignment = useCallback(async (date: string, userId: string) => {
