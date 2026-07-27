@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS public.special_events (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Ensure tasks column exists (in case the table already existed without it)
+ALTER TABLE public.special_events ADD COLUMN IF NOT EXISTS tasks JSONB DEFAULT '[]'::jsonb;
+
 -- Enable RLS
 ALTER TABLE public.special_events ENABLE ROW LEVEL SECURITY;
 
@@ -53,3 +56,4 @@ DROP POLICY IF EXISTS "Allow public read access" ON public.special_events;
 DROP POLICY IF EXISTS "Allow public write access" ON public.special_events;
 CREATE POLICY "Allow public read access" ON public.special_events FOR SELECT USING (true);
 CREATE POLICY "Allow public write access" ON public.special_events FOR ALL USING (true) WITH CHECK (true);
+

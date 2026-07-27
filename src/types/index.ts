@@ -220,3 +220,14 @@ export interface Guardia {
   updatedAt: string;
 }
 
+export interface SystemNote {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  isPinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+

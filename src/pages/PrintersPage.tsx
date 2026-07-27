@@ -212,6 +212,43 @@ export function PrintersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPrinter, setEditingPrinter] = useState<PrinterType | null>(null);
   const [form, setForm] = useState(defaultForm);
+  const [customSectors, setCustomSectors] = useState<string[]>([]);
+  const [isAddingSector, setIsAddingSector] = useState(false);
+  const [newSectorInput, setNewSectorInput] = useState("");
+
+  const allSectors = Array.from(
+    new Set([
+      ...printers.map((p) => {
+        const s = p.sector?.trim();
+        if (s && s.toUpperCase() === "GENERAL") return "• GENERAL •";
+        return s;
+      }).filter(Boolean),
+      ...customSectors,
+      "• GENERAL •",
+      "Administración",
+      "Armado",
+      "Backup",
+      "Calidad",
+      "Compras",
+      "Logística",
+      "Mantenimiento",
+      "Oficinas",
+      "Producción",
+      "Sistemas",
+    ])
+  ).sort((a, b) => (a as string).localeCompare(b as string, "es")) as string[];
+
+  const handleAddCustomSector = () => {
+    const trimmed = newSectorInput.trim();
+    if (!trimmed) return;
+    if (!customSectors.includes(trimmed)) {
+      setCustomSectors((prev) => [...prev, trimmed]);
+    }
+    setForm((prev) => ({ ...prev, sector: trimmed }));
+    setNewSectorInput("");
+    setIsAddingSector(false);
+    toast.success(`Sector "${trimmed}" agregado`);
+  };
 
   const branches = Array.from(new Set(printers.map((p) => p.branch).filter(Boolean))).sort((a, b) =>
     a.localeCompare(b, "es")
@@ -223,12 +260,18 @@ export function PrintersPage() {
   const filtered = printers
     .filter((p) => {
       const area = p.sector?.trim() || "Sin área";
+      const q = search.toLowerCase();
       const matchSearch =
         !search ||
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.model.toLowerCase().includes(search.toLowerCase()) ||
-        area.toLowerCase().includes(search.toLowerCase()) ||
-        p.branch.toLowerCase().includes(search.toLowerCase());
+        p.name.toLowerCase().includes(q) ||
+        p.model.toLowerCase().includes(q) ||
+        p.brand.toLowerCase().includes(q) ||
+        area.toLowerCase().includes(q) ||
+        p.branch.toLowerCase().includes(q) ||
+        (p.tonerModel && p.tonerModel.toLowerCase().includes(q)) ||
+        (p.imageUnitModel && p.imageUnitModel.toLowerCase().includes(q)) ||
+        (p.serialNumber && p.serialNumber.toLowerCase().includes(q)) ||
+        (p.code && p.code.toLowerCase().includes(q));
       const matchStatus =
         filterStatus === "all" ||
         getPrinterStatusBadges(p).some((badge) => badge.statusKey === filterStatus);
@@ -392,7 +435,7 @@ export function PrintersPage() {
         <div className="relative flex-1 min-w-[200px] max-w-lg">
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por área, sucursal, nombre o modelo..."
+            placeholder="Buscar por nombre, modelo, toner, unid. de imagen, área o sucursal..."
             className="pl-8"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -494,13 +537,66 @@ export function PrintersPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-base font-semibold">Área / Sector</Label>
-              <Input
-                value={form.sector}
-                onChange={(e) => setForm({ ...form, sector: e.target.value })}
-                placeholder="Ej: Administración, RRHH, Logística..."
-                className="h-11 text-lg font-semibold"
-              />
+              <Label className="text-base font-semibold">Área / Sector <span className="text-red-500">*</span></Label>
+              {isAddingSector ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={newSectorInput}
+                    onChange={(e) => setNewSectorInput(e.target.value)}
+                    placeholder="Nuevo sector (ej: Calidad, Expedición...)"
+                    className="h-11 font-semibold"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddCustomSector();
+                      }
+                    }}
+                  />
+                  <Button type="button" onClick={handleAddCustomSector} size="sm">
+                    Guardar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setIsAddingSector(false);
+                      setNewSectorInput("");
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={form.sector}
+                    onValueChange={(val) => setForm({ ...form, sector: val })}
+                  >
+                    <SelectTrigger className="h-11 font-semibold text-base flex-1">
+                      <SelectValue placeholder="Seleccioná un sector..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allSectors.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-11 shrink-0"
+                    title="Agregar nuevo sector"
+                    onClick={() => setIsAddingSector(true)}
+                  >
+                    <Plus className="size-5" />
+                  </Button>
+                </div>
+              )}
               {form.sector.trim() && (
                 <PrinterSectorBanner sector={form.sector} branch={getEffectivePrinterBranch(form.sector)} size="compact" />
               )}

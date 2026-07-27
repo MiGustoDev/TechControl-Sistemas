@@ -11,6 +11,7 @@ import type {
   Monitor,
   User,
   Guardia,
+  SystemNote,
 } from "../types";
 import {
   stockItems as initialItems,
@@ -22,6 +23,7 @@ import {
   movements as initialMovements,
   dataliveTVs as initialTVs,
   guardias as initialGuardias,
+  systemNotes as initialNotes,
 } from "../data/mock";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -128,6 +130,12 @@ interface AppContextValue {
   updateGuardia: (id: string, data: Partial<Guardia>) => void;
   deleteGuardia: (id: string) => void;
 
+  notes: SystemNote[];
+  addNote: (note: Omit<SystemNote, "id" | "createdAt" | "updatedAt">) => Promise<string>;
+  updateNote: (id: string, data: Partial<SystemNote>) => Promise<void>;
+  deleteNote: (id: string) => Promise<void>;
+  reorderNotes: (reorderedNotes: SystemNote[]) => Promise<void>;
+
   // Holiday and Turn Overrides
   holidayAssignments: Record<string, string>;
   turnOverrides: Record<string, "facundo" | "ramiro">;
@@ -158,6 +166,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [dataliveTVs, setDataliveTVs] = useState<DataliveTV[]>([]);
   const [guardias, setGuardias] = useState<Guardia[]>([]);
+  const [notes, setNotes] = useState<SystemNote[]>([]);
   const [currentPage, setCurrentPage] = useState("guardias");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -206,7 +215,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         { data: usr },
         { data: ords },
         { data: movs },
-        { data: tvs }
+        { data: tvs },
+        { data: sysNotes }
       ] = await Promise.all([
         supabase.from("stock_items").select("*"),
         supabase.from("printers").select("*"),
@@ -215,7 +225,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         supabase.from("users").select("*"),
         supabase.from("orders").select("*"),
         supabase.from("movements").select("*"),
-        supabase.from("datalive_tvs").select("*")
+        supabase.from("datalive_tvs").select("*"),
+        supabase.from("system_notes").select("*")
       ]);
 
       if (items) setStockItems(items.map(i => ({
@@ -227,32 +238,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updatedAt: i.updated_at
       })));
 
-      if (pts) setPrinters(pts.map(p => {
-        const printerObj = {
-          ...p,
-          branch: getEffectivePrinterBranch(p.sector),
-          tonerModel: p.toner_model,
-          tonerUnits:
-            typeof p.toner_level === "number" && p.toner_level > 10
-              ? Math.max(0, Math.round(p.toner_level / 20))
-              : (p.toner_level ?? 0),
-          tonerMinUnits: p.toner_min_units ?? 1,
-          imageUnitModel: p.image_unit_model,
-          imageUnitUnits:
-            typeof p.image_unit_level === "number" && p.image_unit_level > 10
-              ? Math.max(0, Math.round(p.image_unit_level / 20))
-              : (p.image_unit_level ?? 0),
-          imageUnitMinUnits: p.image_unit_min_units ?? 1,
-          lastTonerChange: p.last_toner_change,
-          lastImageUnitChange: p.last_image_unit_change,
-          ipAddress: p.ip_address,
-          serialNumber: p.serial_number,
-          createdAt: p.created_at,
-          updatedAt: p.updated_at
-        };
-        printerObj.status = getEffectivePrinterStatus(printerObj);
-        return printerObj;
-      }));
+      if (pts) {
+        const mappedPts = pts.map(p => {
+          let sectorName = (p.sector || "").trim();
+          const sUpper = sectorName.toUpperCase();
+          if (sUpper === "LOGISTICA" || sUpper === "LOGÍSTICA") {
+            sectorName = "Logística";
+          } else if (sUpper === "GENERAL" || sUpper === "• GENERAL •" || sUpper === "•GENERAL•") {
+            sectorName = "• GENERAL •";
+          } else if (sUpper === "VENTA" || sUpper === "VENTAS") {
+            sectorName = "Ventas";
+          } else if (sUpper === "DEPOSITO" || sUpper === "DEPÓSITO") {
+            sectorName = "Depósito";
+          }
+          const printerObj = {
+            ...p,
+            sector: sectorName,
+            branch: getEffectivePrinterBranch(sectorName),
+            tonerModel: p.toner_model,
+            tonerUnits:
+              typeof p.toner_level === "number" && p.toner_level > 10
+                ? Math.max(0, Math.round(p.toner_level / 20))
+                : (p.toner_level ?? 0),
+            tonerMinUnits: p.toner_min_units ?? 1,
+            imageUnitModel: p.image_unit_model,
+            imageUnitUnits:
+              typeof p.image_unit_level === "number" && p.image_unit_level > 10
+                ? Math.max(0, Math.round(p.image_unit_level / 20))
+                : (p.image_unit_level ?? 0),
+            imageUnitMinUnits: p.image_unit_min_units ?? 1,
+            lastTonerChange: p.last_toner_change,
+            lastImageUnitChange: p.last_image_unit_change,
+            ipAddress: p.ip_address,
+            serialNumber: p.serial_number,
+            createdAt: p.created_at,
+            updatedAt: p.updated_at
+          };
+          printerObj.status = getEffectivePrinterStatus(printerObj);
+          return printerObj;
+        });
+
+        setPrinters(mappedPts);
+      }
 
       if (nbs) setNotebooks(nbs.map(n => ({
         ...n,
@@ -346,6 +373,58 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         createdAt: tv.created_at,
         updatedAt: tv.updated_at
       })));
+
+      if (sysNotes) {
+        const mappedNotes = sysNotes.map(n => ({
+          id: n.id,
+          title: n.title,
+          content: n.content,
+          category: n.category ?? "General",
+          isPinned: n.is_pinned ?? false,
+          createdAt: n.created_at,
+          updatedAt: n.updated_at
+        }));
+
+        const dbNoteIds = new Set(mappedNotes.map(n => n.id));
+        const missingInitialNotes = initialNotes.filter(n => !dbNoteIds.has(n.id));
+
+        if (missingInitialNotes.length > 0) {
+          const mergedNotes = [...mappedNotes, ...missingInitialNotes];
+          setNotes(mergedNotes);
+          localStorage.setItem("techcontrol_notes", JSON.stringify(mergedNotes));
+
+          // Silently upsert/insert missing initial notes to Supabase
+          Promise.all(
+            missingInitialNotes.map(n =>
+              supabase.from("system_notes").insert({
+                id: n.id,
+                title: n.title,
+                content: n.content,
+                category: n.category,
+                is_pinned: n.isPinned,
+                created_at: n.createdAt,
+                updated_at: n.updatedAt
+              })
+            )
+          ).catch(err => console.warn("Error seeding missing notes to Supabase:", err));
+        } else {
+          setNotes(mappedNotes);
+          localStorage.setItem("techcontrol_notes", JSON.stringify(mappedNotes));
+        }
+      } else {
+        const saved = localStorage.getItem("techcontrol_notes");
+        let localNotes: SystemNote[] = [];
+        if (saved) {
+          try {
+            localNotes = JSON.parse(saved);
+          } catch (e) {}
+        }
+        const localNoteIds = new Set(localNotes.map(n => n.id));
+        const missingInitialNotes = initialNotes.filter(n => !localNoteIds.has(n.id));
+        const mergedNotes = [...localNotes, ...missingInitialNotes];
+        setNotes(mergedNotes);
+        localStorage.setItem("techcontrol_notes", JSON.stringify(mergedNotes));
+      }
 
       // Fetch guardias separately to handle missing table gracefully
       await syncGuardiasFromSupabase(dbUsers.length > 0 ? dbUsers : fallbackUsers);
@@ -582,6 +661,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updated_at: tv.updatedAt
       })));
 
+      // 9. System Notes
+      await supabase.from("system_notes").upsert(initialNotes.map(n => ({
+        id: n.id,
+        title: n.title,
+        content: n.content,
+        category: n.category,
+        is_pinned: n.isPinned,
+        created_at: n.createdAt,
+        updated_at: n.updatedAt
+      })));
+
       toast.success("Migración completada con éxito", { id: t });
       fetchData();
     } catch (err) {
@@ -633,13 +723,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
 
     const updateData: any = { ...data, updated_at: now() };
-    if (data.internalCode) updateData.internal_code = data.internalCode;
-    if (data.currentStock !== undefined) updateData.current_stock = data.currentStock;
-    if (data.minStock !== undefined) updateData.min_stock = data.minStock;
+    if (data.internalCode !== undefined) {
+      updateData.internal_code = data.internalCode;
+      delete updateData.internalCode;
+    }
+    if (data.currentStock !== undefined) {
+      updateData.current_stock = data.currentStock;
+      delete updateData.currentStock;
+    }
+    if (data.minStock !== undefined) {
+      updateData.min_stock = data.minStock;
+      delete updateData.minStock;
+    }
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
 
     const { error } = await supabase.from("stock_items").update(updateData).eq("id", id);
     if (error) {
-      toast.error("Error al actualizar stock");
+      console.error("Supabase stock_items update error:", error);
+      toast.error(error.message || "Error al actualizar stock");
       fetchData();
     }
   }, [fetchData]);
@@ -725,8 +827,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (data.tonerUnits !== undefined) updateData.toner_level = data.tonerUnits;
     if (data.imageUnitModel !== undefined) updateData.image_unit_model = data.imageUnitModel;
     if (data.imageUnitUnits !== undefined) updateData.image_unit_level = data.imageUnitUnits;
-    if (data.lastTonerChange !== undefined) updateData.last_toner_change = data.lastTonerChange;
-    if (data.lastImageUnitChange !== undefined) updateData.last_image_unit_change = data.lastImageUnitChange;
+    if (data.lastTonerChange !== undefined) updateData.last_toner_change = data.lastTonerChange ? data.lastTonerChange : null;
+    if (data.lastImageUnitChange !== undefined) updateData.last_image_unit_change = data.lastImageUnitChange ? data.lastImageUnitChange : null;
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.ipAddress !== undefined) updateData.ip_address = data.ipAddress;
     if (data.serialNumber !== undefined) updateData.serial_number = data.serialNumber;
@@ -795,19 +897,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
 
     const updateData: any = { ...data, updated_at: now() };
-    if (data.serialNumber) updateData.serial_number = data.serialNumber;
-    if (data.internalCode) updateData.internal_code = data.internalCode;
-    if (data.screenSize) updateData.screen_size = data.screenSize;
-    if (data.physicalCondition) updateData.physical_condition = data.physicalCondition;
-    if (data.functionalStatus) updateData.functional_status = data.functionalStatus;
-    if (data.currentAssignment !== undefined) updateData.current_assignment = data.currentAssignment;
-    if (data.assignmentHistory) updateData.assignment_history = data.assignmentHistory;
-    if (data.entryDate) updateData.entry_date = data.entryDate;
-    if (data.lastReviewDate) updateData.last_review_date = data.lastReviewDate;
+    if (data.serialNumber !== undefined) {
+      updateData.serial_number = data.serialNumber;
+      delete updateData.serialNumber;
+    }
+    if (data.internalCode !== undefined) {
+      updateData.internal_code = data.internalCode;
+      delete updateData.internalCode;
+    }
+    if (data.screenSize !== undefined) {
+      updateData.screen_size = data.screenSize;
+      delete updateData.screenSize;
+    }
+    if (data.physicalCondition !== undefined) {
+      updateData.physical_condition = data.physicalCondition;
+      delete updateData.physicalCondition;
+    }
+    if (data.functionalStatus !== undefined) {
+      updateData.functional_status = data.functionalStatus;
+      delete updateData.functionalStatus;
+    }
+    if (data.currentAssignment !== undefined) {
+      updateData.current_assignment = data.currentAssignment;
+      delete updateData.currentAssignment;
+    }
+    if (data.assignmentHistory !== undefined) {
+      updateData.assignment_history = data.assignmentHistory;
+      delete updateData.assignmentHistory;
+    }
+    if (data.entryDate !== undefined) {
+      updateData.entry_date = data.entryDate ? data.entryDate : null;
+      delete updateData.entryDate;
+    }
+    if (data.lastReviewDate !== undefined) {
+      updateData.last_review_date = data.lastReviewDate ? data.lastReviewDate : null;
+      delete updateData.lastReviewDate;
+    }
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
 
     const { error } = await supabase.from("notebooks").update(updateData).eq("id", id);
     if (error) {
-      toast.error("Error al actualizar notebook");
+      console.error("Supabase notebooks update error:", error);
+      toast.error(error.message || "Error al actualizar notebook");
       fetchData();
     }
   }, [fetchData]);
@@ -866,15 +998,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
 
     const updateData: any = { ...data, updated_at: now() };
-    if (data.serialNumber) updateData.serial_number = data.serialNumber;
-    if (data.internalCode) updateData.internal_code = data.internalCode;
-    if (data.physicalCondition) updateData.physical_condition = data.physicalCondition;
-    if (data.currentAssignment !== undefined) updateData.current_assignment = data.currentAssignment;
-    if (data.entryDate) updateData.entry_date = data.entryDate;
+    if (data.serialNumber !== undefined) {
+      updateData.serial_number = data.serialNumber;
+      delete updateData.serialNumber;
+    }
+    if (data.internalCode !== undefined) {
+      updateData.internal_code = data.internalCode;
+      delete updateData.internalCode;
+    }
+    if (data.physicalCondition !== undefined) {
+      updateData.physical_condition = data.physicalCondition;
+      delete updateData.physicalCondition;
+    }
+    if (data.currentAssignment !== undefined) {
+      updateData.current_assignment = data.currentAssignment;
+      delete updateData.currentAssignment;
+    }
+    if (data.entryDate !== undefined) {
+      updateData.entry_date = data.entryDate ? data.entryDate : null;
+      delete updateData.entryDate;
+    }
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
 
     const { error } = await supabase.from("monitors").update(updateData).eq("id", id);
     if (error) {
-      toast.error("Error al actualizar monitor");
+      console.error("Supabase monitors update error:", error);
+      toast.error(error.message || "Error al actualizar monitor");
       fetchData();
     }
   }, [fetchData]);
@@ -1309,6 +1459,103 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [hasDbTurnOverrides]);
 
+  // System Notes actions
+  const addNote = useCallback(async (note: Omit<SystemNote, "id" | "createdAt" | "updatedAt">) => {
+    const id = genId();
+    const createdAt = now();
+    const newNote: SystemNote = {
+      ...note,
+      id,
+      createdAt,
+      updatedAt: createdAt
+    };
+
+    setNotes(prev => {
+      const next = [newNote, ...prev];
+      localStorage.setItem("techcontrol_notes", JSON.stringify(next));
+      return next;
+    });
+
+    const { error } = await supabase.from("system_notes").insert({
+      id: newNote.id,
+      title: newNote.title,
+      content: newNote.content,
+      category: newNote.category,
+      is_pinned: newNote.isPinned,
+      created_at: newNote.createdAt,
+      updated_at: newNote.updatedAt
+    });
+
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla system_notes aún no existe en Supabase. Se guardó localmente.");
+      } else {
+        console.error("Error adding note to Supabase:", error);
+        toast.error("Error al sincronizar nota: " + error.message);
+      }
+    }
+
+    return id;
+  }, []);
+
+  const updateNote = useCallback(async (id: string, data: Partial<SystemNote>) => {
+    const updatedAt = now();
+    setNotes(prev => {
+      const next = prev.map(n => n.id === id ? { ...n, ...data, updatedAt } : n);
+      localStorage.setItem("techcontrol_notes", JSON.stringify(next));
+      return next;
+    });
+
+    const dbPayload: Record<string, any> = { updated_at: updatedAt };
+    if (data.title !== undefined) dbPayload.title = data.title;
+    if (data.content !== undefined) dbPayload.content = data.content;
+    if (data.category !== undefined) dbPayload.category = data.category;
+    if (data.isPinned !== undefined) dbPayload.is_pinned = data.isPinned;
+
+    const { error } = await supabase.from("system_notes").update(dbPayload).eq("id", id);
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla system_notes aún no existe en Supabase.");
+      } else {
+        console.error("Error updating note in Supabase:", error);
+        toast.error("Error al actualizar nota: " + error.message);
+      }
+    }
+  }, []);
+
+  const deleteNote = useCallback(async (id: string) => {
+    setNotes(prev => {
+      const next = prev.filter(n => n.id !== id);
+      localStorage.setItem("techcontrol_notes", JSON.stringify(next));
+      return next;
+    });
+
+    const { error } = await supabase.from("system_notes").delete().eq("id", id);
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla system_notes aún no existe en Supabase.");
+      } else {
+        console.error("Error deleting note from Supabase:", error);
+        toast.error("Error al eliminar nota en base de datos");
+      }
+    }
+  }, []);
+
+  const reorderNotes = useCallback(async (reorderedNotes: SystemNote[]) => {
+    setNotes(reorderedNotes);
+    localStorage.setItem("techcontrol_notes", JSON.stringify(reorderedNotes));
+
+    try {
+      await Promise.all(
+        reorderedNotes.map((n, idx) =>
+          supabase.from("system_notes").update({ sort_order: idx }).eq("id", n.id)
+        )
+      );
+    } catch (e) {
+      console.warn("Error updating sort order in Supabase:", e);
+    }
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -1348,6 +1595,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addGuardia,
         updateGuardia,
         deleteGuardia,
+        notes,
+        addNote,
+        updateNote,
+        deleteNote,
+        reorderNotes,
         holidayAssignments,
         turnOverrides,
         setHolidayAssignment,

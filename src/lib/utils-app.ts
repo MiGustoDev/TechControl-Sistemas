@@ -38,6 +38,28 @@ export function formatDate(dateStr: string): string {
   return `${day}/${month}/${year}`;
 }
 
+/** Simplifica la lista de sucursales afectadas si incluye "Todas" o demasiadas sucursales */
+export function formatBranchesForDisplay(branchesStr?: string): string {
+  if (!branchesStr || !branchesStr.trim()) return "N/A";
+  const trimmed = branchesStr.trim();
+  const upper = trimmed.toUpperCase();
+
+  if (
+    upper === "TODAS" ||
+    upper === "TODAS LAS SUCURSALES" ||
+    upper === "TODAS SUCURSALES"
+  ) {
+    return "Todas las sucursales";
+  }
+
+  const list = trimmed.split(",").map((b) => b.trim()).filter(Boolean);
+  if (list.length >= 20) {
+    return "Todas las sucursales";
+  }
+
+  return list.join(", ");
+}
+
 /** Fecha y hora: dd/mm/aaaa HH:mm */
 export function formatDateTime(dateStr: string): string {
   const d = parseAppDate(dateStr);

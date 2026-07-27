@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { 
   Printer, Laptop, ShoppingCart, TriangleAlert as AlertTriangle, 
-  Monitor, Tv, ChevronRight, Package, Clock, Users, Calendar 
+  Monitor, Tv, ChevronRight, Package, Clock, Users, Calendar, Database 
 } from "lucide-react";
 import {
   Sidebar,
@@ -33,7 +33,8 @@ export function AppSidebar() {
     monitors, 
     dataliveTVs,
     guardias,
-    setGuardiasViewMode
+    setGuardiasViewMode,
+    notes
   } = useApp();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -47,6 +48,7 @@ export function AppSidebar() {
   const totalDataliveBranches = new Set(dataliveTVs.map(tv => tv.branch)).size;
   const totalOrders = orders.length;
   const totalGuardias = guardias.length;
+  const totalNotes = notes.length;
 
   const [isStockOpen, setIsStockOpen] = useState(() => {
     return ["notebooks", "printers", "monitors"].includes(currentPage);
@@ -191,6 +193,23 @@ export function AppSidebar() {
                   </CollapsibleContent>
                 </SidebarMenuItem>
               </Collapsible>
+
+              {/* Datos */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "notes"}
+                  onClick={() => setCurrentPage("notes")}
+                  tooltip="Datos y Notas"
+                >
+                  <Database className="size-4" />
+                  <span>Datos</span>
+                </SidebarMenuButton>
+                {!isCollapsed && totalNotes > 0 && (
+                  <SidebarMenuBadge className="bg-muted-foreground/10 font-bold text-foreground">
+                    {totalNotes}
+                  </SidebarMenuBadge>
+                )}
+              </SidebarMenuItem>
 
               {/* DataliveTV */}
               <SidebarMenuItem>

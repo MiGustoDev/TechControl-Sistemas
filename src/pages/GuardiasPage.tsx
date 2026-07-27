@@ -39,7 +39,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 
 import { GUARDIA_TYPES, getGuardiaTypeShortLabel } from "@/data/guardiaTypes";
-import { formatDate, formatToday } from "@/lib/utils-app";
+import { formatDate, formatToday, formatBranchesForDisplay } from "@/lib/utils-app";
 import type { Guardia, User as AppUser } from "@/types";
 import { getHolidayInfo } from "@/data/holidays";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
@@ -591,22 +591,46 @@ export function GuardiasPage() {
   const handleToggleBranch = (branch: string) => {
     setForm((prev) => {
       const allBranches = suggestedBranches.filter((item) => item !== "TODAS");
-      const current = prev.branchesAffected
+      const currentRaw = prev.branchesAffected.trim();
+      const currentUpper = currentRaw.toUpperCase();
+
+      const isAllCurrentlySelected =
+        currentUpper === "TODAS" ||
+        currentUpper === "TODAS LAS SUCURSALES" ||
+        currentUpper === "TODAS SUCURSALES" ||
+        allBranches.every((item) =>
+          currentRaw.split(",").map((entry) => entry.trim()).includes(item)
+        );
+
+      if (branch === "TODAS") {
+        return {
+          ...prev,
+          branchesAffected: isAllCurrentlySelected ? "" : "Todas las sucursales",
+        };
+      }
+
+      if (isAllCurrentlySelected) {
+        return {
+          ...prev,
+          branchesAffected: branch,
+        };
+      }
+
+      const current = currentRaw
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
 
-      if (branch === "TODAS") {
-        const allSelected = allBranches.every((item) => current.includes(item));
-        return {
-          ...prev,
-          branchesAffected: allSelected ? "" : allBranches.join(", "),
-        };
-      }
-
       const next = current.includes(branch)
         ? current.filter((item) => item !== branch)
         : [...current, branch];
+
+      if (allBranches.every((item) => next.includes(item))) {
+        return {
+          ...prev,
+          branchesAffected: "Todas las sucursales",
+        };
+      }
 
       return {
         ...prev,
@@ -802,6 +826,7 @@ export function GuardiasPage() {
       notes: g.notes || ""
     });
     setShowAllBranches(false);
+    setHistorialOpen(false);
     setDialogOpen(true);
   };
 
@@ -899,9 +924,36 @@ export function GuardiasPage() {
     }
   };
 
-  // Browser Print
-  const handlePrint = () => {
-    window.print();
+  // Browser Print — Imprime la versión del reporte PDF en la vista previa del navegador
+  const handlePrint = async (customGuardias?: Guardia[] | React.SyntheticEvent) => {
+    const listToPrint = Array.isArray(customGuardias) ? customGuardias : filteredGuardias;
+    if (listToPrint.length === 0) {
+      toast.error("No hay guardias para imprimir con los filtros actuales");
+      return;
+    }
+    try {
+      const { exportGuardiasPdf } = await import("@/lib/exportGuardiasPdf");
+      const ok = exportGuardiasPdf(listToPrint, "print");
+      if (ok) toast.success("Generando vista previa de impresión...");
+    } catch (err) {
+      console.error("Error al imprimir reporte:", err);
+      toast.error("No se pudo abrir la vista previa de impresión");
+    }
+  };
+
+  const handleDownloadPeriodPdf = async (periodGuardias: Guardia[]) => {
+    if (periodGuardias.length === 0) {
+      toast.error("No hay guardias para exportar en este período");
+      return;
+    }
+    try {
+      const { exportGuardiasPdf } = await import("@/lib/exportGuardiasPdf");
+      const ok = exportGuardiasPdf(periodGuardias);
+      if (ok) toast.success("PDF del período descargado correctamente");
+    } catch (err) {
+      console.error("Error al exportar PDF del período:", err);
+      toast.error("No se pudo generar el PDF");
+    }
   };
 
   const getGuardTypeBadgeColor = (type: string) => {
@@ -1888,11 +1940,17 @@ export function GuardiasPage() {
                               <Building2 className="size-3.5 text-muted-foreground shrink-0" />
                               <span className="font-semibold mr-1">Alcance/Sucursales:</span>
                               <div className="flex flex-wrap gap-1">
-                                {g.branchesAffected.split(",").map((br, idx) => (
-                                  <Badge key={idx} variant="outline" className="text-[10px] bg-background/50 border-muted-foreground/15">
-                                    {br.trim()}
+                                {formatBranchesForDisplay(g.branchesAffected) === "Todas las sucursales" ? (
+                                  <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20 font-bold">
+                                    Todas las sucursales
                                   </Badge>
-                                ))}
+                                ) : (
+                                  g.branchesAffected.split(",").map((br, idx) => (
+                                    <Badge key={idx} variant="outline" className="text-[10px] bg-background/50 border-muted-foreground/15">
+                                      {br.trim()}
+                                    </Badge>
+                                  ))
+                                )}
                               </div>
                             </div>
                           )}
@@ -2646,11 +2704,24 @@ export function GuardiasPage() {
                   }`}
                 >
                   {suggestedBranches.map((br) => {
+                    const currentUpper = form.branchesAffected.trim().toUpperCase();
+                    const isAllSelected =
+                      currentUpper === "TODAS" ||
+                      currentUpper === "TODAS LAS SUCURSALES" ||
+                      currentUpper === "TODAS SUCURSALES" ||
+                      suggestedBranches
+                        .filter((item) => item !== "TODAS")
+                        .every((item) =>
+                          form.branchesAffected
+                            .split(",")
+                            .map((entry) => entry.trim())
+                            .includes(item)
+                        );
+
                     const selected = br === "TODAS"
-                      ? suggestedBranches.filter((item) => item !== "TODAS").every((item) =>
-                          form.branchesAffected.split(",").map((entry) => entry.trim()).includes(item)
-                        )
-                      : form.branchesAffected
+                      ? isAllSelected
+                      : !isAllSelected &&
+                        form.branchesAffected
                           .split(",")
                           .map((item) => item.trim())
                           .includes(br);
@@ -2661,12 +2732,12 @@ export function GuardiasPage() {
                         type="button"
                         className={`text-[10px] border rounded-md px-2 py-1 transition-colors ${
                           selected
-                            ? "bg-white text-black border-primary/40 shadow-sm dark:text-black"
+                            ? "bg-white text-black border-primary/40 shadow-xs dark:text-black font-bold"
                             : "bg-muted/40 text-foreground hover:bg-muted-foreground/10"
                         }`}
                         onClick={() => handleToggleBranch(br)}
                       >
-                        {br}
+                        {br === "TODAS" ? "Todas las sucursales" : br}
                       </button>
                     );
                   })}
@@ -3073,11 +3144,17 @@ export function GuardiasPage() {
                                     <Building2 className="size-3.5 text-muted-foreground shrink-0" />
                                     <span className="font-semibold mr-1">Alcance/Sucursales:</span>
                                     <div className="flex flex-wrap gap-1">
-                                      {g.branchesAffected.split(",").map((br, idx) => (
-                                        <Badge key={idx} variant="outline" className="text-[10px] bg-background/50 border-muted-foreground/15">
-                                          {br.trim()}
+                                      {formatBranchesForDisplay(g.branchesAffected) === "Todas las sucursales" ? (
+                                        <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20 font-bold">
+                                          Todas las sucursales
                                         </Badge>
-                                      ))}
+                                      ) : (
+                                        g.branchesAffected.split(",").map((br, idx) => (
+                                          <Badge key={idx} variant="outline" className="text-[10px] bg-background/50 border-muted-foreground/15">
+                                            {br.trim()}
+                                          </Badge>
+                                        ))
+                                      )}
                                     </div>
                                   </div>
                                 )}
@@ -3569,6 +3646,28 @@ export function GuardiasPage() {
                             {period.guardias.length} guardia{period.guardias.length !== 1 ? "s" : ""} · Corte el 24 (23:59hs)
                           </p>
                         </div>
+                        <div className="flex items-center gap-1.5 ml-2.5 print:hidden">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-[10px] font-semibold gap-1 border-primary/20 hover:border-primary/45 hover:bg-primary/5"
+                            onClick={() => handleDownloadPeriodPdf(period.guardias)}
+                            title="Descargar reporte PDF de este período"
+                          >
+                            <FileDown className="size-3 text-primary" />
+                            <span>Descargar PDF</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-[10px] font-semibold gap-1 border-muted-foreground/20 hover:border-foreground/40 hover:bg-muted/50"
+                            onClick={() => handlePrint(period.guardias)}
+                            title="Abrir vista previa de impresión del reporte PDF"
+                          >
+                            <Printer className="size-3 text-muted-foreground" />
+                            <span>Imprimir</span>
+                          </Button>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="inline-flex items-center gap-1 text-xs font-bold bg-primary/10 text-primary border border-primary/20 rounded-md px-2.5 py-1">
@@ -3592,7 +3691,7 @@ export function GuardiasPage() {
 
                     {/* Collaborator breakdown */}
                     {colabs.length > 0 && (
-                      <div className="px-4 py-2.5 border-b border-muted-foreground/8 bg-muted/10 flex flex-wrap gap-2">
+                      <div className="px-4 py-2.5 border-b border-muted-foreground/8 bg-muted/10 flex flex-wrap items-center justify-center gap-2">
                         {colabs.map(c => (
                           <div key={c.name} className="flex items-center gap-1.5 text-[11px] font-semibold bg-background border border-muted-foreground/15 rounded-full px-2.5 py-1">
                             <div className="size-4 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-[8px] font-black shrink-0">
@@ -3613,13 +3712,15 @@ export function GuardiasPage() {
                         return (
                           <div
                             key={g.id}
-                            className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2.5 hover:bg-muted/20 transition-colors"
+                            className="group flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2.5 hover:bg-muted/30 cursor-pointer transition-colors"
+                            onClick={() => openEdit(g)}
+                            title="Hacé click para editar esta guardia"
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
                               <div className={`size-1.5 rounded-full shrink-0 ${isApproved ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
                               <CollaboratorAvatar userName={g.userName} avatarUrl={users.find(u => u.id === g.userId)?.avatarUrl} />
                               <div className="min-w-0">
-                                <p className="text-xs font-semibold text-foreground truncate">{g.userName}</p>
+                                <p className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">{g.userName}</p>
                                 <p className="text-[10px] text-muted-foreground truncate max-w-[260px]">{g.description}</p>
                               </div>
                             </div>
@@ -3629,10 +3730,15 @@ export function GuardiasPage() {
                               <span className="text-[11px] font-bold bg-primary/10 text-primary border border-primary/15 rounded px-1.5 py-0.5">{g.hours}h</span>
                               <Badge
                                 variant="outline"
-                                className={`text-[9px] py-0 px-1.5 h-5 font-bold ${isApproved
-                                  ? "border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/8"
-                                  : "border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/8"
+                                className={`text-[9px] py-0 px-1.5 h-5 font-bold cursor-pointer select-none transition-all hover:bg-emerald-500/20 active:scale-95 ${isApproved
+                                  ? "border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/8 hover:bg-emerald-500/20"
+                                  : "border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/8 hover:bg-amber-500/20"
                                 }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleStatus(g.id);
+                                }}
+                                title="Click para cambiar el estado"
                               >
                                 {isApproved ? "Aprobada" : "Pendiente"}
                               </Badge>

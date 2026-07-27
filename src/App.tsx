@@ -13,6 +13,7 @@ import { DataliveTVPage } from "@/pages/DataliveTVPage";
 import { MonitoresPage } from "@/pages/MonitoresPage";
 import { PersonalPage } from "@/pages/PersonalPage";
 import { GuardiasPage } from "@/pages/GuardiasPage";
+import { NotesPage } from "@/pages/NotesPage";
 
 function AppContent() {
   const { currentPage } = useApp();
@@ -28,6 +29,7 @@ function AppContent() {
       case "personal": return <PersonalPage />;
       case "reports": return <ReportsPage />;
       case "datalive": return <DataliveTVPage />;
+      case "notes": return <NotesPage />;
       case "guardias":
       default:
         return <GuardiasPage />;

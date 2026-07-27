@@ -2,7 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { Guardia } from "@/types";
 import { getGuardiaTypeShortLabel } from "@/data/guardiaTypes";
-import { formatDate, formatToday } from "@/lib/utils-app";
+import { formatDate, formatToday, formatBranchesForDisplay } from "@/lib/utils-app";
 
 type CollaboratorGroup = {
   userId: string;
@@ -85,7 +85,7 @@ function guardiaToRow(g: Guardia) {
     g.hours.toFixed(1),
     getGuardiaTypeShortLabel(g.type),
     g.description,
-    g.branchesAffected || "N/A",
+    formatBranchesForDisplay(g.branchesAffected),
     g.status === "approved" ? "Aprobado" : "Pendiente",
     g.notes || "",
   ];
@@ -99,7 +99,10 @@ function formatCollaboratorSummary(group: CollaboratorGroup) {
   );
 }
 
-export function exportGuardiasPdf(guardias: Guardia[]) {
+export function exportGuardiasPdf(
+  guardias: Guardia[],
+  action: "download" | "print" = "download"
+) {
   if (guardias.length === 0) return false;
 
   const groups = groupByCollaborator(guardias);
@@ -191,6 +194,29 @@ export function exportGuardiasPdf(guardias: Guardia[]) {
     doc.setFont("helvetica", "normal");
 
     cursorY += 12;
+  }
+
+  if (action === "print") {
+    doc.autoPrint();
+    const blobUrl = String(doc.output("bloburl"));
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.src = blobUrl;
+    document.body.appendChild(iframe);
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (err) {
+        console.error("Error al imprimir PDF:", err);
+      }
+    };
+    return true;
   }
 
   const fileDate = formatToday().replace(/\//g, "-");
