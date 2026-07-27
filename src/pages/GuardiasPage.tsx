@@ -1248,7 +1248,7 @@ export function GuardiasPage() {
                     const holidayName = getHolidayInfo(cell.dateStr);
                     const assignedUserId = holidayAssignments[cell.dateStr];
                     const assignedUser = assignedUserId ? users.find(u => u.id === assignedUserId) : null;
-                    const isLimitDay = cell.day === 24 && cell.isCurrentMonth;
+                    const isLimitDay = cell.day === 25 && cell.isCurrentMonth;
                     
                     // Construct hover title
                     let cellTitle = "Hacé click para ver y registrar guardias de este día";
@@ -2074,7 +2074,7 @@ export function GuardiasPage() {
                   const holidayName = getHolidayInfo(cell.dateStr);
                   const assignedUserId = holidayAssignments[cell.dateStr];
                   const assignedUser = assignedUserId ? users.find(u => u.id === assignedUserId) : null;
-                  const isLimitDay = cell.day === 24 && cell.isCurrentMonth;
+                  const isLimitDay = cell.day === 25 && cell.isCurrentMonth;
                   
                   // Construct hover title
                   let cellTitle = "Hacé click para ver y registrar guardias de este día";
