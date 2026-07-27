@@ -43,6 +43,9 @@ import { formatDate, formatToday, formatBranchesForDisplay } from "@/lib/utils-a
 import type { Guardia, User as AppUser } from "@/types";
 import { getHolidayInfo } from "@/data/holidays";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { Calendar as CalendarUI } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 function formatCollaboratorRole(user: AppUser) {
   if (user.role?.trim()) return user.role.trim();
@@ -176,7 +179,7 @@ function getActivePeriod(today: Date): { start: string; end: string; label: stri
 /** Devuelve la etiqueta del período de cierre al que pertenece una guardia */
 function getGuardiaPeriodLabel(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
-  // Si el día es >= 25, el período cierra el mes siguiente (el 24 del mes siguiente)
+  // Si el día es >= 25, el período comienza el 25 a las 00:01hs y cierra el 24 del mes siguiente
   let endMonth: number, endYear: number;
   if (d >= 25) {
     endMonth = m % 12; // siguiente mes 0-indexed
@@ -200,6 +203,23 @@ function getGuardiaPeriodSortKey(dateStr: string): string {
     endYear = y;
   }
   return `${endYear}-${endMonth.toString().padStart(2, "0")}`;
+}
+
+/** Devuelve el rango exacto de fechas del período (25/MM/YYYY a 24/MM/YYYY) */
+function getGuardiaPeriodRange(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  let endMonth: number, endYear: number;
+  if (d >= 25) {
+    endMonth = (m % 12) + 1;
+    endYear = m === 12 ? y + 1 : y;
+  } else {
+    endMonth = m;
+    endYear = y;
+  }
+  const startMonth = endMonth === 1 ? 12 : endMonth - 1;
+  const startYear = endMonth === 1 ? endYear - 1 : endYear;
+  const pad2 = (n: number) => n.toString().padStart(2, "0");
+  return `25/${pad2(startMonth)}/${startYear} a 24/${pad2(endMonth)}/${endYear}`;
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -676,11 +696,12 @@ export function GuardiasPage() {
 
   // Historial agrupado por período de cierre
   const historialByPeriod = useMemo(() => {
-    const groups: Record<string, { label: string; sortKey: string; guardias: typeof filteredHistorial }> = {};
+    const groups: Record<string, { label: string; dateRange: string; sortKey: string; guardias: typeof filteredHistorial }> = {};
     for (const g of filteredHistorial) {
       const sortKey = getGuardiaPeriodSortKey(g.date);
       const label = getGuardiaPeriodLabel(g.date);
-      if (!groups[sortKey]) groups[sortKey] = { label, sortKey, guardias: [] };
+      const dateRange = getGuardiaPeriodRange(g.date);
+      if (!groups[sortKey]) groups[sortKey] = { label, dateRange, sortKey, guardias: [] };
       groups[sortKey].guardias.push(g);
     }
     return Object.values(groups).sort((a, b) => b.sortKey.localeCompare(a.sortKey));
@@ -914,21 +935,6 @@ export function GuardiasPage() {
     autoResizeTextarea(notesRef.current);
     autoResizeTextarea(otherReasonRef.current);
   }, [form.description, form.notes, form.otherReason, dialogOpen]);
-
-  const exportToPdf = async () => {
-    if (filteredGuardias.length === 0) {
-      toast.error("No hay guardias para exportar con los filtros actuales");
-      return;
-    }
-    try {
-      const { exportGuardiasPdf } = await import("@/lib/exportGuardiasPdf");
-      const ok = exportGuardiasPdf(filteredGuardias);
-      if (ok) toast.success("PDF descargado correctamente");
-    } catch (err) {
-      console.error("Error al exportar PDF:", err);
-      toast.error("No se pudo generar el PDF");
-    }
-  };
 
   // Browser Print — Imprime la versión del reporte PDF en la vista previa del navegador
   const handlePrint = async (customGuardias?: Guardia[] | React.SyntheticEvent) => {
@@ -3616,37 +3622,172 @@ export function GuardiasPage() {
               </DialogHeader>
 
               {/* Date filter bar */}
-              <div className="flex flex-col sm:flex-row items-end gap-3 px-6 py-4 border-b border-muted-foreground/10 shrink-0 bg-muted/20">
-                <div className="flex-1 w-full">
-                  <Label htmlFor="pdf-from" className="text-xs font-semibold text-muted-foreground mb-1.5 block">Fecha desde</Label>
-                  <Input
-                    id="pdf-from"
-                    type="date"
-                    value={pdfExportFrom}
-                    onChange={e => { setPdfExportFrom(e.target.value); setPdfExportFiltered(false); }}
-                    className="h-8 text-xs"
-                  />
+              <div className="flex flex-col gap-3 px-6 py-4 border-b border-muted-foreground/10 shrink-0 bg-muted/20">
+                {/* Quick presets */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-muted-foreground mr-1">Rápido:</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2.5 text-[11px] font-semibold"
+                    onClick={() => {
+                      const now = new Date();
+                      let baseYear = now.getFullYear();
+                      let baseMonth = now.getMonth();
+                      if (now.getDate() < 25) {
+                        baseMonth -= 1;
+                      }
+                      const startDate = new Date(baseYear, baseMonth, 25);
+                      const endDate = new Date(baseYear, baseMonth + 1, 24);
+                      const formatIso = (d: Date) => {
+                        const y = d.getFullYear();
+                        const m = String(d.getMonth() + 1).padStart(2, "0");
+                        const day = String(d.getDate()).padStart(2, "0");
+                        return `${y}-${m}-${day}`;
+                      };
+                      setPdfExportFrom(formatIso(startDate));
+                      setPdfExportTo(formatIso(endDate));
+                      setPdfExportFiltered(true);
+                    }}
+                  >
+                    Este mes
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2.5 text-[11px] font-semibold"
+                    onClick={() => {
+                      const now = new Date();
+                      let baseYear = now.getFullYear();
+                      let baseMonth = now.getMonth() - 1;
+                      if (now.getDate() < 25) {
+                        baseMonth -= 1;
+                      }
+                      const startDate = new Date(baseYear, baseMonth, 25);
+                      const endDate = new Date(baseYear, baseMonth + 1, 24);
+                      const formatIso = (d: Date) => {
+                        const y = d.getFullYear();
+                        const m = String(d.getMonth() + 1).padStart(2, "0");
+                        const day = String(d.getDate()).padStart(2, "0");
+                        return `${y}-${m}-${day}`;
+                      };
+                      setPdfExportFrom(formatIso(startDate));
+                      setPdfExportTo(formatIso(endDate));
+                      setPdfExportFiltered(true);
+                    }}
+                  >
+                    Mes anterior
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2.5 text-[11px] font-semibold"
+                    onClick={() => {
+                      const now = new Date();
+                      const past = new Date();
+                      past.setDate(now.getDate() - 30);
+                      const fY = past.getFullYear();
+                      const fM = String(past.getMonth() + 1).padStart(2, "0");
+                      const fD = String(past.getDate()).padStart(2, "0");
+                      const tY = now.getFullYear();
+                      const tM = String(now.getMonth() + 1).padStart(2, "0");
+                      const tD = String(now.getDate()).padStart(2, "0");
+                      setPdfExportFrom(`${fY}-${fM}-${fD}`);
+                      setPdfExportTo(`${tY}-${tM}-${tD}`);
+                      setPdfExportFiltered(true);
+                    }}
+                  >
+                    Últimos 30 días
+                  </Button>
                 </div>
-                <div className="flex-1 w-full">
-                  <Label htmlFor="pdf-to" className="text-xs font-semibold text-muted-foreground mb-1.5 block">Fecha hasta</Label>
-                  <Input
-                    id="pdf-to"
-                    type="date"
-                    value={pdfExportTo}
-                    onChange={e => { setPdfExportTo(e.target.value); setPdfExportFiltered(false); }}
-                    className="h-8 text-xs"
-                  />
+
+                <div className="flex flex-col sm:flex-row items-end gap-3 w-full">
+                  {/* Fecha Desde Popover */}
+                  <div className="flex-1 w-full">
+                    <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Fecha desde</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn(
+                            "h-9 w-full justify-start text-left font-normal text-xs bg-background border-input",
+                            !pdfExportFrom && "text-muted-foreground"
+                          )}
+                        >
+                          <Calendar className="mr-2 size-3.5 text-primary shrink-0" />
+                          {pdfExportFrom ? formatDate(pdfExportFrom) : "Seleccionar fecha desde..."}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarUI
+                          mode="single"
+                          selected={pdfExportFrom ? new Date(pdfExportFrom + "T12:00:00") : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              const y = date.getFullYear();
+                              const m = String(date.getMonth() + 1).padStart(2, "0");
+                              const d = String(date.getDate()).padStart(2, "0");
+                              setPdfExportFrom(`${y}-${m}-${d}`);
+                              setPdfExportFiltered(false);
+                            }
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Fecha Hasta Popover */}
+                  <div className="flex-1 w-full">
+                    <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Fecha hasta</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn(
+                            "h-9 w-full justify-start text-left font-normal text-xs bg-background border-input",
+                            !pdfExportTo && "text-muted-foreground"
+                          )}
+                        >
+                          <Calendar className="mr-2 size-3.5 text-primary shrink-0" />
+                          {pdfExportTo ? formatDate(pdfExportTo) : "Seleccionar fecha hasta..."}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarUI
+                          mode="single"
+                          selected={pdfExportTo ? new Date(pdfExportTo + "T12:00:00") : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              const y = date.getFullYear();
+                              const m = String(date.getMonth() + 1).padStart(2, "0");
+                              const d = String(date.getDate()).padStart(2, "0");
+                              setPdfExportTo(`${y}-${m}-${d}`);
+                              setPdfExportFiltered(false);
+                            }
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-9 px-5 text-xs shrink-0 w-full sm:w-auto font-semibold"
+                    disabled={!pdfExportFrom || !pdfExportTo || pdfExportFrom > pdfExportTo}
+                    onClick={() => setPdfExportFiltered(true)}
+                  >
+                    <Filter className="size-3.5 mr-1.5" />
+                    Filtrar
+                  </Button>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-4 text-xs shrink-0 w-full sm:w-auto"
-                  disabled={!pdfExportFrom || !pdfExportTo || pdfExportFrom > pdfExportTo}
-                  onClick={() => setPdfExportFiltered(true)}
-                >
-                  <Filter className="size-3 mr-1.5" />
-                  Filtrar
-                </Button>
               </div>
 
               {/* Results body */}
@@ -3865,7 +4006,9 @@ export function GuardiasPage() {
                           <Calendar className="size-3.5 text-primary" />
                         </div>
                         <div>
-                          <p className="font-bold text-sm text-foreground">Período: {period.label}</p>
+                          <p className="font-bold text-sm text-foreground">
+                            Período: {period.label} <span className="text-xs font-normal text-muted-foreground ml-1.5">({period.dateRange})</span>
+                          </p>
                           <p className="text-[10px] text-muted-foreground font-medium">
                             {period.guardias.length} guardia{period.guardias.length !== 1 ? "s" : ""} · Corte el 24 (23:59hs)
                           </p>
