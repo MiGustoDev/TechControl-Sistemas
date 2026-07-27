@@ -285,6 +285,12 @@ export function GuardiasPage() {
   const [historialSearch, setHistorialSearch] = useState("");
   const [historialUserFilter, setHistorialUserFilter] = useState("all");
 
+  // Modal exportar PDF por rango de fechas
+  const [pdfExportOpen, setPdfExportOpen] = useState(false);
+  const [pdfExportFrom, setPdfExportFrom] = useState("");
+  const [pdfExportTo, setPdfExportTo] = useState("");
+  const [pdfExportFiltered, setPdfExportFiltered] = useState(false);
+
   // Período activo de cierre
   const activePeriod = useMemo(() => getActivePeriod(new Date()), []);
 
@@ -1541,7 +1547,12 @@ export function GuardiasPage() {
           </p>
         </div>
         <div className="flex flex-row items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-          <Button variant="outline" size="sm" onClick={exportToPdf} className="flex-1 sm:flex-initial text-xs sm:text-sm px-2 sm:px-3">
+          <Button variant="outline" size="sm" onClick={() => {
+            setPdfExportFrom("");
+            setPdfExportTo("");
+            setPdfExportFiltered(false);
+            setPdfExportOpen(true);
+          }} className="flex-1 sm:flex-initial text-xs sm:text-sm px-2 sm:px-3">
             <FileDown className="size-3.5 sm:size-4 mr-1 sm:mr-1.5 shrink-0" />
             <span className="hidden sm:inline">Exportar PDF</span>
             <span className="sm:hidden">Exportar</span>
@@ -3539,6 +3550,219 @@ export function GuardiasPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ─────────────────────────────────────────────────────────────
+          MODAL: EXPORTAR PDF POR RANGO DE FECHAS
+          ───────────────────────────────────────────────────────────── */}
+      {(() => {
+        // Guardias filtradas por rango de fechas seleccionado
+        const pdfRangeGuardias = (() => {
+          if (!pdfExportFiltered || !pdfExportFrom || !pdfExportTo) return [];
+          return [...guardias]
+            .filter(g => g.date >= pdfExportFrom && g.date <= pdfExportTo)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        })();
+
+        // Agrupar por colaborador para mostrar en la lista previa
+        const pdfColabMap: Record<string, { name: string; hours: number; count: number; avatarUrl?: string | null }> = {};
+        pdfRangeGuardias.forEach(g => {
+          if (!pdfColabMap[g.userId]) {
+            const u = users.find(u => u.id === g.userId);
+            pdfColabMap[g.userId] = { name: g.userName, hours: 0, count: 0, avatarUrl: u?.avatarUrl };
+          }
+          pdfColabMap[g.userId].hours += g.hours;
+          pdfColabMap[g.userId].count += 1;
+        });
+        const pdfColabs = Object.values(pdfColabMap).sort((a, b) => b.hours - a.hours);
+        const pdfTotalHours = pdfRangeGuardias.reduce((a, g) => a + g.hours, 0);
+
+        const handleGeneratePdf = async () => {
+          if (pdfRangeGuardias.length === 0) {
+            toast.error("No hay guardias en el rango de fechas seleccionado");
+            return;
+          }
+          try {
+            const { exportGuardiasPdf } = await import("@/lib/exportGuardiasPdf");
+            const ok = exportGuardiasPdf(pdfRangeGuardias);
+            if (ok) {
+              toast.success("PDF descargado correctamente");
+              setPdfExportOpen(false);
+            }
+          } catch (err) {
+            console.error("Error al exportar PDF:", err);
+            toast.error("No se pudo generar el PDF");
+          }
+        };
+
+        return (
+          <Dialog open={pdfExportOpen} onOpenChange={(open) => {
+            setPdfExportOpen(open);
+            if (!open) { setPdfExportFrom(""); setPdfExportTo(""); setPdfExportFiltered(false); }
+          }}>
+            <DialogContent className="sm:max-w-[700px] max-h-[88vh] flex flex-col gap-0 p-0 overflow-hidden">
+              {/* Header */}
+              <DialogHeader className="px-6 pt-5 pb-4 border-b border-muted-foreground/10 shrink-0">
+                <DialogTitle className="flex items-center gap-2.5 text-base font-bold">
+                  <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <FileDown className="size-4 text-primary" />
+                  </div>
+                  <div>
+                    <div>Exportar Guardias a PDF</div>
+                    <p className="text-xs font-normal text-muted-foreground mt-0.5">
+                      Seleccioná un rango de fechas para filtrar y descargar el reporte
+                    </p>
+                  </div>
+                </DialogTitle>
+              </DialogHeader>
+
+              {/* Date filter bar */}
+              <div className="flex flex-col sm:flex-row items-end gap-3 px-6 py-4 border-b border-muted-foreground/10 shrink-0 bg-muted/20">
+                <div className="flex-1 w-full">
+                  <Label htmlFor="pdf-from" className="text-xs font-semibold text-muted-foreground mb-1.5 block">Fecha desde</Label>
+                  <Input
+                    id="pdf-from"
+                    type="date"
+                    value={pdfExportFrom}
+                    onChange={e => { setPdfExportFrom(e.target.value); setPdfExportFiltered(false); }}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="flex-1 w-full">
+                  <Label htmlFor="pdf-to" className="text-xs font-semibold text-muted-foreground mb-1.5 block">Fecha hasta</Label>
+                  <Input
+                    id="pdf-to"
+                    type="date"
+                    value={pdfExportTo}
+                    onChange={e => { setPdfExportTo(e.target.value); setPdfExportFiltered(false); }}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-4 text-xs shrink-0 w-full sm:w-auto"
+                  disabled={!pdfExportFrom || !pdfExportTo || pdfExportFrom > pdfExportTo}
+                  onClick={() => setPdfExportFiltered(true)}
+                >
+                  <Filter className="size-3 mr-1.5" />
+                  Filtrar
+                </Button>
+              </div>
+
+              {/* Results body */}
+              <div className="flex-1 overflow-y-auto px-6 py-4">
+                {!pdfExportFiltered ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+                    <div className="size-14 rounded-full bg-muted flex items-center justify-center">
+                      <Calendar className="size-6 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-foreground">Seleccioná un rango de fechas</p>
+                      <p className="text-xs text-muted-foreground mt-1">Ingresá la fecha desde y hasta, luego hacé click en <strong>Filtrar</strong> para ver las guardias disponibles.</p>
+                    </div>
+                  </div>
+                ) : pdfRangeGuardias.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+                    <div className="size-14 rounded-full bg-muted flex items-center justify-center">
+                      <FileText className="size-6 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-foreground">Sin resultados</p>
+                      <p className="text-xs text-muted-foreground mt-1">No se encontraron guardias en el rango seleccionado. Probá con otras fechas.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Summary chips */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20 rounded-md px-2.5 h-7">
+                        <FileText className="size-3" />
+                        {pdfRangeGuardias.length} guardia{pdfRangeGuardias.length !== 1 ? "s" : ""}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-muted border border-muted-foreground/15 rounded-md px-2.5 h-7 text-muted-foreground">
+                        <Clock className="size-3 text-primary" />
+                        {pdfTotalHours.toFixed(1)} hs totales
+                      </span>
+                      {pdfColabs.map(c => (
+                        <div key={c.name} className="flex items-center gap-1.5 text-[11px] font-semibold bg-background border border-muted-foreground/15 rounded-full px-2.5 h-7">
+                          <div className="size-4 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-[8px] font-black shrink-0">
+                            {getInitials(c.name)}
+                          </div>
+                          <span className="text-foreground">{c.name.split(" ")[0]}</span>
+                          <span className="text-primary font-bold">{c.hours.toFixed(1)} hs</span>
+                          <span className="text-muted-foreground">({c.count})</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Guardias list */}
+                    <div className="rounded-xl border border-muted-foreground/10 bg-card/50 overflow-hidden">
+                      <div className="divide-y divide-muted-foreground/8">
+                        {pdfRangeGuardias.map(g => {
+                          const isApproved = g.status === "approved";
+                          return (
+                            <div
+                              key={g.id}
+                              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2.5 hover:bg-muted/30 transition-colors"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className={`size-1.5 rounded-full shrink-0 ${isApproved ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
+                                <CollaboratorAvatar userName={g.userName} avatarUrl={users.find(u => u.id === g.userId)?.avatarUrl} />
+                                <div className="min-w-0">
+                                  <p className="text-xs font-semibold text-foreground truncate">{g.userName}</p>
+                                  <p className="text-[10px] text-muted-foreground truncate max-w-[260px]">{g.description}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0 ml-auto">
+                                <span className="text-[11px] text-muted-foreground font-medium">{formatDate(g.date)}</span>
+                                <span className="text-[10px] text-muted-foreground">{g.startTime}–{g.endTime}</span>
+                                <span className="text-[11px] font-bold bg-primary/10 text-primary border border-primary/15 rounded px-1.5 py-0.5">{g.hours}h</span>
+                                <Badge
+                                  variant="outline"
+                                  className={`text-[9px] py-0 px-1.5 h-5 font-bold ${
+                                    isApproved
+                                      ? "border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/8"
+                                      : "border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/8"
+                                  }`}
+                                >
+                                  {isApproved ? "Aprobada" : "Pendiente"}
+                                </Badge>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <DialogFooter className="px-6 py-3 border-t border-muted-foreground/10 shrink-0 bg-muted/10">
+                <div className="flex items-center justify-between w-full gap-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    {pdfExportFiltered && pdfRangeGuardias.length > 0
+                      ? `${pdfRangeGuardias.length} guardia${pdfRangeGuardias.length !== 1 ? "s" : ""} · ${pdfTotalHours.toFixed(1)} hs totales listas para exportar`
+                      : "Filtrá por fechas para ver los registros disponibles"}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      className="h-8 px-5"
+                      disabled={!pdfExportFiltered || pdfRangeGuardias.length === 0}
+                      onClick={handleGeneratePdf}
+                    >
+                      <FileDown className="size-3.5 mr-1.5" />
+                      Descargar PDF
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-8 px-4" onClick={() => setPdfExportOpen(false)}>Cancelar</Button>
+                  </div>
+                </div>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
 
       {/* ─────────────────────────────────────────────────────────────
           MODAL: HISTORIAL DE GUARDIAS
