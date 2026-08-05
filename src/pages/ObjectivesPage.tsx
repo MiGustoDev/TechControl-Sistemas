@@ -468,12 +468,12 @@ export function ObjectivesPage() {
                                   <Square className="size-4 text-muted-foreground/60" />
                                 )}
                               </span>
-                              <span className={`leading-normal flex-1 ${task.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                              <span className={`leading-normal ${task.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
                                 {task.title}
+                                {!task.completed && (
+                                  <span className="ml-0.5 text-amber-500 font-bold text-[11px]" title="Requerimiento pendiente">!</span>
+                                )}
                               </span>
-                              {!task.completed && (
-                                <span className="shrink-0 text-amber-500 font-bold text-[11px] leading-none" title="Requerimiento pendiente">!</span>
-                              )}
                             </div>
                           ))}
                         </div>
