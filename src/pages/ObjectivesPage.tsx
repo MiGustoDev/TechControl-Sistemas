@@ -29,6 +29,32 @@ const getPriorityBadge = (priority: string) => {
   }
 };
 
+// Card border color matching priority badge
+const getPriorityBorderColor = (priority: string) => {
+  switch (priority) {
+    case "critical": return "border-l-rose-500";
+    case "high":     return "border-l-amber-500";
+    case "medium":   return "border-l-blue-500";
+    default:         return "border-l-slate-500";
+  }
+};
+
+// Progress bar color: 0-40% amber, 41-75% blue, 76-99% teal, 100% emerald
+const getProgressBarColor = (value: number): string => {
+  if (value >= 100) return "[&>div]:bg-emerald-500";
+  if (value >= 76)  return "[&>div]:bg-teal-500";
+  if (value >= 41)  return "[&>div]:bg-blue-500";
+  return "[&>div]:bg-amber-500";
+};
+
+// Format ISO date YYYY-MM-DD → DD-MM-YYYY
+const formatDate = (dateStr?: string): string => {
+  if (!dateStr) return "?";
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return dateStr;
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
+};
+
 const getPriorityLabel = (priority: string) => {
   switch (priority) {
     case "critical": return "Crítica";
@@ -349,41 +375,41 @@ export function ObjectivesPage() {
             const daysInfo = getDaysRemainingLabel(obj.endDate, obj.status);
             
             return (
-              <Card key={obj.id} className="flex flex-col h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500">
+              <Card key={obj.id} className={`flex flex-col h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-l-4 ${getPriorityBorderColor(obj.priority)}`}>
                 <CardHeader className="pb-3 relative">
-                  <div className="flex justify-between items-start gap-2 mb-2">
+                  {/* Priority badge bottom-left, status + actions top-right */}
+                  <div className="flex items-center justify-between mb-2">
                     <Badge variant="outline" className={getPriorityBadge(obj.priority)}>
                       {getPriorityLabel(obj.priority)}
                     </Badge>
-                    <Badge variant="outline" className={getStatusBadge(obj.status)}>
-                      {getStatusLabel(obj.status)}
-                    </Badge>
+                    {/* Status badge + action buttons in same row, top-right */}
+                    <div className="flex items-center gap-1">
+                      <Badge variant="outline" className={`${getStatusBadge(obj.status)} text-[10px] px-2 py-0.5`}>
+                        {getStatusLabel(obj.status)}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 rounded-full text-muted-foreground hover:text-foreground"
+                        onClick={() => handleOpenEdit(obj)}
+                        title="Editar"
+                      >
+                        <Edit2 className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 rounded-full text-muted-foreground hover:text-rose-500"
+                        onClick={() => handleDelete(obj.id)}
+                        title="Eliminar"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                  <CardTitle className="line-clamp-2 text-lg font-bold text-foreground pr-10">
+                  <CardTitle className="line-clamp-2 text-lg font-bold text-foreground">
                     {obj.title}
                   </CardTitle>
-                  
-                  {/* Actions Dropdown / Group */}
-                  <div className="absolute right-4 top-4 flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-7 rounded-full text-muted-foreground hover:text-foreground"
-                      onClick={() => handleOpenEdit(obj)}
-                      title="Editar"
-                    >
-                      <Edit2 className="size-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-7 rounded-full text-muted-foreground hover:text-rose-500"
-                      onClick={() => handleDelete(obj.id)}
-                      title="Eliminar"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </div>
                 </CardHeader>
 
                 <CardContent className="flex-1 flex flex-col pb-4">
@@ -398,9 +424,14 @@ export function ObjectivesPage() {
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-xs font-semibold">
                       <span>Progreso</span>
-                      <span className="text-primary">{obj.progress}%</span>
+                      <span className={`${
+                        obj.progress >= 100 ? "text-emerald-500" :
+                        obj.progress >= 76  ? "text-teal-500" :
+                        obj.progress >= 41  ? "text-blue-500" :
+                        "text-amber-500"
+                      }`}>{obj.progress}%</span>
                     </div>
-                    <Progress value={obj.progress} className="h-2 bg-muted-foreground/10" />
+                    <Progress value={obj.progress} className={`h-2 bg-muted-foreground/10 ${getProgressBarColor(obj.progress)}`} />
                   </div>
 
                   {/* Tasks List / Requerimientos */}
@@ -451,19 +482,24 @@ export function ObjectivesPage() {
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1">
                         <Calendar className="size-3.5 text-teal-600" />
-                        {obj.startDate || "?"} al {obj.endDate || "?"}
+                        {formatDate(obj.startDate)} al {formatDate(obj.endDate)}
                       </span>
                       <span className={daysInfo.color}>{daysInfo.text}</span>
                     </div>
 
-                    {/* Assigned Team */}
+                    {/* Assigned Team – same emerald pill style as the form */}
                     {obj.assignedTo && obj.assignedTo.length > 0 && (
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <User className="size-3.5 text-sky-600 shrink-0" />
+                        <User className="size-3.5 text-emerald-500 shrink-0" />
                         <span className="font-medium shrink-0">Responsables:</span>
-                        <div className="flex gap-1 flex-wrap">
+                        <div className="flex gap-1.5 flex-wrap">
                           {obj.assignedTo.map((name, i) => (
-                            <Badge key={i} variant="secondary" className="px-1.5 py-0 text-[10px] bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300">
+                            <Badge
+                              key={i}
+                              variant="default"
+                              className="px-2.5 py-0.5 text-[10px] rounded-full bg-emerald-600 text-white font-semibold flex items-center gap-1 shadow-sm"
+                            >
+                              <Check className="size-2.5" />
                               {name}
                             </Badge>
                           ))}
