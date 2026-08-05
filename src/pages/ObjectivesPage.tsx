@@ -109,6 +109,7 @@ export function ObjectivesPage() {
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "critical">("medium");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [noEndDate, setNoEndDate] = useState(false);
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   
@@ -135,6 +136,7 @@ export function ObjectivesPage() {
     setPriority("medium");
     setStartDate(new Date().toISOString().split("T")[0]);
     setEndDate("");
+    setNoEndDate(false);
     setAssignedTo([]);
     setNotes("");
     setFormTasks([]);
@@ -151,6 +153,7 @@ export function ObjectivesPage() {
     setPriority(obj.priority);
     setStartDate(obj.startDate || "");
     setEndDate(obj.endDate || "");
+    setNoEndDate(!obj.endDate);
     setAssignedTo(obj.assignedTo || []);
     setNotes(obj.notes || "");
     setFormTasks(obj.tasks || []);
@@ -278,10 +281,10 @@ export function ObjectivesPage() {
     });
   }, [objectives, search, statusFilter, priorityFilter]);
 
-  // Compute days remaining
+  // Compute days remaining. Returns urgent=true when < 7 days (for pulse animation)
   const getDaysRemainingLabel = (endDateStr?: string, status?: string) => {
-    if (status === "completed") return { text: "Completado", color: "text-emerald-500" };
-    if (!endDateStr) return { text: "Sin fecha límite", color: "text-muted-foreground" };
+    if (status === "completed") return { text: "Completado", color: "text-emerald-500", urgent: false };
+    if (!endDateStr) return { text: "Sin fecha límite", color: "text-muted-foreground", urgent: false };
     
     const end = new Date(endDateStr + "T12:00:00");
     const today = new Date();
@@ -291,13 +294,13 @@ export function ObjectivesPage() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) {
-      return { text: `Vencido por ${Math.abs(diffDays)} d.`, color: "text-rose-500 font-bold" };
+      return { text: `Vencido por ${Math.abs(diffDays)} d.`, color: "text-rose-500 font-bold", urgent: true };
     } else if (diffDays === 0) {
-      return { text: "Vence hoy", color: "text-amber-500 font-bold" };
-    } else if (diffDays === 1) {
-      return { text: "Vence mañana", color: "text-amber-500 font-medium" };
+      return { text: "Vence hoy", color: "text-amber-500 font-bold", urgent: true };
+    } else if (diffDays <= 7) {
+      return { text: `${diffDays} día${diffDays === 1 ? "" : "s"} restante${diffDays === 1 ? "" : "s"}`, color: "text-amber-500 font-semibold", urgent: true };
     } else {
-      return { text: `${diffDays} días restantes`, color: "text-muted-foreground" };
+      return { text: `${diffDays} días restantes`, color: "text-muted-foreground", urgent: false };
     }
   };
 
@@ -465,9 +468,12 @@ export function ObjectivesPage() {
                                   <Square className="size-4 text-muted-foreground/60" />
                                 )}
                               </span>
-                              <span className={`leading-normal ${task.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                              <span className={`leading-normal flex-1 ${task.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
                                 {task.title}
                               </span>
+                              {!task.completed && (
+                                <span className="shrink-0 text-amber-500 font-bold text-[11px] leading-none" title="Requerimiento pendiente">!</span>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -484,7 +490,7 @@ export function ObjectivesPage() {
                         <Calendar className="size-3.5 text-teal-600" />
                         {formatDate(obj.startDate)} al {formatDate(obj.endDate)}
                       </span>
-                      <span className={daysInfo.color}>{daysInfo.text}</span>
+                      <span className={`${daysInfo.color}${daysInfo.urgent ? " pulse-soft" : ""}`}>{daysInfo.text}</span>
                     </div>
 
                     {/* Assigned Team – same emerald pill style as the form */}
@@ -613,8 +619,25 @@ export function ObjectivesPage() {
                 <Input
                   type="date"
                   value={endDate}
+                  disabled={noEndDate}
                   onChange={(e) => setEndDate(e.target.value)}
+                  className={noEndDate ? "opacity-40 cursor-not-allowed" : ""}
                 />
+                {/* Sin fecha límite checkbox */}
+                <label className="flex items-center gap-2 cursor-pointer mt-1 select-none group w-fit">
+                  <input
+                    type="checkbox"
+                    checked={noEndDate}
+                    onChange={(e) => {
+                      setNoEndDate(e.target.checked);
+                      if (e.target.checked) setEndDate("");
+                    }}
+                    className="size-3.5 rounded accent-emerald-600 cursor-pointer"
+                  />
+                  <span className="text-[11px] text-muted-foreground group-hover:text-foreground transition-colors">
+                    Sin fecha límite
+                  </span>
+                </label>
               </div>
             </div>
 

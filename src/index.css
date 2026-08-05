@@ -318,3 +318,12 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   width: 0 !important;
   height: 0 !important;
 }
+
+/* Soft pulse animation for urgent deadline indicator (< 7 days) */
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+.pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
