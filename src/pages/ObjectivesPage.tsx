@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { 
   Plus, Search, Calendar, User, CheckSquare, ListTodo, Edit2, Trash2, 
-  ChevronDown, ChevronUp, Flag, CheckSquare2, Square, Info
+  ChevronDown, ChevronUp, Flag, CheckSquare2, Square, Info, Check
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -153,6 +153,11 @@ export function ObjectivesPage() {
     e.preventDefault();
     if (!title.trim()) {
       toast.error("Por favor, ingresá el título del objetivo");
+      return;
+    }
+
+    if (!assignedTo || assignedTo.length === 0) {
+      toast.error("Por favor, seleccioná al menos un responsable del equipo");
       return;
     }
 
@@ -415,7 +420,7 @@ export function ObjectivesPage() {
                       </Button>
                       
                       {(!expandedCards.hasOwnProperty(obj.id) || isExpanded) && (
-                        <div className="mt-2 space-y-1.5 pl-2 pr-1 max-h-48 overflow-y-auto">
+                        <div className="mt-2 space-y-1.5 pl-2 pr-1 max-h-48 overflow-y-auto no-scrollbar">
                           {obj.tasks.map((task) => (
                             <div 
                               key={task.id}
@@ -483,7 +488,7 @@ export function ObjectivesPage() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto no-scrollbar">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
               {editingObjective ? "Editar Objetivo" : "Nuevo Objetivo"}
@@ -496,7 +501,9 @@ export function ObjectivesPage() {
           <form onSubmit={handleSubmit} className="space-y-4 py-2">
             {/* Title */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-muted-foreground uppercase">Título</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase">
+                Título <span className="text-rose-500">*</span>
+              </label>
               <Input
                 placeholder="Título del objetivo"
                 value={title}
@@ -510,9 +517,18 @@ export function ObjectivesPage() {
               <label className="text-xs font-bold text-muted-foreground uppercase">Descripción</label>
               <Textarea
                 placeholder="Descripción breve del objetivo..."
-                rows={3}
+                rows={1}
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
+                onFocus={(e) => {
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
+                className="resize-none overflow-hidden min-h-[38px] transition-none py-2"
               />
             </div>
 
@@ -566,55 +582,54 @@ export function ObjectivesPage() {
               </div>
             </div>
 
-            {/* Assigned to */}
+            {/* Assigned to (Required Badges / Tags) */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-muted-foreground uppercase">Responsables del Equipo</label>
-              <div className="flex gap-4 p-2.5 rounded-md border border-input bg-muted/10 flex-wrap">
+              <label className="text-xs font-bold text-muted-foreground uppercase">
+                Responsables del Equipo <span className="text-rose-500">*</span>
+              </label>
+              <div className="flex gap-2 flex-wrap pt-1">
                 {systemsUsers.map((u) => {
                   const isAssigned = assignedTo.includes(u.fullName);
                   return (
-                    <label key={u.id} className="flex items-center gap-2 text-xs font-medium cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isAssigned}
-                        onChange={() => {
-                          if (isAssigned) {
-                            setAssignedTo(prev => prev.filter(name => name !== u.fullName));
-                          } else {
-                            setAssignedTo(prev => [...prev, u.fullName]);
-                          }
-                        }}
-                        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                      />
+                    <Badge
+                      key={u.id}
+                      variant={isAssigned ? "default" : "outline"}
+                      className={`cursor-pointer px-3 py-1.5 text-xs transition-all flex items-center gap-1.5 rounded-full select-none ${
+                        isAssigned 
+                          ? "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm border-emerald-600" 
+                          : "hover:bg-muted/80 text-muted-foreground border-input"
+                      }`}
+                      onClick={() => {
+                        if (isAssigned) {
+                          setAssignedTo(prev => prev.filter(name => name !== u.fullName));
+                        } else {
+                          setAssignedTo(prev => [...prev, u.fullName]);
+                        }
+                      }}
+                    >
+                      {isAssigned && <Check className="size-3.5" />}
                       {u.fullName}
-                    </label>
+                    </Badge>
                   );
                 })}
               </div>
             </div>
 
-            {/* Checklist Tasks / Requerimientos */}
+            {/* Checklist Tasks / Requerimientos (No checkboxes in modal) */}
             <div className="space-y-2 border-t border-border pt-3">
               <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
                 <Flag className="size-3.5 text-emerald-500" />
                 Requerimientos ({formTasks.length})
               </label>
               
-              {/* Task list inside modal */}
+              {/* Requirement items list without checkboxes inside modal */}
               {formTasks.length > 0 && (
-                <div className="space-y-1.5 max-h-36 overflow-y-auto p-1.5 rounded-md border border-input bg-muted/20">
+                <div className="space-y-1.5 max-h-36 overflow-y-auto no-scrollbar p-1.5 rounded-md border border-input bg-muted/20">
                   {formTasks.map((t) => (
                     <div key={t.id} className="flex items-center justify-between gap-2 p-1.5 rounded hover:bg-muted/40 text-xs">
                       <div className="flex items-center gap-2 min-w-0">
-                        <input
-                          type="checkbox"
-                          checked={t.completed}
-                          onChange={() => {
-                            setFormTasks(prev => prev.map(item => item.id === t.id ? { ...item, completed: !item.completed } : item));
-                          }}
-                          className="rounded text-emerald-600"
-                        />
-                        <span className={`truncate ${t.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                        <span className="text-emerald-500 font-bold text-[12px] shrink-0">•</span>
+                        <span className="truncate text-foreground font-medium">
                           {t.title}
                         </span>
                       </div>
@@ -658,22 +673,12 @@ export function ObjectivesPage() {
               </div>
             </div>
 
-            {/* Notes */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-muted-foreground uppercase">Comentarios / Notas</label>
-              <Input
-                placeholder="Observaciones o notas adicionales"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </div>
-
-            <DialogFooter className="pt-2 border-t border-border mt-4">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
-              </Button>
+            <DialogFooter className="pt-2 border-t border-border mt-4 flex gap-2 sm:justify-end">
               <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow">
                 {editingObjective ? "Guardar Cambios" : "Guardar"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancelar
               </Button>
             </DialogFooter>
           </form>

@@ -307,3 +307,14 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 }
 
 
+
+/* Utility: hide scrollbar visually while keeping scroll functionality */
+.no-scrollbar {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE / Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Opera */
+  width: 0 !important;
+  height: 0 !important;
+}
