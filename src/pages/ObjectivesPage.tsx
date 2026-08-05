@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
 import { 
   Plus, Search, Calendar, User, CheckSquare, ListTodo, Edit2, Trash2, 
-  AlertCircle, ChevronDown, ChevronUp, Flag, CheckSquare2, Square, Info
+  ChevronDown, ChevronUp, Flag, CheckSquare2, Square, Info
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -152,7 +152,7 @@ export function ObjectivesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      toast.error("Por favor, ingresá el título del proyecto");
+      toast.error("Por favor, ingresá el título del objetivo");
       return;
     }
 
@@ -187,25 +187,25 @@ export function ObjectivesPage() {
     try {
       if (editingObjective) {
         await updateObjective(editingObjective.id, payload);
-        toast.success("Proyecto actualizado correctamente");
+        toast.success("Objetivo actualizado correctamente");
       } else {
         await addObjective(payload);
-        toast.success("Proyecto creado correctamente");
+        toast.success("Objetivo creado correctamente");
       }
       setIsDialogOpen(false);
     } catch (err) {
-      toast.error("Hubo un error al guardar el proyecto");
+      toast.error("Hubo un error al guardar el objetivo");
     }
   };
 
   // Delete handler
   const handleDelete = async (id: string) => {
-    if (window.confirm("¿Estás seguro de que querés eliminar este proyecto?")) {
+    if (window.confirm("¿Estás seguro de que querés eliminar este objetivo?")) {
       try {
         await deleteObjective(id);
-        toast.success("Proyecto eliminado");
+        toast.success("Objetivo eliminado");
       } catch (err) {
-        toast.error("Error al eliminar el proyecto");
+        toast.error("Error al eliminar el objetivo");
       }
     }
   };
@@ -276,14 +276,14 @@ export function ObjectivesPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
-            Objetivos y Proyectos
+            Objetivos
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Seguimiento de proyectos y metas del equipo de Sistemas IT.
+            Gestión, seguimiento y control de objetivos y metas del equipo de Sistemas IT.
           </p>
         </div>
         <Button onClick={handleOpenCreate} className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shrink-0 shadow-md">
-          <Plus className="mr-2 size-4" /> Nuevo Proyecto
+          <Plus className="mr-2 size-4" /> Nuevo objetivo
         </Button>
       </div>
 
@@ -398,7 +398,7 @@ export function ObjectivesPage() {
                     <Progress value={obj.progress} className="h-2 bg-muted-foreground/10" />
                   </div>
 
-                  {/* Tasks List Collapsible */}
+                  {/* Tasks List / Requerimientos */}
                   {obj.tasks && obj.tasks.length > 0 && (
                     <div className="mb-4">
                       <Button
@@ -409,12 +409,12 @@ export function ObjectivesPage() {
                       >
                         <span className="flex items-center gap-1.5 text-muted-foreground">
                           <CheckSquare className="size-3.5 text-emerald-500" />
-                          Tareas ({obj.tasks.filter(t => t.completed).length}/{obj.tasks.length})
+                          Requerimientos ({obj.tasks.filter(t => t.completed).length}/{obj.tasks.length})
                         </span>
                         {isExpanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
                       </Button>
                       
-                      {isExpanded && (
+                      {(!expandedCards.hasOwnProperty(obj.id) || isExpanded) && (
                         <div className="mt-2 space-y-1.5 pl-2 pr-1 max-h-48 overflow-y-auto">
                           {obj.tasks.map((task) => (
                             <div 
@@ -486,10 +486,10 @@ export function ObjectivesPage() {
         <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
-              {editingObjective ? "Editar Proyecto" : "Nuevo Proyecto / Objetivo"}
+              {editingObjective ? "Editar Objetivo" : "Nuevo Objetivo"}
             </DialogTitle>
             <DialogDescription>
-              Completá los detalles para coordinar las metas del equipo de sistemas.
+              Completá los datos del objetivo, fechas de inicio y fin, y sus requerimientos.
             </DialogDescription>
           </DialogHeader>
 
@@ -498,7 +498,7 @@ export function ObjectivesPage() {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-muted-foreground uppercase">Título</label>
               <Input
-                placeholder="Nombre del proyecto o meta"
+                placeholder="Título del objetivo"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -509,7 +509,7 @@ export function ObjectivesPage() {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-muted-foreground uppercase">Descripción</label>
               <Textarea
-                placeholder="Explicación breve del proyecto..."
+                placeholder="Descripción breve del objetivo..."
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -557,7 +557,7 @@ export function ObjectivesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground uppercase">Fecha Límite</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase">Fecha Fin</label>
                 <Input
                   type="date"
                   value={endDate}
@@ -593,11 +593,11 @@ export function ObjectivesPage() {
               </div>
             </div>
 
-            {/* Checklist Tasks */}
+            {/* Checklist Tasks / Requerimientos */}
             <div className="space-y-2 border-t border-border pt-3">
               <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
                 <Flag className="size-3.5 text-emerald-500" />
-                Sub-Tareas / Checklist ({formTasks.length})
+                Requerimientos ({formTasks.length})
               </label>
               
               {/* Task list inside modal */}
@@ -635,7 +635,7 @@ export function ObjectivesPage() {
               {/* Add task row */}
               <div className="flex gap-2">
                 <Input
-                  placeholder="Agregar una sub-tarea..."
+                  placeholder="Agregar un requerimiento..."
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
                   onKeyDown={(e) => {
@@ -673,7 +673,7 @@ export function ObjectivesPage() {
                 Cancelar
               </Button>
               <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow">
-                {editingObjective ? "Guardar Cambios" : "Crear Proyecto"}
+                {editingObjective ? "Guardar Cambios" : "Guardar"}
               </Button>
             </DialogFooter>
           </form>

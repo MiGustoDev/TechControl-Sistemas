@@ -24,7 +24,7 @@ import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 
 export function AppSidebar() {
-  const SHOW_OBJECTIVES = false; // Cambiar a true para mostrar la pestaña de Objetivos
+  const SHOW_OBJECTIVES = true; // Mostrar la pestaña de Objetivos posicionada sobre Guardias IT
   const { 
     currentPage, 
     setCurrentPage, 
