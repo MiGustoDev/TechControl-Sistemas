@@ -16,7 +16,9 @@ const pageLabels: Record<string, string> = {
   datalive: "DataliveTV",
   guardias: "Guardias IT",
   personal: "Personal",
-  notes: "Datos",
+  notes: "Información",
+  databases: "Bases de Datos",
+  "office-tickets": "Tareas y Tickets",
 };
 
 interface TopBarProps {}

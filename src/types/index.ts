@@ -230,4 +230,56 @@ export interface SystemNote {
   updatedAt: string;
 }
 
+export interface OfficeTicket {
+  id: string;
+  title: string;
+  description?: string;
+  category: "soporte" | "redes" | "mantenimiento" | "servidores" | "desarrollo" | "otro";
+  customCategory?: string;
+  userId: string;
+  userName: string;
+  date: string; // YYYY-MM-DD
+  durationMinutes: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DatabaseCredential {
+  id: string;
+  name: string;
+  engine: "postgres" | "mysql" | "sqlserver" | "oracle" | "mongodb" | "sqlite" | "other";
+  host: string;
+  port?: string;
+  databaseName?: string;
+  username?: string;
+  password?: string;
+  notes?: string;
+  project1?: string;
+  project2?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectTask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
+export interface Objective {
+  id: string;
+  title: string;
+  description?: string;
+  status: "pending" | "in-progress" | "completed" | "on-hold";
+  priority: "low" | "medium" | "high" | "critical";
+  startDate?: string;
+  endDate?: string;
+  progress: number;
+  assignedTo?: string[];
+  tasks?: ProjectTask[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 

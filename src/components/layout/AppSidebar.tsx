@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { 
   Printer, Laptop, ShoppingCart, TriangleAlert as AlertTriangle, 
-  Monitor, Tv, ChevronRight, Package, Clock, Users, Calendar, Database 
+  Monitor, Tv, ChevronRight, Package, Clock, Users, Calendar, Database,
+  Ticket, Info, Target
 } from "lucide-react";
 import {
   Sidebar,
@@ -23,6 +24,7 @@ import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 
 export function AppSidebar() {
+  const SHOW_OBJECTIVES = false; // Cambiar a true para mostrar la pestaña de Objetivos
   const { 
     currentPage, 
     setCurrentPage, 
@@ -34,7 +36,10 @@ export function AppSidebar() {
     dataliveTVs,
     guardias,
     setGuardiasViewMode,
-    notes
+    notes,
+    officeTickets,
+    databaseCredentials,
+    objectives
   } = useApp();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -49,6 +54,9 @@ export function AppSidebar() {
   const totalOrders = orders.length;
   const totalGuardias = guardias.length;
   const totalNotes = notes.length;
+  const totalOfficeTickets = officeTickets?.length || 0;
+  const totalDatabaseCredentials = databaseCredentials?.length || 0;
+  const totalActiveObjectives = objectives?.filter(o => o.status === "in-progress" || o.status === "pending").length || 0;
 
   const [isStockOpen, setIsStockOpen] = useState(() => {
     return ["notebooks", "printers", "monitors"].includes(currentPage);
@@ -105,6 +113,25 @@ export function AppSidebar() {
           <SidebarGroupLabel>Módulos</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              {/* Objetivos del equipo */}
+              {SHOW_OBJECTIVES && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={currentPage === "objectives"}
+                    onClick={() => setCurrentPage("objectives")}
+                    tooltip="Objetivos"
+                  >
+                    <Target className="size-4" />
+                    <span>Objetivos</span>
+                  </SidebarMenuButton>
+                  {!isCollapsed && totalActiveObjectives > 0 && (
+                    <SidebarMenuBadge className="bg-emerald-500/15 font-bold text-emerald-700 dark:text-emerald-400">
+                      {totalActiveObjectives}
+                    </SidebarMenuBadge>
+                  )}
+                </SidebarMenuItem>
+              )}
+
               {/* Guardias IT — pantalla principal */}
               <SidebarMenuItem>
                 <SidebarMenuButton
@@ -194,19 +221,53 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               </Collapsible>
 
-              {/* Datos */}
+              {/* Tareas Oficina */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "office-tickets"}
+                  onClick={() => setCurrentPage("office-tickets")}
+                  tooltip="Tareas Oficina"
+                >
+                  <Ticket className="size-4" />
+                  <span>Tareas Oficina</span>
+                </SidebarMenuButton>
+                {!isCollapsed && totalOfficeTickets > 0 && (
+                  <SidebarMenuBadge className="bg-indigo-500/10 font-bold text-indigo-600 dark:text-indigo-400">
+                    {totalOfficeTickets}
+                  </SidebarMenuBadge>
+                )}
+              </SidebarMenuItem>
+
+              {/* Información */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={currentPage === "notes"}
                   onClick={() => setCurrentPage("notes")}
-                  tooltip="Datos y Notas"
+                  tooltip="Información y Notas"
                 >
-                  <Database className="size-4" />
-                  <span>Datos</span>
+                  <Info className="size-4" />
+                  <span>Información</span>
                 </SidebarMenuButton>
                 {!isCollapsed && totalNotes > 0 && (
                   <SidebarMenuBadge className="bg-muted-foreground/10 font-bold text-foreground">
                     {totalNotes}
+                  </SidebarMenuBadge>
+                )}
+              </SidebarMenuItem>
+
+              {/* Databases */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "databases"}
+                  onClick={() => setCurrentPage("databases")}
+                  tooltip="Bases de Datos"
+                >
+                  <Database className="size-4" />
+                  <span>Databases</span>
+                </SidebarMenuButton>
+                {!isCollapsed && totalDatabaseCredentials > 0 && (
+                  <SidebarMenuBadge className="bg-muted-foreground/10 font-bold text-foreground">
+                    {totalDatabaseCredentials}
                   </SidebarMenuBadge>
                 )}
               </SidebarMenuItem>
@@ -271,8 +332,8 @@ export function AppSidebar() {
             </div>
           )}
           {!isCollapsed && (
-            <div className="text-xs text-muted-foreground text-center">
-              Sistema IT v1.1.0
+            <div className="text-xs text-muted-foreground text-center font-medium">
+              Sistemas IT Center v2.0
             </div>
           )}
         </div>

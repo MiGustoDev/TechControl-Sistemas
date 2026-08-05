@@ -12,6 +12,9 @@ import type {
   User,
   Guardia,
   SystemNote,
+  OfficeTicket,
+  DatabaseCredential,
+  Objective,
 } from "../types";
 import {
   stockItems as initialItems,
@@ -136,6 +139,21 @@ interface AppContextValue {
   deleteNote: (id: string) => Promise<void>;
   reorderNotes: (reorderedNotes: SystemNote[]) => Promise<void>;
 
+  officeTickets: OfficeTicket[];
+  addOfficeTicket: (ticket: Omit<OfficeTicket, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  updateOfficeTicket: (id: string, data: Partial<OfficeTicket>) => Promise<void>;
+  deleteOfficeTicket: (id: string) => Promise<void>;
+
+  databaseCredentials: DatabaseCredential[];
+  addDatabaseCredential: (credential: Omit<DatabaseCredential, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  updateDatabaseCredential: (id: string, data: Partial<DatabaseCredential>) => Promise<void>;
+  deleteDatabaseCredential: (id: string) => Promise<void>;
+
+  objectives: Objective[];
+  addObjective: (objective: Omit<Objective, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  updateObjective: (id: string, data: Partial<Objective>) => Promise<void>;
+  deleteObjective: (id: string) => Promise<void>;
+
   // Holiday and Turn Overrides
   holidayAssignments: Record<string, string>;
   turnOverrides: Record<string, "facundo" | "ramiro">;
@@ -167,6 +185,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [dataliveTVs, setDataliveTVs] = useState<DataliveTV[]>([]);
   const [guardias, setGuardias] = useState<Guardia[]>([]);
   const [notes, setNotes] = useState<SystemNote[]>([]);
+  const [officeTickets, setOfficeTickets] = useState<OfficeTicket[]>([]);
+  const [databaseCredentials, setDatabaseCredentials] = useState<DatabaseCredential[]>([]);
+  const [objectives, setObjectives] = useState<Objective[]>([]);
   const [currentPage, setCurrentPage] = useState("guardias");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -216,7 +237,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         { data: ords },
         { data: movs },
         { data: tvs },
-        { data: sysNotes }
+        { data: sysNotes },
+        { data: dbTickets, error: ticketsError },
+        { data: dbCreds, error: credsError },
+        { data: dbObjectives, error: objectivesError }
       ] = await Promise.all([
         supabase.from("stock_items").select("*"),
         supabase.from("printers").select("*"),
@@ -226,7 +250,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         supabase.from("orders").select("*"),
         supabase.from("movements").select("*"),
         supabase.from("datalive_tvs").select("*"),
-        supabase.from("system_notes").select("*")
+        supabase.from("system_notes").select("*"),
+        supabase.from("office_tickets").select("*"),
+        supabase.from("database_credentials").select("*"),
+        supabase.from("objectives").select("*")
       ]);
 
       if (items) setStockItems(items.map(i => ({
@@ -423,7 +450,131 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const missingInitialNotes = initialNotes.filter(n => !localNoteIds.has(n.id));
         const mergedNotes = [...localNotes, ...missingInitialNotes];
         setNotes(mergedNotes);
-        localStorage.setItem("techcontrol_notes", JSON.stringify(mergedNotes));
+      }
+
+      if (dbTickets && !ticketsError) {
+        const mappedTickets = dbTickets.map(t => ({
+          id: t.id,
+          title: t.title,
+          description: t.description || "",
+          category: t.category,
+          customCategory: t.custom_category || undefined,
+          userId: t.user_id,
+          userName: t.user_name,
+          date: t.date,
+          durationMinutes: t.duration_minutes,
+          createdAt: t.created_at,
+          updatedAt: t.updated_at
+        }));
+        setOfficeTickets(mappedTickets);
+        localStorage.setItem("techcontrol_office_tickets", JSON.stringify(mappedTickets));
+      } else {
+        const saved = localStorage.getItem("techcontrol_office_tickets");
+        if (saved) {
+          try {
+            setOfficeTickets(JSON.parse(saved));
+          } catch (e) {
+            setOfficeTickets([]);
+          }
+        } else {
+          setOfficeTickets([]);
+        }
+      }
+
+      if (dbCreds && !credsError) {
+        const mappedCreds = dbCreds.map(c => ({
+          id: c.id,
+          name: c.name,
+          engine: c.engine,
+          host: c.host,
+          port: c.port || undefined,
+          databaseName: c.database_name || undefined,
+          username: c.username || undefined,
+          password: c.password || undefined,
+          notes: c.notes || undefined,
+          project1: c.project_1 || undefined,
+          project2: c.project_2 || undefined,
+          createdAt: c.created_at,
+          updatedAt: c.updated_at
+        }));
+        
+        if (mappedCreds.length === 0) {
+          const SEED_DATABASES: DatabaseCredential[] = [
+            { id: "db-1", name: "MiGusto DB 1", engine: "postgres", host: "database1@migusto.com.ar", password: "MiGusto123.", project1: "Fabrica MES", project2: "Romi Rooms", createdAt: now(), updatedAt: now() },
+            { id: "db-2", name: "MiGusto DB 2", engine: "postgres", host: "database2@migusto.com.ar", password: "MiGusto123.", project1: "Fabrica DataCenter", project2: "", createdAt: now(), updatedAt: now() },
+            { id: "db-3", name: "MiGusto DB 3", engine: "postgres", host: "database3@migusto.com.ar", password: "MiGusto123.", project1: "Sistemas App", project2: "", createdAt: now(), updatedAt: now() },
+            { id: "db-4", name: "MiGusto DB 4", engine: "postgres", host: "database4@migusto.com.ar", password: "MiGusto123.", project1: "Capacitaciones", project2: "", createdAt: now(), updatedAt: now() },
+            { id: "db-5", name: "MiGusto DB 5", engine: "postgres", host: "database5@migusto.com.ar", password: "MiGusto123.", project1: "", project2: "", createdAt: now(), updatedAt: now() },
+            { id: "db-6", name: "MiGusto DB 6", engine: "postgres", host: "database6@migusto.com.ar", password: "MiGusto123.", project1: "Carta Digital", project2: "", createdAt: now(), updatedAt: now() }
+          ];
+          setDatabaseCredentials(SEED_DATABASES);
+          localStorage.setItem("techcontrol_database_credentials", JSON.stringify(SEED_DATABASES));
+          supabase.from("database_credentials").insert(SEED_DATABASES.map(c => ({
+            id: c.id,
+            name: c.name,
+            engine: c.engine,
+            host: c.host,
+            password: c.password,
+            project_1: c.project1 || null,
+            project_2: c.project2 || null,
+            created_at: c.createdAt,
+            updated_at: c.updatedAt
+          }))).then(() => {});
+        } else {
+          setDatabaseCredentials(mappedCreds);
+          localStorage.setItem("techcontrol_database_credentials", JSON.stringify(mappedCreds));
+        }
+      } else {
+        const saved = localStorage.getItem("techcontrol_database_credentials");
+        if (saved) {
+          try {
+            setDatabaseCredentials(JSON.parse(saved));
+          } catch (e) {
+            setDatabaseCredentials([]);
+          }
+        } else {
+          const SEED_DATABASES: DatabaseCredential[] = [
+            { id: "db-1", name: "MiGusto DB 1", engine: "postgres", host: "database1@migusto.com.ar", password: "MiGusto123.", project1: "Fabrica MES", project2: "Romi Rooms", createdAt: now(), updatedAt: now() },
+            { id: "db-2", name: "MiGusto DB 2", engine: "postgres", host: "database2@migusto.com.ar", password: "MiGusto123.", project1: "Fabrica DataCenter", project2: "", createdAt: now(), updatedAt: now() },
+            { id: "db-3", name: "MiGusto DB 3", engine: "postgres", host: "database3@migusto.com.ar", password: "MiGusto123.", project1: "Sistemas App", project2: "", createdAt: now(), updatedAt: now() },
+            { id: "db-4", name: "MiGusto DB 4", engine: "postgres", host: "database4@migusto.com.ar", password: "MiGusto123.", project1: "Capacitaciones", project2: "", createdAt: now(), updatedAt: now() },
+            { id: "db-5", name: "MiGusto DB 5", engine: "postgres", host: "database5@migusto.com.ar", password: "MiGusto123.", project1: "", project2: "", createdAt: now(), updatedAt: now() },
+            { id: "db-6", name: "MiGusto DB 6", engine: "postgres", host: "database6@migusto.com.ar", password: "MiGusto123.", project1: "Carta Digital", project2: "", createdAt: now(), updatedAt: now() }
+          ];
+          setDatabaseCredentials(SEED_DATABASES);
+          localStorage.setItem("techcontrol_database_credentials", JSON.stringify(SEED_DATABASES));
+        }
+      }
+
+      if (dbObjectives && !objectivesError) {
+        const mappedObjectives = dbObjectives.map(o => ({
+          id: o.id,
+          title: o.title,
+          description: o.description || "",
+          status: o.status,
+          priority: o.priority,
+          startDate: o.start_date || undefined,
+          endDate: o.end_date || undefined,
+          progress: o.progress ?? 0,
+          assignedTo: Array.isArray(o.assigned_to) ? o.assigned_to : [],
+          tasks: Array.isArray(o.tasks) ? o.tasks : [],
+          notes: o.notes || undefined,
+          createdAt: o.created_at,
+          updatedAt: o.updated_at
+        }));
+        setObjectives(mappedObjectives);
+        localStorage.setItem("techcontrol_objectives", JSON.stringify(mappedObjectives));
+      } else {
+        const saved = localStorage.getItem("techcontrol_objectives");
+        if (saved) {
+          try {
+            setObjectives(JSON.parse(saved));
+          } catch (e) {
+            setObjectives([]);
+          }
+        } else {
+          setObjectives([]);
+        }
       }
 
       // Fetch guardias separately to handle missing table gracefully
@@ -670,6 +821,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         is_pinned: n.isPinned,
         created_at: n.createdAt,
         updated_at: n.updatedAt
+      })));
+
+      // 10. Objectives
+      await supabase.from("objectives").upsert(objectives.map(o => ({
+        id: o.id,
+        title: o.title,
+        description: o.description || null,
+        status: o.status,
+        priority: o.priority,
+        start_date: o.startDate || null,
+        end_date: o.endDate || null,
+        progress: o.progress,
+        assigned_to: o.assignedTo || [],
+        tasks: o.tasks || [],
+        notes: o.notes || null,
+        created_at: o.createdAt,
+        updated_at: o.updatedAt
       })));
 
       toast.success("Migración completada con éxito", { id: t });
@@ -1556,6 +1724,268 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const addOfficeTicket = useCallback(async (ticket: Omit<OfficeTicket, "id" | "createdAt" | "updatedAt">) => {
+    const id = genId();
+    const createdAt = now();
+    const newTicket: OfficeTicket = {
+      ...ticket,
+      id,
+      createdAt,
+      updatedAt: createdAt
+    };
+
+    setOfficeTickets(prev => {
+      const next = [newTicket, ...prev];
+      localStorage.setItem("techcontrol_office_tickets", JSON.stringify(next));
+      return next;
+    });
+
+    const { error } = await supabase.from("office_tickets").insert({
+      id: newTicket.id,
+      title: newTicket.title,
+      description: newTicket.description,
+      category: newTicket.category,
+      custom_category: newTicket.customCategory,
+      user_id: newTicket.userId,
+      user_name: newTicket.userName,
+      date: newTicket.date,
+      duration_minutes: newTicket.durationMinutes,
+      created_at: newTicket.createdAt,
+      updated_at: newTicket.updatedAt
+    });
+
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla office_tickets aún no existe en Supabase. Se guardó localmente.");
+      } else {
+        console.error("Error adding office ticket to Supabase:", error);
+        toast.error("Error al sincronizar ticket de oficina: " + error.message);
+      }
+    }
+  }, []);
+
+  const updateOfficeTicket = useCallback(async (id: string, data: Partial<OfficeTicket>) => {
+    const updatedAt = now();
+    setOfficeTickets(prev => {
+      const next = prev.map(t => t.id === id ? { ...t, ...data, updatedAt } : t);
+      localStorage.setItem("techcontrol_office_tickets", JSON.stringify(next));
+      return next;
+    });
+
+    const dbPayload: Record<string, any> = { updated_at: updatedAt };
+    if (data.title !== undefined) dbPayload.title = data.title;
+    if (data.category !== undefined) dbPayload.category = data.category;
+    if (data.customCategory !== undefined) dbPayload.custom_category = data.customCategory;
+    if (data.date !== undefined) dbPayload.date = data.date;
+    if (data.durationMinutes !== undefined) dbPayload.duration_minutes = data.durationMinutes;
+
+    const { error } = await supabase.from("office_tickets").update(dbPayload).eq("id", id);
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla office_tickets aún no existe en Supabase.");
+      } else {
+        console.error("Error updating office ticket in Supabase:", error);
+        toast.error("Error al actualizar ticket: " + error.message);
+      }
+    }
+  }, []);
+
+  const deleteOfficeTicket = useCallback(async (id: string) => {
+    setOfficeTickets(prev => {
+      const next = prev.filter(t => t.id !== id);
+      localStorage.setItem("techcontrol_office_tickets", JSON.stringify(next));
+      return next;
+    });
+
+    const { error } = await supabase.from("office_tickets").delete().eq("id", id);
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla office_tickets aún no existe en Supabase.");
+      } else {
+        console.error("Error deleting office ticket from Supabase:", error);
+        toast.error("Error al eliminar ticket en base de datos");
+      }
+    }
+  }, []);
+
+  const addDatabaseCredential = useCallback(async (credential: Omit<DatabaseCredential, "id" | "createdAt" | "updatedAt">) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    const createdAt = now();
+    const updatedAt = now();
+    const newCred: DatabaseCredential = { id, ...credential, createdAt, updatedAt };
+
+    setDatabaseCredentials(prev => {
+      const next = [newCred, ...prev];
+      localStorage.setItem("techcontrol_database_credentials", JSON.stringify(next));
+      return next;
+    });
+
+    const { error } = await supabase.from("database_credentials").insert({
+      id,
+      name: newCred.name,
+      engine: newCred.engine,
+      host: newCred.host,
+      port: newCred.port || null,
+      database_name: newCred.databaseName || null,
+      username: newCred.username || null,
+      password: newCred.password || null,
+      notes: newCred.notes || null,
+      project_1: newCred.project1 || null,
+      project_2: newCred.project2 || null,
+      created_at: newCred.createdAt,
+      updated_at: newCred.updatedAt
+    });
+
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla database_credentials aún no existe en Supabase. Se guardó localmente.");
+      } else {
+        console.error("Error adding database credential to Supabase:", error);
+        toast.error("Error al sincronizar credencial de base de datos: " + error.message);
+      }
+    }
+  }, []);
+
+  const updateDatabaseCredential = useCallback(async (id: string, data: Partial<DatabaseCredential>) => {
+    const updatedAt = now();
+    setDatabaseCredentials(prev => {
+      const next = prev.map(c => c.id === id ? { ...c, ...data, updatedAt } : c);
+      localStorage.setItem("techcontrol_database_credentials", JSON.stringify(next));
+      return next;
+    });
+
+    const dbPayload: Record<string, any> = { updated_at: updatedAt };
+    if (data.name !== undefined) dbPayload.name = data.name;
+    if (data.engine !== undefined) dbPayload.engine = data.engine;
+    if (data.host !== undefined) dbPayload.host = data.host;
+    if (data.port !== undefined) dbPayload.port = data.port || null;
+    if (data.databaseName !== undefined) dbPayload.database_name = data.databaseName || null;
+    if (data.username !== undefined) dbPayload.username = data.username || null;
+    if (data.password !== undefined) dbPayload.password = data.password || null;
+    if (data.notes !== undefined) dbPayload.notes = data.notes || null;
+    if (data.project1 !== undefined) dbPayload.project_1 = data.project1 || null;
+    if (data.project2 !== undefined) dbPayload.project_2 = data.project2 || null;
+
+    const { error } = await supabase.from("database_credentials").update(dbPayload).eq("id", id);
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla database_credentials aún no existe.");
+      } else {
+        console.error("Error updating database credential in Supabase:", error);
+        toast.error("Error al actualizar credencial: " + error.message);
+      }
+    }
+  }, []);
+
+  const deleteDatabaseCredential = useCallback(async (id: string) => {
+    setDatabaseCredentials(prev => {
+      const next = prev.filter(c => c.id !== id);
+      localStorage.setItem("techcontrol_database_credentials", JSON.stringify(next));
+      return next;
+    });
+
+    const { error } = await supabase.from("database_credentials").delete().eq("id", id);
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla database_credentials aún no existe.");
+      } else {
+        console.error("Error deleting database credential from Supabase:", error);
+        toast.error("Error al eliminar credencial en base de datos");
+      }
+    }
+  }, []);
+
+  const addObjective = useCallback(async (objective: Omit<Objective, "id" | "createdAt" | "updatedAt">) => {
+    const id = genId();
+    const createdAt = now();
+    const newObjective: Objective = {
+      ...objective,
+      id,
+      createdAt,
+      updatedAt: createdAt
+    };
+
+    setObjectives(prev => {
+      const next = [newObjective, ...prev];
+      localStorage.setItem("techcontrol_objectives", JSON.stringify(next));
+      return next;
+    });
+
+    const { error } = await supabase.from("objectives").insert({
+      id: newObjective.id,
+      title: newObjective.title,
+      description: newObjective.description || null,
+      status: newObjective.status,
+      priority: newObjective.priority,
+      start_date: newObjective.startDate || null,
+      end_date: newObjective.endDate || null,
+      progress: newObjective.progress,
+      assigned_to: newObjective.assignedTo || [],
+      tasks: newObjective.tasks || [],
+      notes: newObjective.notes || null,
+      created_at: newObjective.createdAt,
+      updated_at: newObjective.updatedAt
+    });
+
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla objectives aún no existe en Supabase. Se guardó localmente.");
+      } else {
+        console.error("Error adding objective to Supabase:", error);
+        toast.error("Error al sincronizar objetivo: " + error.message);
+      }
+    }
+  }, []);
+
+  const updateObjective = useCallback(async (id: string, data: Partial<Objective>) => {
+    const updatedAt = now();
+    setObjectives(prev => {
+      const next = prev.map(o => o.id === id ? { ...o, ...data, updatedAt } : o);
+      localStorage.setItem("techcontrol_objectives", JSON.stringify(next));
+      return next;
+    });
+
+    const dbPayload: Record<string, any> = { updated_at: updatedAt };
+    if (data.title !== undefined) dbPayload.title = data.title;
+    if (data.description !== undefined) dbPayload.description = data.description;
+    if (data.status !== undefined) dbPayload.status = data.status;
+    if (data.priority !== undefined) dbPayload.priority = data.priority;
+    if (data.startDate !== undefined) dbPayload.start_date = data.startDate;
+    if (data.endDate !== undefined) dbPayload.end_date = data.endDate;
+    if (data.progress !== undefined) dbPayload.progress = data.progress;
+    if (data.assignedTo !== undefined) dbPayload.assigned_to = data.assignedTo;
+    if (data.tasks !== undefined) dbPayload.tasks = data.tasks;
+    if (data.notes !== undefined) dbPayload.notes = data.notes;
+
+    const { error } = await supabase.from("objectives").update(dbPayload).eq("id", id);
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla objectives aún no existe en Supabase.");
+      } else {
+        console.error("Error updating objective in Supabase:", error);
+        toast.error("Error al actualizar objetivo: " + error.message);
+      }
+    }
+  }, []);
+
+  const deleteObjective = useCallback(async (id: string) => {
+    setObjectives(prev => {
+      const next = prev.filter(o => o.id !== id);
+      localStorage.setItem("techcontrol_objectives", JSON.stringify(next));
+      return next;
+    });
+
+    const { error } = await supabase.from("objectives").delete().eq("id", id);
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla objectives aún no existe en Supabase.");
+      } else {
+        console.error("Error deleting objective from Supabase:", error);
+        toast.error("Error al eliminar objetivo en base de datos");
+      }
+    }
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -1600,6 +2030,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateNote,
         deleteNote,
         reorderNotes,
+        officeTickets,
+        addOfficeTicket,
+        updateOfficeTicket,
+        deleteOfficeTicket,
+        databaseCredentials,
+        addDatabaseCredential,
+        updateDatabaseCredential,
+        deleteDatabaseCredential,
+        objectives,
+        addObjective,
+        updateObjective,
+        deleteObjective,
         holidayAssignments,
         turnOverrides,
         setHolidayAssignment,

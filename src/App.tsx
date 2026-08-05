@@ -14,6 +14,9 @@ import { MonitoresPage } from "@/pages/MonitoresPage";
 import { PersonalPage } from "@/pages/PersonalPage";
 import { GuardiasPage } from "@/pages/GuardiasPage";
 import { NotesPage } from "@/pages/NotesPage";
+import { OfficeTicketsPage } from "@/pages/OfficeTicketsPage";
+import { DatabasesPage } from "@/pages/DatabasesPage";
+import { ObjectivesPage } from "@/pages/ObjectivesPage";
 
 function AppContent() {
   const { currentPage } = useApp();
@@ -30,6 +33,9 @@ function AppContent() {
       case "reports": return <ReportsPage />;
       case "datalive": return <DataliveTVPage />;
       case "notes": return <NotesPage />;
+      case "databases": return <DatabasesPage />;
+      case "office-tickets": return <OfficeTicketsPage />;
+      case "objectives": return <ObjectivesPage />;
       case "guardias":
       default:
         return <GuardiasPage />;

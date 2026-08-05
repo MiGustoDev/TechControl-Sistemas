@@ -37,6 +37,7 @@ import { useApp } from "@/context/AppContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { Progress } from "@/components/ui/progress";
 
 import { GUARDIA_TYPES, getGuardiaTypeShortLabel } from "@/data/guardiaTypes";
 import { formatDate, formatToday, formatBranchesForDisplay } from "@/lib/utils-app";
@@ -233,11 +234,31 @@ interface SpecialEvent {
   id: string;
   date: string;
   name: string;
-  type: "onfire" | "break" | "promo" | "custom";
+  type: string;
   tasks?: SpecialEventTask[];
   createdAt?: string;
   updatedAt?: string;
 }
+
+const EVENT_COLOR_MAP: Record<string, string> = {
+  sky: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border-sky-200 dark:border-sky-800",
+  blue: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+  indigo: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800",
+  violet: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300 border-violet-200 dark:border-violet-800",
+  purple: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-200 dark:border-purple-800",
+  fuchsia: "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950 dark:text-fuchsia-300 border-fuchsia-200 dark:border-fuchsia-800",
+  pink: "bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300 border-pink-200 dark:border-pink-800",
+  rose: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-200 dark:border-rose-800",
+  red: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border-red-200 dark:border-red-800",
+  orange: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 border-orange-200 dark:border-orange-800",
+  amber: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+  yellow: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
+  lime: "bg-lime-100 text-lime-800 dark:bg-lime-950 dark:text-lime-300 border-lime-200 dark:border-lime-800",
+  emerald: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+  teal: "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 border-teal-200 dark:border-teal-800",
+  cyan: "bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800",
+  gray: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700"
+};
 
 function getDynamicEventStyle(tasks?: SpecialEventTask[]) {
   if (!tasks || tasks.length === 0) {
@@ -350,12 +371,36 @@ export function GuardiasPage() {
     return [];
   });
 
+  const [eventTypes, setEventTypes] = useState<{ id: string; name: string; color: string }[]>(() => {
+    const saved = localStorage.getItem("techcontrol_calendar_event_types");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return [
+      { id: "break", name: "☕ MG Break", color: "amber" },
+      { id: "onfire", name: "🔥 Jueves OnFire", color: "rose" },
+      { id: "promo", name: "🎯 Promo Importante", color: "purple" },
+      { id: "custom", name: "⚙️ Personalizado", color: "sky" }
+    ];
+  });
+
+  const [showManageTypes, setShowManageTypes] = useState(false);
+  const [newTypeName, setNewTypeName] = useState("");
+  const [newTypeColor, setNewTypeColor] = useState<string>("sky");
+  const [editingTypeColorId, setEditingTypeColorId] = useState<string | null>(null);
+
+  const [renamingTaskId, setRenamingTaskId] = useState<string | null>(null);
+  const [renamingTaskName, setRenamingTaskName] = useState("");
+
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [eventForm, setEventForm] = useState<{
     id?: string;
     date: string;
     name: string;
-    type: "onfire" | "break" | "promo" | "custom";
+    type: string;
     tasks: SpecialEventTask[];
   }>({
     date: "",
@@ -823,6 +868,37 @@ export function GuardiasPage() {
       devBreakdown,
     };
   }, [filteredGuardias, activeGuardias]);
+
+  const nextEvent = useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const upcoming = manualEvents
+      .filter(e => e.date >= todayStr)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    
+    if (upcoming.length === 0) return null;
+    
+    const evt = upcoming[0];
+    const eventDate = new Date(evt.date + "T12:00:00");
+    const todayDate = new Date();
+    todayDate.setHours(0,0,0,0);
+    const diffTime = eventDate.getTime() - todayDate.getTime();
+    const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    let daysLabel = "";
+    if (daysRemaining === 0) {
+      daysLabel = "Hoy";
+    } else if (daysRemaining === 1) {
+      daysLabel = "Mañana";
+    } else {
+      daysLabel = `En ${daysRemaining} días`;
+    }
+    
+    return {
+      ...evt,
+      daysRemaining,
+      daysLabel
+    };
+  }, [manualEvents]);
 
   const openCreate = (prefilledDate?: string) => {
     setEditingGuardia(null);
@@ -1324,16 +1400,20 @@ export function GuardiasPage() {
                                 {showEventos && getSpecialEvents(cell.dateStr).map((evt) => {
                                   let style = {};
                                   let className = "";
+                                  const evType = eventTypes.find(t => t.id === evt.type);
                                   if (evt.id === "last-thursday-onfire") {
                                     className = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
                                   } else if (evt.id === "first-wednesday-break") {
                                     className = "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30";
+                                  } else if (evType) {
+                                    className = EVENT_COLOR_MAP[evType.color] || EVENT_COLOR_MAP.gray;
                                   } else {
                                     const dynamic = getDynamicEventStyle(evt.tasks);
                                     style = dynamic.style;
                                     className = "border";
                                   }
                                   
+                                  const isAllCompleted = evt.tasks && evt.tasks.length > 0 && evt.tasks.every(t => t.completed);
                                   return (
                                     <span 
                                       key={evt.id}
@@ -1347,7 +1427,7 @@ export function GuardiasPage() {
                                       className={`text-[9px] ${className} px-2 py-0.5 rounded font-extrabold uppercase tracking-wider shrink-0 truncate max-w-full cursor-pointer hover:scale-105 transition-transform`}
                                       title={`${evt.name} (${evt.tasks ? evt.tasks.filter(t => t.completed).length : 0}/${evt.tasks ? evt.tasks.length : 0} tareas)`}
                                     >
-                                      {evt.name}
+                                      {evt.name} {isAllCompleted && "✓"}
                                     </span>
                                   );
                                 })}
@@ -1618,23 +1698,37 @@ export function GuardiasPage() {
           </CardContent>
         </Card>
 
-        {/* 3. Hora Más Concurrente */}
+        {/* 3. Próximo Evento */}
         <Card className="border-muted-foreground/10 bg-card/65 backdrop-blur-sm relative overflow-hidden p-3.5 sm:p-6 gap-2 sm:gap-6">
           <div className="absolute top-0 right-0 p-2 sm:p-3 opacity-15">
-            <Clock className="size-8 sm:size-10 text-sky-500" />
+            <Calendar className="size-8 sm:size-10 text-sky-500" />
           </div>
           <CardHeader className="p-0">
-            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Hora Más Concurrente</p>
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Próximo Evento</p>
           </CardHeader>
           <CardContent className="p-0 min-w-0">
-            <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight text-sky-600 dark:text-sky-400">
-              {stats.busiestHour !== -1 
-                ? `${stats.busiestHour.toString().padStart(2, "0")}:00 hs` 
-                : "Sin registros"
-              }
+            <h2 className={`text-base sm:text-xl font-extrabold tracking-tight truncate ${nextEvent ? "text-sky-600 dark:text-sky-400" : "text-muted-foreground"}`} title={nextEvent?.name || ""}>
+              {nextEvent ? nextEvent.name : "Sin eventos"}
             </h2>
-            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
-              {stats.maxHourCount} {stats.maxHourCount === 1 ? "guardia activa" : "guardias activas"}
+            <p className="text-[11px] sm:text-sm font-semibold text-foreground mt-1 flex items-center gap-1.5">
+              {nextEvent ? (
+                <>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                    nextEvent.daysRemaining === 0 
+                      ? "bg-rose-500 text-white animate-pulse" 
+                      : nextEvent.daysRemaining === 1 
+                        ? "bg-amber-500 text-black" 
+                        : "bg-sky-500/20 text-sky-700 dark:text-sky-300"
+                  }`}>
+                    {nextEvent.daysLabel}
+                  </span>
+                  <span className="text-muted-foreground text-xs font-normal">
+                    ({formatDate(nextEvent.date)})
+                  </span>
+                </>
+              ) : (
+                <span className="text-xs text-muted-foreground font-normal">No hay eventos planificados</span>
+              )}
             </p>
           </CardContent>
         </Card>
@@ -2150,16 +2244,20 @@ export function GuardiasPage() {
                               {showEventos && getSpecialEvents(cell.dateStr).map((evt) => {
                                 let style = {};
                                 let className = "";
+                                const evType = eventTypes.find(t => t.id === evt.type);
                                 if (evt.id === "last-thursday-onfire") {
                                   className = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
                                 } else if (evt.id === "first-wednesday-break") {
                                   className = "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30";
+                                } else if (evType) {
+                                  className = EVENT_COLOR_MAP[evType.color] || EVENT_COLOR_MAP.gray;
                                 } else {
                                   const dynamic = getDynamicEventStyle(evt.tasks);
                                   style = dynamic.style;
                                   className = "border";
                                 }
                                 
+                                const isAllCompleted = evt.tasks && evt.tasks.length > 0 && evt.tasks.every(t => t.completed);
                                 return (
                                   <span 
                                     key={evt.id}
@@ -2173,7 +2271,7 @@ export function GuardiasPage() {
                                     className={`text-[8px] ${className} px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wider shrink-0 truncate max-w-full cursor-pointer hover:scale-105 transition-transform`}
                                     title={`${evt.name} (${evt.tasks ? evt.tasks.filter(t => t.completed).length : 0}/${evt.tasks ? evt.tasks.length : 0} tareas)`}
                                   >
-                                    {evt.name}
+                                    {evt.name} {isAllCompleted && "✓"}
                                   </span>
                                 );
                               })}
@@ -3247,38 +3345,199 @@ export function GuardiasPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="eventType">Tipo de Evento</Label>
-              <Select
-                value={eventForm.type}
-                onValueChange={(val: any) => setEventForm({ ...eventForm, type: val })}
-              >
-                <SelectTrigger id="eventType">
-                  <SelectValue placeholder="Seleccionar tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="break">☕ MG Break</SelectItem>
-                  <SelectItem value="onfire">🔥 Jueves OnFire</SelectItem>
-                  <SelectItem value="promo">🎯 Promo Importante</SelectItem>
-                  <SelectItem value="custom">⚙️ Personalizado</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="eventType" className="font-semibold text-xs text-muted-foreground uppercase">Tipo de Evento</Label>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-xs text-primary px-2 hover:bg-muted/50"
+                  onClick={() => setShowManageTypes(!showManageTypes)}
+                >
+                  {showManageTypes ? "✕ Cerrar" : "⚙️ Administrar Tipos"}
+                </Button>
+              </div>
+
+              {showManageTypes ? (
+                <div className="border border-border bg-muted/15 rounded-lg p-3 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Tipos de Eventos</span>
+                  </div>
+                  <div className="space-y-1 max-h-[110px] overflow-y-auto pr-1">
+                    {eventTypes.map((t) => {
+                      const bgMap: Record<string, string> = {
+                        sky: "bg-sky-500", blue: "bg-blue-500", indigo: "bg-indigo-500", violet: "bg-violet-500",
+                        purple: "bg-purple-500", fuchsia: "bg-fuchsia-500", pink: "bg-pink-500", rose: "bg-rose-500",
+                        red: "bg-red-500", orange: "bg-orange-500", amber: "bg-amber-500", yellow: "bg-yellow-500",
+                        lime: "bg-lime-500", emerald: "bg-emerald-500", teal: "bg-teal-500", cyan: "bg-cyan-500", gray: "bg-slate-500"
+                      };
+                      const isEditingColor = editingTypeColorId === t.id;
+                      return (
+                        <div key={t.id} className="flex flex-col gap-1.5 p-1.5 rounded-md border bg-card text-xs">
+                          <div className="flex items-center justify-between">
+                            <div 
+                              className="flex items-center gap-2 cursor-pointer hover:opacity-80 group/dot"
+                              onClick={() => setEditingTypeColorId(isEditingColor ? null : t.id)}
+                              title="Click en el color para cambiarlo"
+                            >
+                              <span className={`w-2.5 h-2.5 rounded-full inline-block cursor-pointer hover:scale-120 transition-transform ${bgMap[t.color] || "bg-slate-500"}`} />
+                              <span className="font-semibold">{t.name}</span>
+                              <span className="text-[9px] text-muted-foreground opacity-0 group-hover/dot:opacity-100 transition-opacity">(Click color para cambiar)</span>
+                            </div>
+                            {t.id !== "break" && t.id !== "onfire" && t.id !== "promo" && t.id !== "custom" && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded"
+                                onClick={() => {
+                                  const next = eventTypes.filter(x => x.id !== t.id);
+                                  setEventTypes(next);
+                                  localStorage.setItem("techcontrol_calendar_event_types", JSON.stringify(next));
+                                  if (eventForm.type === t.id) {
+                                    setEventForm(prev => ({ ...prev, type: "custom" }));
+                                  }
+                                }}
+                              >
+                                <Trash2 className="size-3" />
+                              </Button>
+                            )}
+                          </div>
+
+                          {isEditingColor && (
+                            <div className="grid grid-cols-6 sm:grid-cols-8 gap-1.5 p-1.5 bg-muted/40 rounded border border-border mt-1">
+                              {(["sky", "blue", "indigo", "violet", "purple", "fuchsia", "pink", "rose", "red", "orange", "amber", "yellow", "lime", "emerald", "teal", "cyan", "gray"] as const).map((colorName) => {
+                                const isSelected = t.color === colorName;
+                                return (
+                                  <button
+                                    key={colorName}
+                                    type="button"
+                                    className={`w-4 h-4 rounded-full ${bgMap[colorName]} border transition-transform cursor-pointer hover:scale-115 ${isSelected ? "border-foreground scale-110 shadow-xs" : "border-transparent"}`}
+                                    onClick={() => {
+                                      const next = eventTypes.map(x => x.id === t.id ? { ...x, color: colorName } : x);
+                                      setEventTypes(next);
+                                      localStorage.setItem("techcontrol_calendar_event_types", JSON.stringify(next));
+                                      toast.success(`Color de "${t.name}" actualizado`);
+                                      setEditingTypeColorId(null);
+                                    }}
+                                    title={colorName}
+                                  />
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase block">Agregar Nuevo Tipo</span>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Nombre (ej: Lanzamiento)"
+                        value={newTypeName}
+                        onChange={(e) => setNewTypeName(e.target.value)}
+                        className="h-8 text-xs flex-1"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3"
+                        onClick={() => {
+                          if (!newTypeName.trim()) return;
+                          const newId = `type-${Date.now()}`;
+                          const next = [...eventTypes, { id: newId, name: newTypeName.trim(), color: newTypeColor }];
+                          setEventTypes(next);
+                          localStorage.setItem("techcontrol_calendar_event_types", JSON.stringify(next));
+                          setEventForm(prev => ({ ...prev, type: newId }));
+                          setNewTypeName("");
+                          setShowManageTypes(false);
+                          toast.success("Tipo de evento agregado");
+                        }}
+                      >
+                        Crear
+                      </Button>
+                    </div>
+
+                    {/* Extended responsive 17 color circles grid */}
+                    <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 p-2 bg-background rounded-lg border border-input">
+                      {(["sky", "blue", "indigo", "violet", "purple", "fuchsia", "pink", "rose", "red", "orange", "amber", "yellow", "lime", "emerald", "teal", "cyan", "gray"] as const).map((colorName) => {
+                        const isSelected = newTypeColor === colorName;
+                        const bgMap = {
+                          sky: "bg-sky-500", blue: "bg-blue-500", indigo: "bg-indigo-500", violet: "bg-violet-500",
+                          purple: "bg-purple-500", fuchsia: "bg-fuchsia-500", pink: "bg-pink-500", rose: "bg-rose-500",
+                          red: "bg-red-500", orange: "bg-orange-500", amber: "bg-amber-500", yellow: "bg-yellow-500",
+                          lime: "bg-lime-500", emerald: "bg-emerald-500", teal: "bg-teal-500", cyan: "bg-cyan-500", gray: "bg-slate-500"
+                        };
+                        return (
+                          <button
+                            key={colorName}
+                            type="button"
+                            className={`w-5.5 h-5.5 rounded-full ${bgMap[colorName]} border-2 transition-transform cursor-pointer hover:scale-110 flex items-center justify-center ${isSelected ? "border-foreground scale-110 shadow-xs" : "border-transparent"}`}
+                            onClick={() => setNewTypeColor(colorName)}
+                            title={colorName}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <Select
+                  value={eventForm.type}
+                  onValueChange={(val: any) => setEventForm({ ...eventForm, type: val })}
+                >
+                  <SelectTrigger id="eventType">
+                    <SelectValue placeholder="Seleccionar tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventTypes.map((t) => {
+                      const bgMap: Record<string, string> = {
+                        sky: "bg-sky-500", blue: "bg-blue-500", indigo: "bg-indigo-500", violet: "bg-violet-500",
+                        purple: "bg-purple-500", fuchsia: "bg-fuchsia-500", pink: "bg-pink-500", rose: "bg-rose-500",
+                        red: "bg-red-500", orange: "bg-orange-500", amber: "bg-amber-500", yellow: "bg-yellow-500",
+                        lime: "bg-lime-500", emerald: "bg-emerald-500", teal: "bg-teal-500", cyan: "bg-cyan-500", gray: "bg-slate-500"
+                      };
+                      return (
+                        <SelectItem key={t.id} value={t.id}>
+                          <span className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full inline-block ${bgMap[t.color] || "bg-slate-500"}`} />
+                            {t.name}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* Tareas List */}
-            <div className="space-y-2 border-t pt-3">
-              <Label className="font-bold text-sm flex items-center justify-between">
-                <span>Tareas del Evento</span>
-                <span className="text-[10px] text-muted-foreground">
-                  {eventForm.tasks.filter(t => t.completed).length}/{eventForm.tasks.length} completadas
-                </span>
-              </Label>
+            <div className="space-y-3 border-t pt-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-muted-foreground uppercase">Tareas del Evento</span>
+                  <span className="font-bold text-primary">
+                    {eventForm.tasks.filter(t => t.completed).length}/{eventForm.tasks.length} ({eventForm.tasks.length > 0 ? Math.round((eventForm.tasks.filter(t => t.completed).length / eventForm.tasks.length) * 100) : 0}%)
+                  </span>
+                </div>
+                {eventForm.tasks.length > 0 && (
+                  <Progress 
+                    value={eventForm.tasks.length > 0 ? (eventForm.tasks.filter(t => t.completed).length / eventForm.tasks.length) * 100 : 0} 
+                    className="h-1.5 bg-muted-foreground/10" 
+                  />
+                )}
+              </div>
               
               {/* Add Task Input */}
               <div className="flex gap-2">
                 <Input
                   id="newTaskInput"
-                  placeholder="Nueva tarea..."
-                  className="h-9 text-xs"
+                  placeholder="Escribí una tarea y apretá Enter..."
+                  className="h-9 text-xs flex-1"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -3296,8 +3555,7 @@ export function GuardiasPage() {
                 <Button
                   type="button"
                   size="sm"
-                  variant="secondary"
-                  className="h-9 px-2"
+                  className="h-9 px-3 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shrink-0"
                   onClick={() => {
                     const el = document.getElementById("newTaskInput") as HTMLInputElement;
                     const val = el?.value.trim();
@@ -3310,23 +3568,23 @@ export function GuardiasPage() {
                     }
                   }}
                 >
-                  <Plus className="size-3.5" />
+                  <Plus className="size-4" />
                 </Button>
               </div>
 
               {/* List of current Tasks */}
-              <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
+              <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1">
                 {eventForm.tasks.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic py-2 text-center bg-muted/10 rounded">
-                    Sin tareas cargadas para este evento.
+                  <p className="text-xs text-muted-foreground italic py-3 text-center bg-muted/10 rounded-md border border-dashed">
+                    No hay tareas cargadas para este evento.
                   </p>
                 ) : (
                   eventForm.tasks.map((task) => (
                     <div 
                       key={task.id} 
-                      className="flex items-center justify-between p-2 rounded-md border border-muted-foreground/10 bg-background/50 hover:bg-background/80 transition-colors"
+                      className="flex items-center justify-between p-2 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors shadow-xs group"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <input
                           type="checkbox"
                           checked={task.completed}
@@ -3336,26 +3594,82 @@ export function GuardiasPage() {
                               tasks: prev.tasks.map(t => t.id === task.id ? { ...t, completed: e.target.checked } : t)
                             }));
                           }}
-                          className="h-3.5 w-3.5 rounded border-muted accent-primary cursor-pointer"
+                          className="h-4 w-4 rounded border-input text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
                         />
-                        <span className={`text-xs ${task.completed ? "line-through text-muted-foreground" : "text-foreground font-medium"}`}>
-                          {task.name}
-                        </span>
+                        {renamingTaskId === task.id ? (
+                          <Input
+                            value={renamingTaskName}
+                            onChange={(e) => setRenamingTaskName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                if (renamingTaskName.trim()) {
+                                  setEventForm(prev => ({
+                                    ...prev,
+                                    tasks: prev.tasks.map(t => t.id === task.id ? { ...t, name: renamingTaskName.trim() } : t)
+                                  }));
+                                }
+                                setRenamingTaskId(null);
+                              } else if (e.key === "Escape") {
+                                setRenamingTaskId(null);
+                              }
+                            }}
+                            onBlur={() => {
+                              if (renamingTaskName.trim()) {
+                                setEventForm(prev => ({
+                                  ...prev,
+                                  tasks: prev.tasks.map(t => t.id === task.id ? { ...t, name: renamingTaskName.trim() } : t)
+                                }));
+                              }
+                              setRenamingTaskId(null);
+                            }}
+                            className="h-7 py-0 px-1.5 text-xs flex-1 font-medium"
+                            autoFocus
+                          />
+                        ) : (
+                          <span 
+                            className={`text-xs truncate cursor-pointer select-none flex-1 py-0.5 ${task.completed ? "line-through text-muted-foreground font-normal" : "text-foreground font-semibold"}`}
+                            onDoubleClick={() => {
+                              setRenamingTaskId(task.id);
+                              setRenamingTaskName(task.name);
+                            }}
+                            title="Doble click para renombrar"
+                          >
+                            {task.name}
+                          </span>
+                        )}
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="h-6 w-6 text-destructive hover:bg-destructive/10"
-                        onClick={() => {
-                          setEventForm(prev => ({
-                            ...prev,
-                            tasks: prev.tasks.filter(t => t.id !== task.id)
-                          }));
-                        }}
-                      >
-                        <Trash2 className="size-3" />
-                      </Button>
+                      <div className="flex items-center gap-1 shrink-0 ml-2">
+                        {renamingTaskId !== task.id && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => {
+                              setRenamingTaskId(task.id);
+                              setRenamingTaskName(task.name);
+                            }}
+                            title="Renombrar"
+                          >
+                            <Edit className="size-3" />
+                          </Button>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded"
+                          onClick={() => {
+                            setEventForm(prev => ({
+                              ...prev,
+                              tasks: prev.tasks.filter(t => t.id !== task.id)
+                            }));
+                          }}
+                        >
+                          <Trash2 className="size-3" />
+                        </Button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -3389,8 +3703,12 @@ export function GuardiasPage() {
                     <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-sm bg-muted text-muted-foreground border border-muted-foreground/10">
                       {formatDate(detailEvent.date)}
                     </span>
-                    <Badge variant="outline" className="text-[10px] py-0 px-2 uppercase font-semibold border-muted-foreground/20 bg-background/50">
-                      {detailEvent.type === "break" ? "☕ Break" : detailEvent.type === "onfire" ? "🔥 OnFire" : detailEvent.type === "promo" ? "🎯 Promo" : "⚙️ Custom"}
+                    <Badge variant="outline" className={`text-[10px] py-0 px-2 uppercase font-semibold border-muted-foreground/20 ${
+                      eventTypes.find(t => t.id === detailEvent.type) 
+                        ? EVENT_COLOR_MAP[eventTypes.find(t => t.id === detailEvent.type)!.color] 
+                        : "bg-background/50 text-foreground"
+                    }`}>
+                      {eventTypes.find(t => t.id === detailEvent.type)?.name || detailEvent.type}
                     </Badge>
                   </div>
                   <DialogTitle className="text-xl font-bold mt-2 text-foreground break-words">
