@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { 
   Plus, Search, Calendar, User, CheckSquare, ListTodo, Edit2, Trash2, 
-  ChevronDown, CheckSquare2, Square, Sparkles, Megaphone, PartyPopper, CalendarHeart, HelpCircle
+  ChevronDown, CheckSquare2, Square, Sparkles, Megaphone, PartyPopper, CalendarHeart, HelpCircle, Check, Flag
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -133,6 +133,40 @@ const getStatusLabel = (status: string) => {
     default: return "Pendiente";
   }
 };
+
+// Auto-growing textarea: starts as 1 row, expands as content grows
+function AutoGrowTextarea({
+  value,
+  onChange,
+  placeholder,
+  className = "",
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className={`w-full resize-none overflow-hidden rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 leading-6 ${className}`}
+      style={{ minHeight: "2.25rem" }}
+    />
+  );
+}
 
 export function SpecialTasksPage() {
   const { specialTasks, addSpecialTask, updateSpecialTask, deleteSpecialTask, users } = useApp();
@@ -602,7 +636,7 @@ export function SpecialTasksPage() {
 
       {/* CREATE & EDIT DIALOG */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
           <DialogHeader>
             <DialogTitle>{editingTask ? "Editar Tarea Especial" : "Nueva Tarea Especial"}</DialogTitle>
             <DialogDescription>
@@ -614,7 +648,7 @@ export function SpecialTasksPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Title */}
               <div className="space-y-1.5 md:col-span-2">
-                <label className="text-xs font-bold text-foreground">Título *</label>
+                <label className="text-xs font-bold text-foreground">Título <span className="text-red-500">*</span></label>
                 <Input
                   placeholder="Ej. Promo CyberMonday 2026"
                   value={title}
@@ -627,107 +661,80 @@ export function SpecialTasksPage() {
               {/* Description */}
               <div className="space-y-1.5 md:col-span-2">
                 <label className="text-xs font-bold text-foreground">Descripción</label>
-                <Textarea
+                <AutoGrowTextarea
                   placeholder="Detalles sobre la promoción, evento, requerimientos generales, etc."
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
+                  onChange={setDescription}
                 />
               </div>
 
-              {/* Category */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-foreground">Categoría *</label>
-                <select
-                  className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as SpecialTaskCategory)}
-                  required
-                >
-                  <option value="campaign">Campaña</option>
-                  <option value="promotion">Promoción</option>
-                  <option value="event">Evento</option>
-                  <option value="special-day">Día Especial</option>
-                  <option value="other">Otro / Especial</option>
-                </select>
-              </div>
-
-              {/* Status */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-foreground">Estado *</label>
-                <select
-                  className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as any)}
-                  required
-                >
-                  <option value="pending">Pendiente</option>
-                  <option value="in-progress">En Curso</option>
-                  <option value="on-hold">En Pausa</option>
-                  <option value="completed">Completado</option>
-                </select>
-              </div>
-
-              {/* Priority */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-foreground">Prioridad *</label>
-                <select
-                  className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as any)}
-                  required
-                >
-                  <option value="low">Baja</option>
-                  <option value="medium">Media</option>
-                  <option value="high">Alta</option>
-                  <option value="critical">Crítica</option>
-                </select>
-              </div>
-
-              {/* Assigned To */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-foreground font-semibold flex items-center justify-between">
-                  <span>Responsables (Seleccionar) *</span>
-                  <span className="text-[10px] text-muted-foreground font-normal">({assignedTo.length} selec.)</span>
-                </label>
-                <div className="flex flex-wrap gap-1.5 border border-input rounded-md p-2 max-h-[100px] overflow-y-auto bg-background">
-                  {systemsUsers.map(user => {
-                    const isSelected = assignedTo.includes(user.fullName);
-                    return (
-                      <Badge
-                        key={user.id}
-                        variant={isSelected ? "default" : "outline"}
-                        className="cursor-pointer transition-colors text-xs px-2 py-0.5 hover:opacity-85 select-none"
-                        onClick={() => {
-                          if (isSelected) {
-                            setAssignedTo(prev => prev.filter(name => name !== user.fullName));
-                          } else {
-                            setAssignedTo(prev => [...prev, user.fullName]);
-                          }
-                        }}
-                      >
-                        {user.fullName}
-                      </Badge>
-                    );
-                  })}
+              {/* Category + Status + Priority — single row */}
+              <div className="md:col-span-2 grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">Categoría <span className="text-red-500">*</span></label>
+                  <select
+                    className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as SpecialTaskCategory)}
+                    required
+                  >
+                    <option value="campaign">Campaña</option>
+                    <option value="promotion">Promoción</option>
+                    <option value="event">Evento</option>
+                    <option value="special-day">Día Especial</option>
+                    <option value="other">Otro / Especial</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">Estado <span className="text-red-500">*</span></label>
+                  <select
+                    className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as any)}
+                    required
+                  >
+                    <option value="pending">Pendiente</option>
+                    <option value="in-progress">En Curso</option>
+                    <option value="on-hold">En Pausa</option>
+                    <option value="completed">Completado</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">Prioridad <span className="text-red-500">*</span></label>
+                  <select
+                    className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value as any)}
+                    required
+                  >
+                    <option value="low">Baja</option>
+                    <option value="medium">Media</option>
+                    <option value="high">Alta</option>
+                    <option value="critical">Crítica</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Start Date */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-foreground">Fecha de Inicio</label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
-
-              {/* End Date */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
+              {/* Dates row */}
+              <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">Fecha de Inicio</label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
                   <label className="text-xs font-bold text-foreground">Fecha Límite / Fin</label>
-                  <label className="flex items-center gap-1 text-[11px] text-muted-foreground cursor-pointer select-none">
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    disabled={noEndDate}
+                    min={startDate || undefined}
+                  />
+                  <label className="flex items-center gap-2 cursor-pointer mt-1 select-none group w-fit">
                     <input
                       type="checkbox"
                       checked={noEndDate}
@@ -735,34 +742,92 @@ export function SpecialTasksPage() {
                         setNoEndDate(e.target.checked);
                         if (e.target.checked) setEndDate("");
                       }}
-                      className="rounded border-input text-orange-600 focus:ring-orange-500 size-3"
+                      className="size-3.5 rounded accent-orange-600 cursor-pointer"
                     />
-                    Sin límite
+                    <span className="text-[11px] text-muted-foreground group-hover:text-foreground transition-colors">
+                      Sin límite
+                    </span>
                   </label>
                 </div>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  disabled={noEndDate}
-                  min={startDate || undefined}
-                />
+              </div>
+
+              {/* Assigned To — Objectives style pills */}
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-xs font-bold text-foreground">
+                  Responsables <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2 flex-wrap pt-1">
+                  {systemsUsers.map((u) => {
+                    const isAssigned = assignedTo.includes(u.fullName);
+                    return (
+                      <Badge
+                        key={u.id}
+                        variant={isAssigned ? "default" : "outline"}
+                        className={`cursor-pointer px-3 py-1.5 text-xs transition-all flex items-center gap-1.5 rounded-full select-none ${
+                          isAssigned
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm border-emerald-600"
+                            : "hover:bg-muted/80 text-muted-foreground border-input"
+                        }`}
+                        onClick={() => {
+                          if (isAssigned) {
+                            setAssignedTo(prev => prev.filter(name => name !== u.fullName));
+                          } else {
+                            setAssignedTo(prev => [...prev, u.fullName]);
+                          }
+                        }}
+                      >
+                        {isAssigned && <Check className="size-3.5" />}
+                        {u.fullName}
+                      </Badge>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            <Separator className="my-2" />
+
+
 
             {/* Checklist Tasks */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-foreground flex items-center justify-between">
-                <span>Checklist de Requerimientos</span>
-                <span className="text-[10px] text-muted-foreground font-normal">Sub-tareas para el seguimiento</span>
+            <div className="space-y-2 border-t border-border pt-3">
+              <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Flag className="size-3.5 text-orange-500" />
+                Requerimientos ({formTasks.length})
               </label>
+
+              {/* List — no checkboxes, just bullets */}
+              {formTasks.length > 0 && (
+                <div className="space-y-1.5 max-h-36 overflow-y-auto no-scrollbar p-1.5 rounded-md border border-input bg-muted/20">
+                  {formTasks.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between gap-2 p-1.5 rounded hover:bg-muted/40 text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-orange-500 font-bold text-[12px] shrink-0">•</span>
+                        <span className="truncate text-foreground font-medium">{t.title}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-6 text-muted-foreground hover:text-rose-500 shrink-0"
+                        onClick={() => handleRemoveTaskFromForm(t.id)}
+                      >
+                        <Trash2 className="size-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {formTasks.length === 0 && (
+                <div className="text-center py-4 text-xs text-muted-foreground border border-dashed rounded-lg">
+                  No hay requerimientos. Se calculará el progreso manualmente.
+                </div>
+              )}
 
               {/* Add checklist item */}
               <div className="flex gap-2">
                 <Input
-                  placeholder="Agregar un paso o requerimiento..."
+                  placeholder="Agregar un requerimiento..."
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
                   onKeyDown={(e) => {
@@ -777,68 +842,26 @@ export function SpecialTasksPage() {
                   Agregar
                 </Button>
               </div>
-
-              {/* List of added checklist items */}
-              <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
-                {formTasks.map((t, idx) => (
-                  <div key={t.id} className="flex items-center justify-between gap-2 p-2 bg-muted/40 rounded-lg text-xs border border-border">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="text-muted-foreground/60 select-none font-medium">{idx + 1}.</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormTasks(prev => prev.map(item => item.id === t.id ? { ...item, completed: !item.completed } : item));
-                        }}
-                        className="shrink-0 text-muted-foreground hover:text-foreground"
-                      >
-                        {t.completed ? (
-                          <CheckSquare2 className="size-4.5 text-emerald-500" />
-                        ) : (
-                          <Square className="size-4.5" />
-                        )}
-                      </button>
-                      <span className={`truncate leading-normal ${t.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                        {t.title}
-                      </span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-6 text-muted-foreground hover:text-rose-500"
-                      onClick={() => handleRemoveTaskFromForm(t.id)}
-                    >
-                      <Trash2 className="size-3" />
-                    </Button>
-                  </div>
-                ))}
-                {formTasks.length === 0 && (
-                  <div className="text-center py-6 text-xs text-muted-foreground border border-dashed rounded-lg">
-                    No hay requerimientos específicos en la lista. Se calculará el progreso manualmente.
-                  </div>
-                )}
-              </div>
             </div>
 
             <Separator className="my-2" />
 
             {/* Internal Notes */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-foreground">Notas Internas / Comentarios</label>
-              <Textarea
+              <label className="text-xs font-bold text-foreground">Notas internas</label>
+              <AutoGrowTextarea
                 placeholder="Observaciones extra sobre la tarea o enlaces a recursos útiles..."
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
+                onChange={setNotes}
               />
             </div>
 
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
-              </Button>
+            <DialogFooter className="pt-2 justify-end gap-2">
               <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white font-medium">
                 {editingTask ? "Guardar Cambios" : "Crear Tarea Especial"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancelar
               </Button>
             </DialogFooter>
           </form>
