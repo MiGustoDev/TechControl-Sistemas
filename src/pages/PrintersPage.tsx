@@ -710,7 +710,7 @@ export function PrintersPage() {
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
             </div>
           </div>
-          <DialogFooter className="sm:justify-end gap-2">
+          <DialogFooter className="flex flex-row items-center justify-end gap-2">
             <Button onClick={handleSave}><Save className="size-4" />{editingPrinter ? "Guardar" : "Registrar impresora"}</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
           </DialogFooter>

@@ -217,7 +217,7 @@ function NotebookDetailModal({
             </div>
           )}
         </div>
-        <DialogFooter className="sm:justify-end gap-2">
+        <DialogFooter className="flex flex-row items-center justify-end gap-2">
           <Button onClick={onClose}>Cerrar</Button>
         </DialogFooter>
       </DialogContent>
@@ -601,8 +601,8 @@ export function NotebooksPage() {
             </div>
             </div>
           </div>
-          <DialogFooter className="sm:justify-end">
-            <Button onClick={handleSave}><Save className="size-4" />{editingNotebook ? "Guardar" : "Registrar equipo"}</Button>
+          <DialogFooter className="flex flex-row items-center justify-end gap-2">
+            <Button onClick={handleSave}><Save className="size-4 mr-1" />{editingNotebook ? "Guardar" : "Registrar equipo"}</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
           </DialogFooter>
         </DialogContent>

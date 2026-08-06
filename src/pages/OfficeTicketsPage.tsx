@@ -329,16 +329,16 @@ export function OfficeTicketsPage() {
         </Card>
 
         <Card className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-emerald-500/20 shadow-sm">
-          <CardContent className="flex items-center gap-4 py-4 px-5">
-            <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500 shrink-0">
-              <Clock className="size-6" />
+          <CardContent className="flex items-center gap-2 sm:gap-4 py-3 sm:py-4 px-3 sm:px-5">
+            <div className="p-1.5 sm:p-2 bg-emerald-500/10 rounded-lg text-emerald-500 shrink-0">
+              <Clock className="size-5 sm:size-6" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Hora de Oficina</p>
-              <h3 className="text-2xl font-bold font-mono tracking-tight text-emerald-700 dark:text-emerald-400">
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground font-semibold uppercase tracking-wider truncate">Hora de Oficina</p>
+              <h3 className="text-lg sm:text-2xl font-bold font-mono tracking-tight text-emerald-700 dark:text-emerald-400 leading-tight">
                 {currentTime.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
               </h3>
-              <p className="text-[11px] font-medium text-emerald-600/85 dark:text-emerald-500/85 truncate mt-0.5 capitalize">
+              <p className="text-[10px] sm:text-[11px] font-medium text-emerald-600/85 dark:text-emerald-500/85 truncate mt-0.5 capitalize">
                 {currentTime.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })}
               </p>
             </div>
@@ -793,12 +793,12 @@ export function OfficeTicketsPage() {
               </div>
             </div>
 
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" className="rounded-xl h-10 text-xs" onClick={() => setEditingTicket(null)}>
-                Cancelar
-              </Button>
+            <DialogFooter className="pt-2 flex flex-row items-center justify-end gap-2">
               <Button type="submit" className="rounded-xl h-10 bg-indigo-600 hover:bg-indigo-700 text-xs">
                 Guardar cambios
+              </Button>
+              <Button type="button" variant="outline" className="rounded-xl h-10 text-xs" onClick={() => setEditingTicket(null)}>
+                Cancelar
               </Button>
             </DialogFooter>
           </form>

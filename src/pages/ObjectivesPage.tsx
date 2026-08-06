@@ -746,7 +746,7 @@ export function ObjectivesPage() {
               </div>
             </div>
 
-            <DialogFooter className="pt-2 border-t border-border mt-4 flex gap-2 sm:justify-end">
+            <DialogFooter className="pt-2 border-t border-border mt-4 flex flex-row items-center justify-end gap-2">
               <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow">
                 {editingObjective ? "Guardar Cambios" : "Guardar"}
               </Button>

@@ -311,10 +311,14 @@ export function OrdersPage() {
           <h1 className="text-2xl font-bold tracking-tight">Pedidos a Compras</h1>
           <p className="text-sm text-muted-foreground">{orders.length} pedidos registrados</p>
         </div>
+        <Button onClick={openCreate} className="sm:hidden w-fit">
+          <Plus className="size-4" />
+          Nuevo pedido
+        </Button>
       </div>
 
-      {/* Status summary */}
-      <div className="flex flex-wrap gap-2">
+      {/* Status summary - 3 in first row, 2 in second row on mobile */}
+      <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
         {[
           { status: "requested" as OrderStatus, label: "Solicitados" },
           { status: "in-process" as OrderStatus, label: "En proceso" },
@@ -326,59 +330,61 @@ export function OrdersPage() {
             key={status}
             onClick={() => setFilterStatus(filterStatus === status ? "all" : status)}
             className={cn(
-              "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
+              "flex items-center justify-center gap-1 sm:gap-2 rounded-full border px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-medium transition-all min-w-0 truncate",
               orderStatusColor(status),
               filterStatus === status ? "ring-2 ring-primary ring-offset-2" : "opacity-80 hover:opacity-100"
             )}
           >
-            <span className="text-base font-bold">{statsCounts[status]}</span>
-            {label}
+            <span className="text-xs sm:text-base font-bold shrink-0">{statsCounts[status]}</span>
+            <span className="truncate">{label}</span>
           </button>
         ))}
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative w-full max-w-sm">
+      <div className="space-y-3">
+        <div className="relative w-full">
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por ítem o solicitante..."
-            className="pl-8"
+            className="pl-8 w-full"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Estado" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los estados</SelectItem>
-            <SelectItem value="requested">Solicitado</SelectItem>
-            <SelectItem value="in-process">En proceso</SelectItem>
-            <SelectItem value="ordered">Pedido realizado</SelectItem>
-            <SelectItem value="delivered">Entregado</SelectItem>
-            <SelectItem value="returned">Devuelto</SelectItem>
-            <SelectItem value="cancelled">Cancelado</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterPriority} onValueChange={setFilterPriority}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Prioridad" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas las prioridades</SelectItem>
-            <SelectItem value="critical">Crítica</SelectItem>
-            <SelectItem value="high">Alta</SelectItem>
-            <SelectItem value="medium">Media</SelectItem>
-            <SelectItem value="low">Baja</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="flex-1 min-w-0">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los estados</SelectItem>
+              <SelectItem value="requested">Solicitado</SelectItem>
+              <SelectItem value="in-process">En proceso</SelectItem>
+              <SelectItem value="ordered">Pedido realizado</SelectItem>
+              <SelectItem value="delivered">Entregado</SelectItem>
+              <SelectItem value="returned">Devuelto</SelectItem>
+              <SelectItem value="cancelled">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterPriority} onValueChange={setFilterPriority}>
+            <SelectTrigger className="flex-1 min-w-0">
+              <SelectValue placeholder="Prioridad" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las prioridades</SelectItem>
+              <SelectItem value="critical">Crítica</SelectItem>
+              <SelectItem value="high">Alta</SelectItem>
+              <SelectItem value="medium">Media</SelectItem>
+              <SelectItem value="low">Baja</SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Button onClick={openCreate} className="ml-auto">
-          <Plus className="size-4" />
-          Nuevo pedido
-        </Button>
+          <Button onClick={openCreate} className="ml-auto hidden sm:flex shrink-0">
+            <Plus className="size-4" />
+            Nuevo pedido
+          </Button>
+        </div>
       </div>
 
       {/* Orders */}
@@ -462,8 +468,8 @@ export function OrdersPage() {
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
             </div>
           </div>
-          <DialogFooter>
-            <Button onClick={handleSave}><Save className="size-4" />{editingOrder ? "Guardar" : "Crear pedido"}</Button>
+          <DialogFooter className="flex flex-row items-center justify-end gap-2">
+            <Button onClick={handleSave}><Save className="size-4 mr-1.5" />{editingOrder ? "Guardar" : "Crear pedido"}</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
           </DialogFooter>
         </DialogContent>

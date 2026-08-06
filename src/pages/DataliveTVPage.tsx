@@ -378,7 +378,7 @@ export function DataliveTVPage() {
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
             </div>
           </div>
-          <DialogFooter className="sm:justify-end">
+          <DialogFooter className="flex flex-row items-center justify-end gap-2">
             <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 text-primary-foreground"><Save className="size-4" />Guardar</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
           </DialogFooter>

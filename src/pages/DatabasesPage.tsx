@@ -178,13 +178,13 @@ export function DatabasesPage() {
 
         <Card className="bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/30 shadow-md shadow-emerald-500/5 relative overflow-hidden group">
           <div className="absolute -right-6 -bottom-6 size-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all duration-500" />
-          <CardContent className="flex items-center gap-4 py-4 px-5 relative z-10">
-            <div className="p-2.5 bg-emerald-500/15 rounded-xl text-emerald-500 shadow-inner">
-              <Server className="size-6" />
+          <CardContent className="flex items-center gap-2 sm:gap-4 py-3 sm:py-4 px-3 sm:px-5 relative z-10">
+            <div className="p-1.5 sm:p-2.5 bg-emerald-500/15 rounded-xl text-emerald-500 shadow-inner shrink-0">
+              <Server className="size-5 sm:size-6" />
             </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Proveedor Cloud</p>
-              <h3 className="text-2xl font-extrabold bg-gradient-to-r from-emerald-500 to-teal-400 bg-clip-text text-transparent tracking-tight">
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase tracking-wider truncate">Proveedor Cloud</p>
+              <h3 className="text-lg sm:text-2xl font-extrabold bg-gradient-to-r from-emerald-500 to-teal-400 bg-clip-text text-transparent tracking-tight truncate">
                 Supabase ⚡
               </h3>
             </div>
@@ -558,12 +558,12 @@ export function DatabasesPage() {
               />
             </div>
 
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" className="rounded-xl h-10 text-xs" onClick={() => setIsOpen(false)}>
-                Cancelar
-              </Button>
+            <DialogFooter className="pt-2 flex flex-row items-center justify-end gap-2">
               <Button type="submit" className="rounded-xl h-10 bg-indigo-600 hover:bg-indigo-700 text-xs">
                 {editingCred ? "Guardar cambios" : "Crear Conexión"}
+              </Button>
+              <Button type="button" variant="outline" className="rounded-xl h-10 text-xs" onClick={() => setIsOpen(false)}>
+                Cancelar
               </Button>
             </DialogFooter>
           </form>

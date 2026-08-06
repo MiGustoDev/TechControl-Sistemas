@@ -2671,7 +2671,7 @@ export function GuardiasPage() {
 
       {/* Register/Edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col p-6">
           <DialogHeader>
             <DialogTitle>
               {editingGuardia ? "Modificar Registro de Guardia" : "Registrar Nueva Guardia de Sistemas"}
@@ -2681,7 +2681,7 @@ export function GuardiasPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex-1 overflow-y-auto py-2 pr-1 space-y-4">
             {/* Colaborador */}
             <div className="grid gap-2">
               <Label htmlFor="userId">Colaborador <span className="text-red-500">*</span></Label>
@@ -2912,7 +2912,7 @@ export function GuardiasPage() {
             </div>
           </div>
 
-          <DialogFooter className="flex-row-reverse justify-end gap-2">
+          <DialogFooter className="border-t pt-3 flex flex-row items-center justify-end gap-2 shrink-0">
             <Button onClick={handleSave}>
               <Save className="size-4 mr-1.5" />
               Guardar Registro
@@ -3677,7 +3677,7 @@ export function GuardiasPage() {
             </div>
           </div>
 
-          <DialogFooter className="border-t pt-3 flex-row-reverse justify-end gap-2 shrink-0">
+          <DialogFooter className="border-t pt-3 flex flex-row items-center justify-end gap-2 shrink-0">
             <Button onClick={handleSaveEvent}>
               {eventForm.id ? "Guardar Cambios" : "Guardar Evento"}
             </Button>
@@ -3860,7 +3860,7 @@ export function GuardiasPage() {
             );
           })()}
 
-          <DialogFooter className="flex-row-reverse justify-end gap-2">
+          <DialogFooter className="flex flex-row items-center justify-end gap-2">
             <Button onClick={async () => {
               await setHolidayAssignment(selectedHolidayDate!, tempAssignedId);
               setHolidayDialogOpen(false);

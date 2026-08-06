@@ -354,7 +354,7 @@ export function PersonalPage() {
               <Label htmlFor="active">Integrante activo</Label>
             </div>
           </div>
-          <DialogFooter className="flex-row-reverse justify-end gap-2">
+          <DialogFooter className="flex flex-row items-center justify-end gap-2">
             <Button onClick={handleSave}><Save className="size-4 mr-1.5" />Guardar Cambios</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
           </DialogFooter>
