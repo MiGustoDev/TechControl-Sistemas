@@ -163,7 +163,7 @@ export function DatabasesPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <Card className="bg-gradient-to-br from-indigo-500/5 to-indigo-500/10 border-indigo-500/20 shadow-sm">
           <CardContent className="flex items-center gap-4 py-4 px-5">
             <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-500">
@@ -191,7 +191,7 @@ export function DatabasesPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20 shadow-sm">
+        <Card className="col-span-2 sm:col-span-1 bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20 shadow-sm">
           <CardContent className="flex items-center gap-4 py-4 px-5">
             <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
               <Shield className="size-6" />
@@ -219,11 +219,11 @@ export function DatabasesPage() {
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
+          <div className="flex gap-2 w-full md:w-auto items-center shrink-0">
             <select
               value={filterEngine}
               onChange={(e) => setFilterEngine(e.target.value)}
-              className="h-10 min-w-[180px] rounded-xl border border-border/80 bg-background px-3 py-2 text-xs text-foreground focus-visible:ring-indigo-500 focus-visible:ring-1 focus-visible:outline-none w-full sm:w-auto"
+              className="h-10 flex-1 min-w-0 rounded-xl border border-border/80 bg-background px-2.5 py-2 text-xs text-foreground focus-visible:ring-indigo-500 focus-visible:ring-1 focus-visible:outline-none"
             >
               <option value="all">Todos los motores</option>
               {ENGINES.map(e => (
@@ -234,11 +234,11 @@ export function DatabasesPage() {
             <Button 
               type="button"
               variant="outline"
-              className="border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 rounded-xl h-10 px-4 text-xs font-semibold w-full sm:w-auto"
+              className="border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 rounded-xl h-10 px-3 text-xs font-semibold flex-1 min-w-0 whitespace-nowrap justify-center"
               onClick={() => window.open("https://supabase.com/dashboard", "_blank")}
             >
-              <ExternalLink className="size-4 mr-2" />
-              Consola Supabase
+              <ExternalLink className="size-3.5 mr-1.5 shrink-0" />
+              <span className="truncate">Consola Supabase</span>
             </Button>
           </div>
         </CardContent>

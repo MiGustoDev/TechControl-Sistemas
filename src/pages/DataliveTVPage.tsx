@@ -250,72 +250,77 @@ export function DataliveTVPage() {
           <div className="h-px flex-1 bg-border/40" />
         </div>
         
-        <div className="flex flex-wrap gap-3">
-          <div className="flex items-center gap-4 rounded-lg border-2 border-primary/30 bg-primary/5 px-4 h-16 shadow-sm transition-all hover:bg-primary/10">
-            <div className="flex flex-col">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3">
+          <div className="flex items-center justify-between gap-2 rounded-lg border-2 border-primary/30 bg-primary/5 px-3 h-16 shadow-sm transition-all hover:bg-primary/10">
+            <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-1.5 mb-0.5">
-                <User className="size-3 text-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Usuario</span>
+                <User className="size-3 text-primary shrink-0" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate">Usuario</span>
               </div>
-              <span className="text-xl font-black text-primary tracking-tight leading-none">migusto</span>
+              <span className="text-lg sm:text-xl font-black text-primary tracking-tight leading-none truncate">migusto</span>
             </div>
-            <div className="ml-1">
+            <div className="shrink-0">
               <CopyButton text="migusto" />
             </div>
           </div>
           
-          <div className="flex items-center gap-4 rounded-lg border-2 border-primary/30 bg-primary/5 px-4 h-16 shadow-sm transition-all hover:bg-primary/10">
-            <div className="flex flex-col">
+          <div className="flex items-center justify-between gap-2 rounded-lg border-2 border-primary/30 bg-primary/5 px-3 h-16 shadow-sm transition-all hover:bg-primary/10">
+            <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-1.5 mb-0.5">
-                <Key className="size-3 text-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">PIN</span>
+                <Key className="size-3 text-primary shrink-0" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate">PIN</span>
               </div>
-              <span className="text-xl font-black font-mono tracking-[0.1em] text-primary leading-none">85749621</span>
+              <span className="text-base sm:text-xl font-black font-mono tracking-[0.05em] text-primary leading-none truncate">85749621</span>
             </div>
-            <div className="ml-1">
+            <div className="shrink-0">
               <CopyButton text="85749621" />
             </div>
           </div>
 
-          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-5 h-16">
-            <span className="text-2xl font-bold text-foreground">{totalBranches}</span>
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 sm:px-5 h-16">
+            <span className="text-xl sm:text-2xl font-bold text-foreground">{totalBranches}</span>
             <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Sucursales</span>
           </div>
           
-          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-5 h-16">
-            <span className="text-2xl font-bold text-foreground">{totalDevices}</span>
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 sm:px-5 h-16">
+            <span className="text-xl sm:text-2xl font-bold text-foreground">{totalDevices}</span>
             <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Dispositivos</span>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 max-w-md">
+      <div className="space-y-3">
+        {/* Search row - full width */}
+        <div className="relative w-full">
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por sucursal, ID, nombre de TV..."
-            className="pl-8"
+            className="pl-8 w-full"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={filterBranch} onValueChange={setFilterBranch}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Sucursal" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas las sucursales</SelectItem>
-            {SUCURSALES.map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
 
-        <Button onClick={openCreate} className="ml-auto bg-primary hover:bg-primary/90 text-primary-foreground">
-          <Plus className="size-4" />
-          Nuevo dispositivo
-        </Button>
+        {/* Filter and New device button row */}
+        <div className="flex items-center gap-3">
+          <Select value={filterBranch} onValueChange={setFilterBranch}>
+            <SelectTrigger className="flex-1 min-w-0 sm:w-44 sm:flex-none">
+              <SelectValue placeholder="Sucursal" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las sucursales</SelectItem>
+              {SUCURSALES.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button onClick={openCreate} className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 w-fit">
+            <Plus className="size-4 mr-1.5" />
+            Nuevo dispositivo
+          </Button>
+        </div>
       </div>
 
       {/* Grid */}

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { 
-  Plus, Search, Trash2, Copy, Pin, FileText 
+  Plus, Search, Trash2, Copy, Pin, FileText, ArrowLeft 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,7 @@ export function NotesPage() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<'list' | 'editor'>('list');
   
   // Drag and Drop state
   const [draggedNoteId, setDraggedNoteId] = useState<string | null>(null);
@@ -170,6 +171,7 @@ export function NotesPage() {
       isPinned: false
     });
     setActiveNoteId(newNoteId);
+    setMobileView('editor');
     toast.success("Nota creada");
   };
 
@@ -221,7 +223,7 @@ export function NotesPage() {
   return (
     <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden bg-background">
       {/* Panel Izquierdo: Lista de Notas */}
-      <div className="w-80 border-r flex flex-col bg-muted/10 shrink-0">
+      <div className={`w-full md:w-80 border-r flex-col bg-muted/10 shrink-0 ${mobileView === 'editor' ? 'hidden md:flex' : 'flex'}`}>
         {/* Buscador & Nuevo */}
         <div className="p-4 space-y-3">
           <div className="flex items-center gap-2">
@@ -275,7 +277,7 @@ export function NotesPage() {
               {pinnedNotes.map(note => (
                 <div
                   key={note.id}
-                  onClick={() => setActiveNoteId(note.id)}
+                  onClick={() => { setActiveNoteId(note.id); setMobileView('editor'); }}
                   draggable
                   onDragStart={(e) => handleDragStart(e, note.id)}
                   onDragOver={handleDragOver}
@@ -327,7 +329,7 @@ export function NotesPage() {
             {normalNotes.map(note => (
               <div
                 key={note.id}
-                onClick={() => setActiveNoteId(note.id)}
+                onClick={() => { setActiveNoteId(note.id); setMobileView('editor'); }}
                 draggable
                 onDragStart={(e) => handleDragStart(e, note.id)}
                 onDragOver={handleDragOver}
@@ -378,13 +380,16 @@ export function NotesPage() {
       </div>
 
       {/* Panel Derecho: Editor Activo */}
-      <div className="flex-1 flex flex-col bg-background relative overflow-y-auto">
+      <div className={`flex-1 flex-col bg-background relative overflow-y-auto ${mobileView === 'list' ? 'hidden md:flex' : 'flex'}`}>
         {activeNote ? (
-          <div className="flex-1 flex flex-col p-6 space-y-4 h-full min-h-0">
+          <div className="flex-1 flex flex-col p-4 md:p-6 space-y-4 h-full min-h-0">
             {/* Header del editor */}
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase">Categoría:</span>
+                <Button variant="ghost" size="sm" className="md:hidden text-xs px-2 h-8" onClick={() => setMobileView('list')}>
+                  <ArrowLeft className="size-3.5 mr-1" /> Lista
+                </Button>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase hidden sm:inline">Categoría:</span>
                 <select
                   value={category}
                   onChange={(e) => handleCategoryChange(e.target.value)}

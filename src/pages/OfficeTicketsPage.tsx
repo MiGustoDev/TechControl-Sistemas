@@ -315,7 +315,7 @@ export function OfficeTicketsPage() {
       </div>
 
       {/* Mini Stats Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <Card className="bg-gradient-to-br from-indigo-500/5 to-indigo-500/10 border-indigo-500/20 shadow-sm">
           <CardContent className="flex items-center gap-4 py-4 px-5">
             <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-500">
@@ -345,7 +345,7 @@ export function OfficeTicketsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-500/5 to-amber-500/15 border-amber-500/20 shadow-sm">
+        <Card className="col-span-2 sm:col-span-1 bg-gradient-to-br from-amber-500/5 to-amber-500/15 border-amber-500/20 shadow-sm">
           <CardContent className="flex items-center gap-4 py-4 px-5">
             <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
               <Trophy className="size-6" />
@@ -515,7 +515,7 @@ export function OfficeTicketsPage() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl shadow-md font-bold transition-all gap-2 mt-2">
+                <Button type="submit" className="w-fit px-6 h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl shadow-md font-bold transition-all gap-2 mt-2">
                   <Plus className="size-4" />
                   Registrar Tarea de Oficina
                 </Button>
