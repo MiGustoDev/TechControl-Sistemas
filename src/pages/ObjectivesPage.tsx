@@ -1,7 +1,11 @@
 import { useState, useMemo } from "react";
 import { 
   Plus, Search, Calendar, User, CheckSquare, ListTodo, Edit2, Trash2, 
+<<<<<<< HEAD
   ChevronDown, ChevronUp, Flag, CheckSquare2, Square, Info
+=======
+  ChevronDown, ChevronUp, Flag, CheckSquare2, Square, Info, Check
+>>>>>>> 41f6a274933106d2c5d9d4ad9df042a6811ef3d1
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +31,32 @@ const getPriorityBadge = (priority: string) => {
     default:
       return "bg-slate-500/10 text-slate-500 border-slate-500/20";
   }
+};
+
+// Card border color matching priority badge
+const getPriorityBorderColor = (priority: string) => {
+  switch (priority) {
+    case "critical": return "border-l-rose-500";
+    case "high":     return "border-l-amber-500";
+    case "medium":   return "border-l-blue-500";
+    default:         return "border-l-slate-500";
+  }
+};
+
+// Progress bar color: 0-40% amber, 41-75% blue, 76-99% teal, 100% emerald
+const getProgressBarColor = (value: number): string => {
+  if (value >= 100) return "[&>div]:bg-emerald-500";
+  if (value >= 76)  return "[&>div]:bg-teal-500";
+  if (value >= 41)  return "[&>div]:bg-blue-500";
+  return "[&>div]:bg-amber-500";
+};
+
+// Format ISO date YYYY-MM-DD → DD-MM-YYYY
+const formatDate = (dateStr?: string): string => {
+  if (!dateStr) return "?";
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return dateStr;
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
 };
 
 const getPriorityLabel = (priority: string) => {
@@ -83,6 +113,7 @@ export function ObjectivesPage() {
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "critical">("medium");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [noEndDate, setNoEndDate] = useState(false);
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   
@@ -109,6 +140,7 @@ export function ObjectivesPage() {
     setPriority("medium");
     setStartDate(new Date().toISOString().split("T")[0]);
     setEndDate("");
+    setNoEndDate(false);
     setAssignedTo([]);
     setNotes("");
     setFormTasks([]);
@@ -125,6 +157,7 @@ export function ObjectivesPage() {
     setPriority(obj.priority);
     setStartDate(obj.startDate || "");
     setEndDate(obj.endDate || "");
+    setNoEndDate(!obj.endDate);
     setAssignedTo(obj.assignedTo || []);
     setNotes(obj.notes || "");
     setFormTasks(obj.tasks || []);
@@ -152,7 +185,12 @@ export function ObjectivesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      toast.error("Por favor, ingresá el título del proyecto");
+      toast.error("Por favor, ingresá el título del objetivo");
+      return;
+    }
+
+    if (!assignedTo || assignedTo.length === 0) {
+      toast.error("Por favor, seleccioná al menos un responsable del equipo");
       return;
     }
 
@@ -187,25 +225,25 @@ export function ObjectivesPage() {
     try {
       if (editingObjective) {
         await updateObjective(editingObjective.id, payload);
-        toast.success("Proyecto actualizado correctamente");
+        toast.success("Objetivo actualizado correctamente");
       } else {
         await addObjective(payload);
-        toast.success("Proyecto creado correctamente");
+        toast.success("Objetivo creado correctamente");
       }
       setIsDialogOpen(false);
     } catch (err) {
-      toast.error("Hubo un error al guardar el proyecto");
+      toast.error("Hubo un error al guardar el objetivo");
     }
   };
 
   // Delete handler
   const handleDelete = async (id: string) => {
-    if (window.confirm("¿Estás seguro de que querés eliminar este proyecto?")) {
+    if (window.confirm("¿Estás seguro de que querés eliminar este objetivo?")) {
       try {
         await deleteObjective(id);
-        toast.success("Proyecto eliminado");
+        toast.success("Objetivo eliminado");
       } catch (err) {
-        toast.error("Error al eliminar el proyecto");
+        toast.error("Error al eliminar el objetivo");
       }
     }
   };
@@ -247,10 +285,10 @@ export function ObjectivesPage() {
     });
   }, [objectives, search, statusFilter, priorityFilter]);
 
-  // Compute days remaining
+  // Compute days remaining. Returns urgent=true when < 7 days (for pulse animation)
   const getDaysRemainingLabel = (endDateStr?: string, status?: string) => {
-    if (status === "completed") return { text: "Completado", color: "text-emerald-500" };
-    if (!endDateStr) return { text: "Sin fecha límite", color: "text-muted-foreground" };
+    if (status === "completed") return { text: "Completado", color: "text-emerald-500", urgent: false };
+    if (!endDateStr) return { text: "Sin fecha límite", color: "text-muted-foreground", urgent: false };
     
     const end = new Date(endDateStr + "T12:00:00");
     const today = new Date();
@@ -260,13 +298,13 @@ export function ObjectivesPage() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) {
-      return { text: `Vencido por ${Math.abs(diffDays)} d.`, color: "text-rose-500 font-bold" };
+      return { text: `Vencido por ${Math.abs(diffDays)} d.`, color: "text-rose-500 font-bold", urgent: true };
     } else if (diffDays === 0) {
-      return { text: "Vence hoy", color: "text-amber-500 font-bold" };
-    } else if (diffDays === 1) {
-      return { text: "Vence mañana", color: "text-amber-500 font-medium" };
+      return { text: "Vence hoy", color: "text-amber-500 font-bold", urgent: true };
+    } else if (diffDays <= 7) {
+      return { text: `${diffDays} día${diffDays === 1 ? "" : "s"} restante${diffDays === 1 ? "" : "s"}`, color: "text-amber-500 font-semibold", urgent: true };
     } else {
-      return { text: `${diffDays} días restantes`, color: "text-muted-foreground" };
+      return { text: `${diffDays} días restantes`, color: "text-muted-foreground", urgent: false };
     }
   };
 
@@ -276,14 +314,14 @@ export function ObjectivesPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
-            Objetivos y Proyectos
+            Objetivos
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Seguimiento de proyectos y metas del equipo de Sistemas IT.
+            Gestión, seguimiento y control de objetivos y metas del equipo de Sistemas IT.
           </p>
         </div>
         <Button onClick={handleOpenCreate} className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shrink-0 shadow-md">
-          <Plus className="mr-2 size-4" /> Nuevo Proyecto
+          <Plus className="mr-2 size-4" /> Nuevo objetivo
         </Button>
       </div>
 
@@ -344,41 +382,41 @@ export function ObjectivesPage() {
             const daysInfo = getDaysRemainingLabel(obj.endDate, obj.status);
             
             return (
-              <Card key={obj.id} className="flex flex-col h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500">
+              <Card key={obj.id} className={`flex flex-col h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-l-4 ${getPriorityBorderColor(obj.priority)}`}>
                 <CardHeader className="pb-3 relative">
-                  <div className="flex justify-between items-start gap-2 mb-2">
+                  {/* Priority badge bottom-left, status + actions top-right */}
+                  <div className="flex items-center justify-between mb-2">
                     <Badge variant="outline" className={getPriorityBadge(obj.priority)}>
                       {getPriorityLabel(obj.priority)}
                     </Badge>
-                    <Badge variant="outline" className={getStatusBadge(obj.status)}>
-                      {getStatusLabel(obj.status)}
-                    </Badge>
+                    {/* Status badge + action buttons in same row, top-right */}
+                    <div className="flex items-center gap-1">
+                      <Badge variant="outline" className={`${getStatusBadge(obj.status)} text-[10px] px-2 py-0.5`}>
+                        {getStatusLabel(obj.status)}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 rounded-full text-muted-foreground hover:text-foreground"
+                        onClick={() => handleOpenEdit(obj)}
+                        title="Editar"
+                      >
+                        <Edit2 className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 rounded-full text-muted-foreground hover:text-rose-500"
+                        onClick={() => handleDelete(obj.id)}
+                        title="Eliminar"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                  <CardTitle className="line-clamp-2 text-lg font-bold text-foreground pr-10">
+                  <CardTitle className="line-clamp-2 text-lg font-bold text-foreground">
                     {obj.title}
                   </CardTitle>
-                  
-                  {/* Actions Dropdown / Group */}
-                  <div className="absolute right-4 top-4 flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-7 rounded-full text-muted-foreground hover:text-foreground"
-                      onClick={() => handleOpenEdit(obj)}
-                      title="Editar"
-                    >
-                      <Edit2 className="size-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-7 rounded-full text-muted-foreground hover:text-rose-500"
-                      onClick={() => handleDelete(obj.id)}
-                      title="Eliminar"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </div>
                 </CardHeader>
 
                 <CardContent className="flex-1 flex flex-col pb-4">
@@ -393,12 +431,17 @@ export function ObjectivesPage() {
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-xs font-semibold">
                       <span>Progreso</span>
-                      <span className="text-primary">{obj.progress}%</span>
+                      <span className={`${
+                        obj.progress >= 100 ? "text-emerald-500" :
+                        obj.progress >= 76  ? "text-teal-500" :
+                        obj.progress >= 41  ? "text-blue-500" :
+                        "text-amber-500"
+                      }`}>{obj.progress}%</span>
                     </div>
-                    <Progress value={obj.progress} className="h-2 bg-muted-foreground/10" />
+                    <Progress value={obj.progress} className={`h-2 bg-muted-foreground/10 ${getProgressBarColor(obj.progress)}`} />
                   </div>
 
-                  {/* Tasks List Collapsible */}
+                  {/* Tasks List / Requerimientos */}
                   {obj.tasks && obj.tasks.length > 0 && (
                     <div className="mb-4">
                       <Button
@@ -409,13 +452,13 @@ export function ObjectivesPage() {
                       >
                         <span className="flex items-center gap-1.5 text-muted-foreground">
                           <CheckSquare className="size-3.5 text-emerald-500" />
-                          Tareas ({obj.tasks.filter(t => t.completed).length}/{obj.tasks.length})
+                          Requerimientos ({obj.tasks.filter(t => t.completed).length}/{obj.tasks.length})
                         </span>
                         {isExpanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
                       </Button>
                       
-                      {isExpanded && (
-                        <div className="mt-2 space-y-1.5 pl-2 pr-1 max-h-48 overflow-y-auto">
+                      {(!expandedCards.hasOwnProperty(obj.id) || isExpanded) && (
+                        <div className="mt-2 space-y-1.5 pl-2 pr-1 max-h-48 overflow-y-auto no-scrollbar">
                           {obj.tasks.map((task) => (
                             <div 
                               key={task.id}
@@ -431,6 +474,9 @@ export function ObjectivesPage() {
                               </span>
                               <span className={`leading-normal ${task.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
                                 {task.title}
+                                {!task.completed && (
+                                  <span className="ml-0.5 text-amber-500 font-bold text-[11px]" title="Requerimiento pendiente">!</span>
+                                )}
                               </span>
                             </div>
                           ))}
@@ -446,19 +492,24 @@ export function ObjectivesPage() {
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1">
                         <Calendar className="size-3.5 text-teal-600" />
-                        {obj.startDate || "?"} al {obj.endDate || "?"}
+                        {formatDate(obj.startDate)} al {formatDate(obj.endDate)}
                       </span>
-                      <span className={daysInfo.color}>{daysInfo.text}</span>
+                      <span className={`${daysInfo.color}${daysInfo.urgent ? " pulse-soft" : ""}`}>{daysInfo.text}</span>
                     </div>
 
-                    {/* Assigned Team */}
+                    {/* Assigned Team – same emerald pill style as the form */}
                     {obj.assignedTo && obj.assignedTo.length > 0 && (
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <User className="size-3.5 text-sky-600 shrink-0" />
+                        <User className="size-3.5 text-emerald-500 shrink-0" />
                         <span className="font-medium shrink-0">Responsables:</span>
-                        <div className="flex gap-1 flex-wrap">
+                        <div className="flex gap-1.5 flex-wrap">
                           {obj.assignedTo.map((name, i) => (
-                            <Badge key={i} variant="secondary" className="px-1.5 py-0 text-[10px] bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300">
+                            <Badge
+                              key={i}
+                              variant="default"
+                              className="px-2.5 py-0.5 text-[10px] rounded-full bg-emerald-600 text-white font-semibold flex items-center gap-1 shadow-sm"
+                            >
+                              <Check className="size-2.5" />
                               {name}
                             </Badge>
                           ))}
@@ -483,22 +534,24 @@ export function ObjectivesPage() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto no-scrollbar">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
-              {editingObjective ? "Editar Proyecto" : "Nuevo Proyecto / Objetivo"}
+              {editingObjective ? "Editar Objetivo" : "Nuevo Objetivo"}
             </DialogTitle>
             <DialogDescription>
-              Completá los detalles para coordinar las metas del equipo de sistemas.
+              Completá los datos del objetivo, fechas de inicio y fin, y sus requerimientos.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 py-2">
             {/* Title */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-muted-foreground uppercase">Título</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase">
+                Título <span className="text-rose-500">*</span>
+              </label>
               <Input
-                placeholder="Nombre del proyecto o meta"
+                placeholder="Título del objetivo"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -509,10 +562,19 @@ export function ObjectivesPage() {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-muted-foreground uppercase">Descripción</label>
               <Textarea
-                placeholder="Explicación breve del proyecto..."
-                rows={3}
+                placeholder="Descripción breve del objetivo..."
+                rows={1}
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
+                onFocus={(e) => {
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
+                className="resize-none overflow-hidden min-h-[38px] transition-none py-2"
               />
             </div>
 
@@ -557,64 +619,80 @@ export function ObjectivesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground uppercase">Fecha Límite</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase">Fecha Fin</label>
                 <Input
                   type="date"
                   value={endDate}
+                  disabled={noEndDate}
                   onChange={(e) => setEndDate(e.target.value)}
+                  className={noEndDate ? "opacity-40 cursor-not-allowed" : ""}
                 />
+                {/* Sin fecha límite checkbox */}
+                <label className="flex items-center gap-2 cursor-pointer mt-1 select-none group w-fit">
+                  <input
+                    type="checkbox"
+                    checked={noEndDate}
+                    onChange={(e) => {
+                      setNoEndDate(e.target.checked);
+                      if (e.target.checked) setEndDate("");
+                    }}
+                    className="size-3.5 rounded accent-emerald-600 cursor-pointer"
+                  />
+                  <span className="text-[11px] text-muted-foreground group-hover:text-foreground transition-colors">
+                    Sin fecha límite
+                  </span>
+                </label>
               </div>
             </div>
 
-            {/* Assigned to */}
+            {/* Assigned to (Required Badges / Tags) */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-muted-foreground uppercase">Responsables del Equipo</label>
-              <div className="flex gap-4 p-2.5 rounded-md border border-input bg-muted/10 flex-wrap">
+              <label className="text-xs font-bold text-muted-foreground uppercase">
+                Responsables del Equipo <span className="text-rose-500">*</span>
+              </label>
+              <div className="flex gap-2 flex-wrap pt-1">
                 {systemsUsers.map((u) => {
                   const isAssigned = assignedTo.includes(u.fullName);
                   return (
-                    <label key={u.id} className="flex items-center gap-2 text-xs font-medium cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isAssigned}
-                        onChange={() => {
-                          if (isAssigned) {
-                            setAssignedTo(prev => prev.filter(name => name !== u.fullName));
-                          } else {
-                            setAssignedTo(prev => [...prev, u.fullName]);
-                          }
-                        }}
-                        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                      />
+                    <Badge
+                      key={u.id}
+                      variant={isAssigned ? "default" : "outline"}
+                      className={`cursor-pointer px-3 py-1.5 text-xs transition-all flex items-center gap-1.5 rounded-full select-none ${
+                        isAssigned 
+                          ? "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm border-emerald-600" 
+                          : "hover:bg-muted/80 text-muted-foreground border-input"
+                      }`}
+                      onClick={() => {
+                        if (isAssigned) {
+                          setAssignedTo(prev => prev.filter(name => name !== u.fullName));
+                        } else {
+                          setAssignedTo(prev => [...prev, u.fullName]);
+                        }
+                      }}
+                    >
+                      {isAssigned && <Check className="size-3.5" />}
                       {u.fullName}
-                    </label>
+                    </Badge>
                   );
                 })}
               </div>
             </div>
 
-            {/* Checklist Tasks */}
+            {/* Checklist Tasks / Requerimientos (No checkboxes in modal) */}
             <div className="space-y-2 border-t border-border pt-3">
               <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
                 <Flag className="size-3.5 text-emerald-500" />
-                Sub-Tareas / Checklist ({formTasks.length})
+                Requerimientos ({formTasks.length})
               </label>
               
-              {/* Task list inside modal */}
+              {/* Requirement items list without checkboxes inside modal */}
               {formTasks.length > 0 && (
-                <div className="space-y-1.5 max-h-36 overflow-y-auto p-1.5 rounded-md border border-input bg-muted/20">
+                <div className="space-y-1.5 max-h-36 overflow-y-auto no-scrollbar p-1.5 rounded-md border border-input bg-muted/20">
                   {formTasks.map((t) => (
                     <div key={t.id} className="flex items-center justify-between gap-2 p-1.5 rounded hover:bg-muted/40 text-xs">
                       <div className="flex items-center gap-2 min-w-0">
-                        <input
-                          type="checkbox"
-                          checked={t.completed}
-                          onChange={() => {
-                            setFormTasks(prev => prev.map(item => item.id === t.id ? { ...item, completed: !item.completed } : item));
-                          }}
-                          className="rounded text-emerald-600"
-                        />
-                        <span className={`truncate ${t.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                        <span className="text-emerald-500 font-bold text-[12px] shrink-0">•</span>
+                        <span className="truncate text-foreground font-medium">
                           {t.title}
                         </span>
                       </div>
@@ -635,7 +713,7 @@ export function ObjectivesPage() {
               {/* Add task row */}
               <div className="flex gap-2">
                 <Input
-                  placeholder="Agregar una sub-tarea..."
+                  placeholder="Agregar un requerimiento..."
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
                   onKeyDown={(e) => {
@@ -658,22 +736,12 @@ export function ObjectivesPage() {
               </div>
             </div>
 
-            {/* Notes */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-muted-foreground uppercase">Comentarios / Notas</label>
-              <Input
-                placeholder="Observaciones o notas adicionales"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </div>
-
-            <DialogFooter className="pt-2 border-t border-border mt-4">
+            <DialogFooter className="pt-2 border-t border-border mt-4 flex gap-2 sm:justify-end">
+              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow">
+                {editingObjective ? "Guardar Cambios" : "Guardar"}
+              </Button>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
-              </Button>
-              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow">
-                {editingObjective ? "Guardar Cambios" : "Crear Proyecto"}
               </Button>
             </DialogFooter>
           </form>
