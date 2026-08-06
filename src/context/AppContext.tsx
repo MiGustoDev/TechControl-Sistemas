@@ -15,6 +15,7 @@ import type {
   OfficeTicket,
   DatabaseCredential,
   Objective,
+  SpecialTask,
 } from "../types";
 import {
   stockItems as initialItems,
@@ -154,6 +155,12 @@ interface AppContextValue {
   updateObjective: (id: string, data: Partial<Objective>) => Promise<void>;
   deleteObjective: (id: string) => Promise<void>;
 
+  specialTasks: SpecialTask[];
+  addSpecialTask: (specialTask: Omit<SpecialTask, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  updateSpecialTask: (id: string, data: Partial<SpecialTask>) => Promise<void>;
+  deleteSpecialTask: (id: string) => Promise<void>;
+
+
   // Holiday and Turn Overrides
   holidayAssignments: Record<string, string>;
   turnOverrides: Record<string, "facundo" | "ramiro">;
@@ -188,6 +195,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [officeTickets, setOfficeTickets] = useState<OfficeTicket[]>([]);
   const [databaseCredentials, setDatabaseCredentials] = useState<DatabaseCredential[]>([]);
   const [objectives, setObjectives] = useState<Objective[]>([]);
+  const [specialTasks, setSpecialTasks] = useState<SpecialTask[]>([]);
   const [currentPage, setCurrentPage] = useState("guardias");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -240,7 +248,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         { data: sysNotes },
         { data: dbTickets, error: ticketsError },
         { data: dbCreds, error: credsError },
-        { data: dbObjectives, error: objectivesError }
+        { data: dbObjectives, error: objectivesError },
+        { data: dbSpecialTasks, error: specialTasksError }
       ] = await Promise.all([
         supabase.from("stock_items").select("*"),
         supabase.from("printers").select("*"),
@@ -253,7 +262,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         supabase.from("system_notes").select("*"),
         supabase.from("office_tickets").select("*"),
         supabase.from("database_credentials").select("*"),
-        supabase.from("objectives").select("*")
+        supabase.from("objectives").select("*"),
+        supabase.from("special_tasks").select("*")
       ]);
 
       if (items) setStockItems(items.map(i => ({
@@ -576,6 +586,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setObjectives([]);
         }
       }
+
+      if (dbSpecialTasks && !specialTasksError) {
+        const mappedSpecialTasks = dbSpecialTasks.map(o => ({
+          id: o.id,
+          title: o.title,
+          description: o.description || "",
+          category: o.category,
+          status: o.status,
+          priority: o.priority,
+          startDate: o.start_date || undefined,
+          endDate: o.end_date || undefined,
+          progress: o.progress ?? 0,
+          assignedTo: Array.isArray(o.assigned_to) ? o.assigned_to : [],
+          tasks: Array.isArray(o.tasks) ? o.tasks : [],
+          notes: o.notes || undefined,
+          createdAt: o.created_at,
+          updatedAt: o.updated_at
+        }));
+        setSpecialTasks(mappedSpecialTasks);
+        localStorage.setItem("techcontrol_special_tasks", JSON.stringify(mappedSpecialTasks));
+      } else {
+        const saved = localStorage.getItem("techcontrol_special_tasks");
+        if (saved) {
+          try {
+            setSpecialTasks(JSON.parse(saved));
+          } catch (e) {
+            setSpecialTasks([]);
+          }
+        } else {
+          setSpecialTasks([]);
+        }
+      }
+
 
       // Fetch guardias separately to handle missing table gracefully
       await syncGuardiasFromSupabase(dbUsers.length > 0 ? dbUsers : fallbackUsers);
@@ -1986,6 +2029,99 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const addSpecialTask = useCallback(async (specialTask: Omit<SpecialTask, "id" | "createdAt" | "updatedAt">) => {
+    const id = genId();
+    const createdAt = now();
+    const newSpecialTask: SpecialTask = {
+      ...specialTask,
+      id,
+      createdAt,
+      updatedAt: createdAt
+    };
+
+    setSpecialTasks(prev => {
+      const next = [newSpecialTask, ...prev];
+      localStorage.setItem("techcontrol_special_tasks", JSON.stringify(next));
+      return next;
+    });
+
+    const { error } = await supabase.from("special_tasks").insert({
+      id: newSpecialTask.id,
+      title: newSpecialTask.title,
+      description: newSpecialTask.description || null,
+      category: newSpecialTask.category,
+      status: newSpecialTask.status,
+      priority: newSpecialTask.priority,
+      start_date: newSpecialTask.startDate || null,
+      end_date: newSpecialTask.endDate || null,
+      progress: newSpecialTask.progress,
+      assigned_to: newSpecialTask.assignedTo || [],
+      tasks: newSpecialTask.tasks || [],
+      notes: newSpecialTask.notes || null,
+      created_at: newSpecialTask.createdAt,
+      updated_at: newSpecialTask.updatedAt
+    });
+
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla special_tasks aún no existe en Supabase. Se guardó localmente.");
+      } else {
+        console.error("Error adding special task to Supabase:", error);
+        toast.error("Error al sincronizar tarea especial: " + error.message);
+      }
+    }
+  }, []);
+
+  const updateSpecialTask = useCallback(async (id: string, data: Partial<SpecialTask>) => {
+    const updatedAt = now();
+    setSpecialTasks(prev => {
+      const next = prev.map(o => o.id === id ? { ...o, ...data, updatedAt } : o);
+      localStorage.setItem("techcontrol_special_tasks", JSON.stringify(next));
+      return next;
+    });
+
+    const dbPayload: Record<string, any> = { updated_at: updatedAt };
+    if (data.title !== undefined) dbPayload.title = data.title;
+    if (data.description !== undefined) dbPayload.description = data.description;
+    if (data.category !== undefined) dbPayload.category = data.category;
+    if (data.status !== undefined) dbPayload.status = data.status;
+    if (data.priority !== undefined) dbPayload.priority = data.priority;
+    if (data.startDate !== undefined) dbPayload.start_date = data.startDate;
+    if (data.endDate !== undefined) dbPayload.end_date = data.endDate;
+    if (data.progress !== undefined) dbPayload.progress = data.progress;
+    if (data.assignedTo !== undefined) dbPayload.assigned_to = data.assignedTo;
+    if (data.tasks !== undefined) dbPayload.tasks = data.tasks;
+    if (data.notes !== undefined) dbPayload.notes = data.notes;
+
+    const { error } = await supabase.from("special_tasks").update(dbPayload).eq("id", id);
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla special_tasks aún no existe en Supabase.");
+      } else {
+        console.error("Error updating special task in Supabase:", error);
+        toast.error("Error al actualizar tarea especial: " + error.message);
+      }
+    }
+  }, []);
+
+  const deleteSpecialTask = useCallback(async (id: string) => {
+    setSpecialTasks(prev => {
+      const next = prev.filter(o => o.id !== id);
+      localStorage.setItem("techcontrol_special_tasks", JSON.stringify(next));
+      return next;
+    });
+
+    const { error } = await supabase.from("special_tasks").delete().eq("id", id);
+    if (error) {
+      if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+        console.warn("La tabla special_tasks aún no existe en Supabase.");
+      } else {
+        console.error("Error deleting special task from Supabase:", error);
+        toast.error("Error al eliminar tarea especial en base de datos");
+      }
+    }
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -2042,6 +2178,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addObjective,
         updateObjective,
         deleteObjective,
+        specialTasks,
+        addSpecialTask,
+        updateSpecialTask,
+        deleteSpecialTask,
         holidayAssignments,
         turnOverrides,
         setHolidayAssignment,

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { 
   Printer, Laptop, ShoppingCart, TriangleAlert as AlertTriangle, 
   Monitor, Tv, ChevronRight, Package, Clock, Users, Calendar, Database,
-  Ticket, Info, Target
+  Ticket, Info, Target, Sparkles
 } from "lucide-react";
 import {
   Sidebar,
@@ -39,7 +39,8 @@ export function AppSidebar() {
     notes,
     officeTickets,
     databaseCredentials,
-    objectives
+    objectives,
+    specialTasks
   } = useApp();
   const { state, isMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -64,6 +65,7 @@ export function AppSidebar() {
   const totalOfficeTickets = officeTickets?.length || 0;
   const totalDatabaseCredentials = databaseCredentials?.length || 0;
   const totalActiveObjectives = objectives?.filter(o => o.status === "in-progress" || o.status === "pending").length || 0;
+  const totalActiveSpecialTasks = specialTasks?.filter(o => o.status === "in-progress" || o.status === "pending").length || 0;
 
   const [isStockOpen, setIsStockOpen] = useState(() => {
     return ["notebooks", "printers", "monitors"].includes(currentPage);
@@ -138,6 +140,24 @@ export function AppSidebar() {
                   )}
                 </SidebarMenuItem>
               )}
+
+              {/* Tareas Especiales */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "special-tasks"}
+                  onClick={() => handlePageChange("special-tasks")}
+                  tooltip="Tareas Especiales"
+                >
+                  <Sparkles className="size-4 text-orange-500" />
+                  <span>Tareas Especiales</span>
+                </SidebarMenuButton>
+                {!isCollapsed && totalActiveSpecialTasks > 0 && (
+                  <SidebarMenuBadge className="bg-orange-500/15 font-bold text-orange-700 dark:text-orange-400">
+                    {totalActiveSpecialTasks}
+                  </SidebarMenuBadge>
+                )}
+              </SidebarMenuItem>
+
 
               {/* Guardias IT — pantalla principal */}
               <SidebarMenuItem>

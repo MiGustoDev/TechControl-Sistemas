@@ -282,4 +282,24 @@ export interface Objective {
   updatedAt: string;
 }
 
+export type SpecialTaskCategory = "promotion" | "event" | "special-day" | "campaign" | "other";
+
+export interface SpecialTask {
+  id: string;
+  title: string;
+  description?: string;
+  category: SpecialTaskCategory;
+  status: "pending" | "in-progress" | "completed" | "on-hold";
+  priority: "low" | "medium" | "high" | "critical";
+  startDate?: string;
+  endDate?: string;
+  progress: number;
+  assignedTo?: string[];
+  tasks?: ProjectTask[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+
 

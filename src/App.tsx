@@ -17,6 +17,7 @@ import { NotesPage } from "@/pages/NotesPage";
 import { OfficeTicketsPage } from "@/pages/OfficeTicketsPage";
 import { DatabasesPage } from "@/pages/DatabasesPage";
 import { ObjectivesPage } from "@/pages/ObjectivesPage";
+import { SpecialTasksPage } from "@/pages/SpecialTasksPage";
 
 function AppContent() {
   const { currentPage } = useApp();
@@ -36,6 +37,7 @@ function AppContent() {
       case "databases": return <DatabasesPage />;
       case "office-tickets": return <OfficeTicketsPage />;
       case "objectives": return <ObjectivesPage />;
+      case "special-tasks": return <SpecialTasksPage />;
       case "guardias":
       default:
         return <GuardiasPage />;
