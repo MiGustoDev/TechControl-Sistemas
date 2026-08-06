@@ -179,7 +179,7 @@ export function MovementsPage() {
           action={<Button onClick={() => setDialogOpen(true)}><Plus className="size-4" />Registrar movimiento</Button>}
         />
       ) : (
-        <div className="rounded-lg border bg-card">
+        <div className="rounded-lg border bg-card overflow-x-auto w-full">
           <Table>
             <TableHeader>
               <TableRow>

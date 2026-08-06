@@ -41,8 +41,15 @@ export function AppSidebar() {
     databaseCredentials,
     objectives
   } = useApp();
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
+
+  const handlePageChange = (page: string) => {
+    setCurrentPage(page);
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   const criticalStock = stockItems.filter((i) => i.status === "low" || i.status === "out").length;
   
@@ -74,7 +81,7 @@ export function AppSidebar() {
       <SidebarHeader>
         <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between gap-1"} w-full`}>
           <div 
-            onClick={() => setCurrentPage("guardias")}
+            onClick={() => handlePageChange("guardias")}
             className={`flex items-center cursor-pointer hover:bg-muted/50 p-1.5 rounded-lg transition-colors flex-1 min-w-0 ${
               isCollapsed ? "justify-center px-0" : "gap-2.5 px-2"
             } py-2`}
@@ -97,7 +104,7 @@ export function AppSidebar() {
               className="size-8 rounded-lg text-muted-foreground hover:text-foreground shrink-0 hover:bg-muted/50"
               onClick={(e) => {
                 e.stopPropagation();
-                setCurrentPage("guardias");
+                handlePageChange("guardias");
                 setGuardiasViewMode("calendar");
               }}
               title="Abrir Calendario de Guardias"
@@ -118,7 +125,7 @@ export function AppSidebar() {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={currentPage === "objectives"}
-                    onClick={() => setCurrentPage("objectives")}
+                    onClick={() => handlePageChange("objectives")}
                     tooltip="Objetivos"
                   >
                     <Target className="size-4" />
@@ -136,7 +143,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={currentPage === "guardias"}
-                  onClick={() => setCurrentPage("guardias")}
+                  onClick={() => handlePageChange("guardias")}
                   tooltip="Guardias IT"
                 >
                   <Clock className="size-4" />
@@ -169,7 +176,7 @@ export function AppSidebar() {
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           isActive={currentPage === "notebooks"}
-                          onClick={() => setCurrentPage("notebooks")}
+                          onClick={() => handlePageChange("notebooks")}
                           tooltip="Equipos"
                           className="h-8 text-xs"
                         >
@@ -186,7 +193,7 @@ export function AppSidebar() {
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           isActive={currentPage === "printers"}
-                          onClick={() => setCurrentPage("printers")}
+                          onClick={() => handlePageChange("printers")}
                           tooltip="Impresoras"
                           className="h-8 text-xs"
                         >
@@ -203,7 +210,7 @@ export function AppSidebar() {
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           isActive={currentPage === "monitors"}
-                          onClick={() => setCurrentPage("monitors")}
+                          onClick={() => handlePageChange("monitors")}
                           tooltip="Monitores"
                           className="h-8 text-xs"
                         >
@@ -225,7 +232,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={currentPage === "office-tickets"}
-                  onClick={() => setCurrentPage("office-tickets")}
+                  onClick={() => handlePageChange("office-tickets")}
                   tooltip="Tareas Oficina"
                 >
                   <Ticket className="size-4" />
@@ -242,7 +249,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={currentPage === "notes"}
-                  onClick={() => setCurrentPage("notes")}
+                  onClick={() => handlePageChange("notes")}
                   tooltip="Información y Notas"
                 >
                   <Info className="size-4" />
@@ -259,7 +266,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={currentPage === "databases"}
-                  onClick={() => setCurrentPage("databases")}
+                  onClick={() => handlePageChange("databases")}
                   tooltip="Bases de Datos"
                 >
                   <Database className="size-4" />
@@ -276,7 +283,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={currentPage === "datalive"}
-                  onClick={() => setCurrentPage("datalive")}
+                  onClick={() => handlePageChange("datalive")}
                   tooltip="Credenciales DataliveTV"
                 >
                   <Tv className="size-4" />
@@ -293,7 +300,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={currentPage === "orders"}
-                  onClick={() => setCurrentPage("orders")}
+                  onClick={() => handlePageChange("orders")}
                   tooltip="Pedidos a Compras"
                 >
                   <ShoppingCart className="size-4" />
@@ -310,7 +317,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={currentPage === "personal"}
-                  onClick={() => setCurrentPage("personal")}
+                  onClick={() => handlePageChange("personal")}
                   tooltip="Personal"
                 >
                   <Users className="size-4" />

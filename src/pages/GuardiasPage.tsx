@@ -1632,7 +1632,7 @@ export function GuardiasPage() {
             Registro, control operativo y visualización de horas de guardia trabajadas fuera de horario.
           </p>
         </div>
-        <div className="flex flex-row items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+        <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-row sm:items-center sm:gap-2 w-full sm:w-auto">
           <Button variant="outline" size="sm" onClick={() => {
             setPdfExportFrom("");
             setPdfExportTo("");
@@ -1767,13 +1767,13 @@ export function GuardiasPage() {
       </div>
 
       {/* View Switcher Tabs */}
-      <div className="flex items-center justify-between gap-2 border-b border-muted-foreground/10 pb-2 mb-2 print:hidden">
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-muted-foreground/10 pb-2 mb-2 print:hidden">
+        <div className="flex gap-1.5 sm:gap-2 w-full sm:w-auto">
           <Button
             variant={viewMode === "list" ? "default" : "outline"}
             size="sm"
             onClick={() => setViewMode("list")}
-            className="font-semibold text-xs h-8"
+            className="font-semibold text-xs h-8 flex-1 sm:flex-initial"
           >
             <FileText className="size-3.5 mr-1.5" />
             Vista de Lista
@@ -1782,7 +1782,7 @@ export function GuardiasPage() {
             variant={viewMode === "calendar" ? "default" : "outline"}
             size="sm"
             onClick={() => setViewMode("calendar")}
-            className="font-semibold text-xs h-8"
+            className="font-semibold text-xs h-8 flex-1 sm:flex-initial"
           >
             <Calendar className="size-3.5 mr-1.5" />
             Vista de Calendario
@@ -1791,7 +1791,7 @@ export function GuardiasPage() {
             variant="outline"
             size="sm"
             onClick={() => window.open(window.location.origin + window.location.pathname + "?fullscreenCalendar=true", "_blank")}
-            className="font-semibold text-xs h-8 px-2.5"
+            className="font-semibold text-xs h-8 px-2.5 shrink-0"
             title="Ver calendario en pestaña aparte"
           >
             <Maximize2 className="size-3.5" />
@@ -1799,7 +1799,7 @@ export function GuardiasPage() {
         </div>
 
         {/* Período activo + Botón Historial */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
           <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground bg-muted/50 border border-muted-foreground/10 rounded-md px-2.5 h-8">
             <Calendar className="size-3 shrink-0 text-primary" />
             Período: <span className="text-foreground font-bold">{activePeriod.label}</span>
@@ -1808,7 +1808,7 @@ export function GuardiasPage() {
             variant="outline"
             size="sm"
             onClick={() => setHistorialOpen(true)}
-            className="font-semibold text-xs h-8 gap-1.5 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+            className="font-semibold text-xs h-8 gap-1.5 border-primary/20 hover:border-primary/40 hover:bg-primary/5 w-full sm:w-auto justify-center sm:justify-start"
             title={`Ver historial completo de guardias (${historicalGuardias.length} guardias archivadas)`}
           >
             <History className="size-3.5 text-primary" />

@@ -223,7 +223,7 @@ export function CatalogPage() {
           action={<Button onClick={openCreate}><Plus className="size-4" />Nuevo ítem</Button>}
         />
       ) : (
-        <div className="rounded-lg border bg-card">
+        <div className="rounded-lg border bg-card overflow-x-auto w-full">
           <Table>
             <TableHeader>
               <TableRow>

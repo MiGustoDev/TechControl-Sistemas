@@ -1,11 +1,7 @@
 import { useState, useMemo } from "react";
 import { 
   Plus, Search, Calendar, User, CheckSquare, ListTodo, Edit2, Trash2, 
-<<<<<<< HEAD
-  ChevronDown, ChevronUp, Flag, CheckSquare2, Square, Info
-=======
   ChevronDown, ChevronUp, Flag, CheckSquare2, Square, Info, Check
->>>>>>> 41f6a274933106d2c5d9d4ad9df042a6811ef3d1
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +14,16 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Helper for priority styling
 const getPriorityBadge = (priority: string) => {
@@ -105,6 +111,7 @@ export function ObjectivesPage() {
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingObjective, setEditingObjective] = useState<any | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Form fields
   const [title, setTitle] = useState("");
@@ -237,14 +244,19 @@ export function ObjectivesPage() {
   };
 
   // Delete handler
-  const handleDelete = async (id: string) => {
-    if (window.confirm("¿Estás seguro de que querés eliminar este objetivo?")) {
-      try {
-        await deleteObjective(id);
-        toast.success("Objetivo eliminado");
-      } catch (err) {
-        toast.error("Error al eliminar el objetivo");
-      }
+  const handleDeleteTrigger = (id: string) => {
+    setDeleteConfirmId(id);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirmId) return;
+    try {
+      await deleteObjective(deleteConfirmId);
+      toast.success("Objetivo eliminado");
+    } catch (err) {
+      toast.error("Error al eliminar el objetivo");
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -407,7 +419,7 @@ export function ObjectivesPage() {
                         variant="ghost"
                         size="icon"
                         className="size-7 rounded-full text-muted-foreground hover:text-rose-500"
-                        onClick={() => handleDelete(obj.id)}
+                        onClick={() => handleDeleteTrigger(obj.id)}
                         title="Eliminar"
                       >
                         <Trash2 className="size-3.5" />
@@ -747,6 +759,32 @@ export function ObjectivesPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation AlertDialog */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+        <AlertDialogContent className="border-destructive/20 max-w-[90vw] sm:max-w-md">
+          <AlertDialogHeader>
+            <div className="flex size-12 items-center justify-center rounded-full bg-rose-500/10 text-rose-500 mx-auto mb-2">
+              <Trash2 className="size-6" />
+            </div>
+            <AlertDialogTitle className="text-center text-base font-bold">
+              ¿Eliminar objetivo?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-sm">
+              Esta acción no se puede deshacer. Se eliminarán permanentemente el objetivo y todos sus requerimientos asociados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:justify-center">
+            <AlertDialogAction
+              className="w-full sm:w-auto bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold"
+              onClick={handleDeleteConfirm}
+            >
+              Eliminar
+            </AlertDialogAction>
+            <AlertDialogCancel className="w-full sm:w-auto mt-0">Cancelar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

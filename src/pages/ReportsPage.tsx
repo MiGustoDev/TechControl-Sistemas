@@ -161,38 +161,40 @@ export function ReportsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead className="text-center">Total</TableHead>
-                  <TableHead className="text-center">Stock bajo</TableHead>
-                  <TableHead className="text-center">Sin stock</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stockByCategory.map(([cat, data]) => (
-                  <TableRow key={cat}>
-                    <TableCell className="font-medium">{cat}</TableCell>
-                    <TableCell className="text-center">{data.total}</TableCell>
-                    <TableCell className="text-center">
-                      {data.low > 0 ? (
-                        <span className="text-amber-600 font-semibold">{data.low}</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {data.out > 0 ? (
-                        <span className="text-rose-600 font-semibold">{data.out}</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
+            <div className="overflow-x-auto w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Categoría</TableHead>
+                    <TableHead className="text-center">Total</TableHead>
+                    <TableHead className="text-center">Stock bajo</TableHead>
+                    <TableHead className="text-center">Sin stock</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {stockByCategory.map(([cat, data]) => (
+                    <TableRow key={cat}>
+                      <TableCell className="font-medium">{cat}</TableCell>
+                      <TableCell className="text-center">{data.total}</TableCell>
+                      <TableCell className="text-center">
+                        {data.low > 0 ? (
+                          <span className="text-amber-600 font-semibold">{data.low}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {data.out > 0 ? (
+                          <span className="text-rose-600 font-semibold">{data.out}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
@@ -278,32 +280,34 @@ export function ReportsPage() {
             {notebooksByUser.length === 0 ? (
               <p className="text-sm text-muted-foreground">Sin asignaciones activas.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Usuario</TableHead>
-                    <TableHead>Área</TableHead>
-                    <TableHead>Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {notebooksByUser.map((n) => (
-                    <TableRow key={n.id}>
-                      <TableCell className="font-mono text-xs">{n.internalCode}</TableCell>
-                      <TableCell className="text-sm">{n.currentAssignment?.userName}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{n.currentAssignment?.area}</TableCell>
-                      <TableCell>
-                        <StatusBadge
-                          label={notebookStatusLabel(n.status)}
-                          colorClass={notebookStatusColor(n.status)}
-                          className="text-[11px]"
-                        />
-                      </TableCell>
+              <div className="overflow-x-auto w-full">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Código</TableHead>
+                      <TableHead>Usuario</TableHead>
+                      <TableHead>Área</TableHead>
+                      <TableHead>Estado</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {notebooksByUser.map((n) => (
+                      <TableRow key={n.id}>
+                        <TableCell className="font-mono text-xs">{n.internalCode}</TableCell>
+                        <TableCell className="text-sm">{n.currentAssignment?.userName}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{n.currentAssignment?.area}</TableCell>
+                        <TableCell>
+                          <StatusBadge
+                            label={notebookStatusLabel(n.status)}
+                            colorClass={notebookStatusColor(n.status)}
+                            className="text-[11px]"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -327,40 +331,42 @@ export function ReportsPage() {
             {lowStockItems.length === 0 ? (
               <p className="text-sm text-muted-foreground">No hay ítems con stock crítico.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Categoría</TableHead>
-                    <TableHead className="text-center">Stock actual</TableHead>
-                    <TableHead className="text-center">Stock mínimo</TableHead>
-                    <TableHead>Ubicación</TableHead>
-                    <TableHead>Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lowStockItems.map((item) => (
-                    <TableRow key={item.id} className={item.status === "out" ? "bg-rose-100/50 dark:bg-rose-950/20" : "bg-amber-100/50 dark:bg-amber-950/20"}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{item.internalCode}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">{categoryLabel(item.category)}</Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span className={`font-bold ${item.currentStock === 0 ? "text-rose-800" : "text-amber-800"}`}>
-                          {item.currentStock}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center text-muted-foreground">{item.minStock}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{item.location}</TableCell>
-                      <TableCell>
-                        <StatusBadge label={itemStatusLabel(item.status)} colorClass={itemStatusColor(item.status)} />
-                      </TableCell>
+              <div className="overflow-x-auto w-full">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Código</TableHead>
+                      <TableHead>Categoría</TableHead>
+                      <TableHead className="text-center">Stock actual</TableHead>
+                      <TableHead className="text-center">Stock mínimo</TableHead>
+                      <TableHead>Ubicación</TableHead>
+                      <TableHead>Estado</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {lowStockItems.map((item) => (
+                      <TableRow key={item.id} className={item.status === "out" ? "bg-rose-100/50 dark:bg-rose-950/20" : "bg-amber-100/50 dark:bg-amber-950/20"}>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">{item.internalCode}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">{categoryLabel(item.category)}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className={`font-bold ${item.currentStock === 0 ? "text-rose-800" : "text-amber-800"}`}>
+                            {item.currentStock}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center text-muted-foreground">{item.minStock}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{item.location}</TableCell>
+                        <TableCell>
+                          <StatusBadge label={itemStatusLabel(item.status)} colorClass={itemStatusColor(item.status)} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -380,32 +386,34 @@ export function ReportsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Ítem</TableHead>
-                  <TableHead>Cant.</TableHead>
-                  <TableHead>Motivo</TableHead>
-                  <TableHead>Usuario</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentMovements.map((mov) => (
-                  <TableRow key={mov.id}>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(mov.date)}</TableCell>
-                    <TableCell>
-                      <StatusBadge label={movementTypeLabel(mov.type)} colorClass={movementTypeColor(mov.type)} />
-                    </TableCell>
-                    <TableCell className="font-medium text-sm">{mov.itemName}</TableCell>
-                    <TableCell className="text-center">{mov.quantity ?? "—"}</TableCell>
-                    <TableCell className="max-w-48 text-sm text-muted-foreground truncate">{mov.reason}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{mov.user}</TableCell>
+            <div className="overflow-x-auto w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Ítem</TableHead>
+                    <TableHead>Cant.</TableHead>
+                    <TableHead>Motivo</TableHead>
+                    <TableHead>Usuario</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {recentMovements.map((mov) => (
+                    <TableRow key={mov.id}>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(mov.date)}</TableCell>
+                      <TableCell>
+                        <StatusBadge label={movementTypeLabel(mov.type)} colorClass={movementTypeColor(mov.type)} />
+                      </TableCell>
+                      <TableCell className="font-medium text-sm">{mov.itemName}</TableCell>
+                      <TableCell className="text-center">{mov.quantity ?? "—"}</TableCell>
+                      <TableCell className="max-w-48 text-sm text-muted-foreground truncate">{mov.reason}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{mov.user}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>

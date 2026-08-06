@@ -33,65 +33,65 @@ function NotebookCard({ notebook, onEdit, onViewDetail }: NotebookCardProps) {
 
   return (
     <Card
-      className={`flex flex-col cursor-pointer transition-shadow hover:shadow-md ${isAlert ? "border-amber-300 dark:border-amber-800" : ""}`}
+      className="flex flex-col cursor-pointer transition-shadow hover:shadow-md min-w-0 w-full overflow-hidden"
       onClick={() => onViewDetail(notebook)}
     >
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className={`flex size-9 items-center justify-center rounded-lg border ${isAlert ? "border-amber-300 bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30" : "bg-muted"}`}>
+        <div className="flex items-start justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className={`flex size-9 items-center justify-center rounded-lg border ${isAlert ? "border-amber-300 bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30" : "bg-muted"} shrink-0`}>
               <Icon className="size-4 text-muted-foreground" />
             </div>
-            <div>
-              <h3 className="font-semibold leading-tight text-sm">{notebook.internalCode}</h3>
-              <p className="text-xs text-muted-foreground">{notebook.brand} {notebook.model}</p>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold leading-tight text-sm truncate" title={notebook.internalCode}>{notebook.internalCode}</h3>
+              <p className="text-xs text-muted-foreground truncate" title={`${notebook.brand} ${notebook.model}`}>{notebook.brand} {notebook.model}</p>
             </div>
           </div>
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
             <Button variant="ghost" size="icon-xs" onClick={() => onEdit(notebook)}>
               <Edit className="size-3" />
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-2">
+      <CardContent className="flex flex-1 flex-col gap-2 min-w-0">
         <StatusBadge label={notebookStatusLabel(notebook.status)} colorClass={statusColor} className="self-start" />
 
         {/* Assignment */}
         {notebook.currentAssignment ? (
-          <div className="flex items-start gap-1.5 rounded-md bg-muted/40 px-2.5 py-2">
+          <div className="flex items-start gap-1.5 rounded-md bg-muted/40 px-2.5 py-2 min-w-0">
             <User className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
-            <div className="min-w-0">
-              <p className="text-xs font-medium truncate">{notebook.currentAssignment.userName}</p>
-              <p className="text-xs text-muted-foreground">{notebook.currentAssignment.area}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium truncate" title={notebook.currentAssignment.userName}>{notebook.currentAssignment.userName}</p>
+              <p className="text-xs text-muted-foreground truncate" title={notebook.currentAssignment.area}>{notebook.currentAssignment.area}</p>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <User className="size-3" />
-            <span>Sin asignar</span>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
+            <User className="size-3 shrink-0" />
+            <span className="truncate">Sin asignar</span>
           </div>
         )}
 
         <Separator />
 
         {/* Quick Specs */}
-        <div className="flex flex-col gap-1.5 text-[11px] text-muted-foreground">
-          <div className="flex items-center gap-1.5">
+        <div className="flex flex-col gap-1.5 text-[11px] text-muted-foreground min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
             <Cpu className="size-3 shrink-0" />
-            <span className="truncate">{notebook.processor}</span>
+            <span className="truncate" title={notebook.processor}>{notebook.processor}</span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
             <Database className="size-3 shrink-0" />
-            <span className="truncate">{notebook.ram}</span>
+            <span className="truncate" title={notebook.ram}>{notebook.ram}</span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
             <HardDrive className="size-3 shrink-0" />
-            <span className="truncate">{notebook.storage}</span>
+            <span className="truncate" title={notebook.storage}>{notebook.storage}</span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
             <Loader2 className="size-3 shrink-0" />
-            <span className="truncate">{notebook.os}</span>
+            <span className="truncate" title={notebook.os}>{notebook.os}</span>
           </div>
         </div>
       </CardContent>

@@ -29,7 +29,9 @@ const CATEGORIES = [
 
 const DURATIONS = [5, 10, 15, 30, 45, 60, 120];
 
-const getMonthYearLabel = (dateStr: string) => {
+
+
+const getWeekRangeLabel = (dateStr: string) => {
   if (!dateStr) return "Fecha Desconocida";
   let parsedDateStr = dateStr;
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
@@ -37,10 +39,44 @@ const getMonthYearLabel = (dateStr: string) => {
   }
   const date = new Date(parsedDateStr);
   if (isNaN(date.getTime())) return "Fecha Desconocida";
-  const formatter = new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" });
+
+  // Calculate Monday and Sunday of this date's week
+  const day = date.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+
+  const monday = new Date(date);
+  monday.setDate(date.getDate() + diffToMonday);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const mondayDay = monday.getDate();
+  const sundayDay = sunday.getDate();
+
+  const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+  const mondayMonth = months[monday.getMonth()];
+  const sundayMonth = months[sunday.getMonth()];
+
+  if (monday.getMonth() === sunday.getMonth()) {
+    return `Semana del ${mondayDay} al ${sundayDay} de ${mondayMonth}`;
+  } else {
+    return `Semana del ${mondayDay} de ${mondayMonth} al ${sundayDay} de ${sundayMonth}`;
+  }
+};
+
+const getDayOfWeekLabel = (dateStr: string) => {
+  if (!dateStr) return "";
+  let parsedDateStr = dateStr;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    parsedDateStr = dateStr + "T12:00:00";
+  }
+  const date = new Date(parsedDateStr);
+  if (isNaN(date.getTime())) return "";
+  const formatter = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" });
   const formatted = formatter.format(date);
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 };
+
 
 const getShortId = (id: any): string => {
   if (id === null || id === undefined) return "N/A";
@@ -546,26 +582,41 @@ export function OfficeTicketsPage() {
                   />
                 ) : (
                   (() => {
-                    let lastMonthYear = "";
+                    let lastWeekLabel = "";
+                    let lastDayLabel = "";
                     return filteredTickets.map((t) => {
                       const config = CATEGORIES.find(c => c.id === t.category) || CATEGORIES[5];
                       const Icon = config.icon;
                       // Format date
                       const displayDate = formatDate(t.date);
-                      const currentMonthYear = getMonthYearLabel(t.date);
-                      const showSeparator = currentMonthYear !== lastMonthYear;
-                      if (showSeparator) {
-                        lastMonthYear = currentMonthYear;
+                      const currentWeekLabel = getWeekRangeLabel(t.date);
+                      const currentDayLabel = getDayOfWeekLabel(t.date);
+                      const showWeekSeparator = currentWeekLabel !== lastWeekLabel;
+                      const showDaySeparator = currentDayLabel !== lastDayLabel || showWeekSeparator;
+                      
+                      if (showWeekSeparator) {
+                        lastWeekLabel = currentWeekLabel;
+                      }
+                      if (showDaySeparator) {
+                        lastDayLabel = currentDayLabel;
                       }
 
                       return (
-                        <div key={t.id} className="flex flex-col gap-3">
-                          {showSeparator && (
-                            <div className="pt-2 pb-1 flex items-center gap-3">
-                              <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-md">
-                                {currentMonthYear}
+                        <div key={t.id} className="flex flex-col gap-2">
+                          {showWeekSeparator && (
+                            <div className="pt-3 pb-1 flex items-center gap-3">
+                              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-md border border-indigo-500/25">
+                                {currentWeekLabel}
                               </span>
                               <div className="h-[1px] bg-indigo-500/25 dark:bg-indigo-500/15 flex-1" />
+                            </div>
+                          )}
+                          {showDaySeparator && (
+                            <div className="pl-1 pt-1.5 pb-0.5 flex items-center gap-2">
+                              <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground bg-muted border border-border px-2 py-0.5 rounded capitalize">
+                                {currentDayLabel}
+                              </span>
+                              <div className="h-[1px] bg-muted-foreground/10 flex-1 border-dashed border-t" />
                             </div>
                           )}
                           <div 
