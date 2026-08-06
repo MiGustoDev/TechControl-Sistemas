@@ -223,7 +223,7 @@ export function NotesPage() {
   return (
     <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden bg-background">
       {/* Panel Izquierdo: Lista de Notas */}
-      <div className={`w-full md:w-80 border-r flex-col bg-muted/10 shrink-0 ${mobileView === 'editor' ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`w-full md:w-80 border-r flex-col bg-muted/10 shrink-0 ${mobileView === 'editor' ? 'hidden md:flex' : 'flex mobile-slide-in'}`}>
         {/* Buscador & Nuevo */}
         <div className="p-4 space-y-3">
           <div className="flex items-center gap-2">
@@ -380,7 +380,7 @@ export function NotesPage() {
       </div>
 
       {/* Panel Derecho: Editor Activo */}
-      <div className={`flex-1 flex-col bg-background relative overflow-y-auto ${mobileView === 'list' ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`flex-1 flex-col bg-background relative overflow-y-auto ${mobileView === 'list' ? 'hidden md:flex' : 'flex mobile-slide-in'}`}>
         {activeNote ? (
           <div className="flex-1 flex flex-col p-4 md:p-6 space-y-4 h-full min-h-0">
             {/* Header del editor */}

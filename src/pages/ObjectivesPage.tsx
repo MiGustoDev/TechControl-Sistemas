@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { 
   Plus, Search, Calendar, User, CheckSquare, ListTodo, Edit2, Trash2, 
-  ChevronDown, ChevronUp, Flag, CheckSquare2, Square, Info, Check
+  ChevronDown, Flag, CheckSquare2, Square, Info, Check
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -339,21 +339,19 @@ export function ObjectivesPage() {
 
       <Separator />
 
-      {/* Filters Bar */}
-      {/* Search row - full width */}
-      <div className="relative w-full">
-        <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por título o descripción..."
-          className="pl-8 w-full"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-      {/* Selects row - always one line */}
-      <div className="flex gap-3 items-center">
+      {/* Filters Bar — search + selects all on one line */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por título o descripción..."
+            className="pl-8 w-full"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
         <select
-          className="flex-1 min-w-0 h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          className="h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 min-w-0 flex-1 sm:flex-none sm:w-48"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -364,7 +362,7 @@ export function ObjectivesPage() {
           <option value="completed">Completados</option>
         </select>
         <select
-          className="flex-1 min-w-0 h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          className="h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 min-w-0 flex-1 sm:flex-none sm:w-48"
           value={priorityFilter}
           onChange={(e) => setPriorityFilter(e.target.value)}
         >
@@ -464,10 +462,14 @@ export function ObjectivesPage() {
                           <CheckSquare className="size-3.5 text-emerald-500" />
                           Requerimientos ({obj.tasks.filter(t => t.completed).length}/{obj.tasks.length})
                         </span>
-                        {isExpanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                        <ChevronDown
+                          className="size-3 transition-transform duration-280 ease-out"
+                          style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                        />
                       </Button>
                       
-                      {isExpanded && (
+                      {/* Smooth accordion — always rendered, animated via CSS grid-template-rows */}
+                      <div className={`accordion-grid${isExpanded ? " accordion-open" : ""}`}>
                         <div className="mt-2 space-y-1.5 pl-2 pr-1 max-h-48 overflow-y-auto no-scrollbar">
                           {obj.tasks.map((task) => (
                             <div 
@@ -491,7 +493,7 @@ export function ObjectivesPage() {
                             </div>
                           ))}
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
 
