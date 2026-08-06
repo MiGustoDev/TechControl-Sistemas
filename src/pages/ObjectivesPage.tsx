@@ -339,9 +339,9 @@ export function ObjectivesPage() {
 
       <Separator />
 
-      {/* Filters Bar — search + selects all on one line */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-48">
+      {/* Filters Bar */}
+      <div className="flex flex-col md:flex-row gap-3 items-center">
+        <div className="relative w-full md:flex-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por título o descripción..."
@@ -350,28 +350,30 @@ export function ObjectivesPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <select
-          className="h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 min-w-0 flex-1 sm:flex-none sm:w-48"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="all">Todos los Estados</option>
-          <option value="pending">Pendientes</option>
-          <option value="in-progress">En Curso</option>
-          <option value="on-hold">En Pausa</option>
-          <option value="completed">Completados</option>
-        </select>
-        <select
-          className="h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 min-w-0 flex-1 sm:flex-none sm:w-48"
-          value={priorityFilter}
-          onChange={(e) => setPriorityFilter(e.target.value)}
-        >
-          <option value="all">Todas las Prioridades</option>
-          <option value="critical">Prioridad Crítica</option>
-          <option value="high">Prioridad Alta</option>
-          <option value="medium">Prioridad Media</option>
-          <option value="low">Prioridad Baja</option>
-        </select>
+        <div className="grid grid-cols-2 gap-2 w-full md:flex md:w-auto md:gap-3">
+          <select
+            className="h-10 px-2 md:px-3 py-2 text-xs md:text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 min-w-0 md:w-48 truncate"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">Todos los Estados</option>
+            <option value="pending">Pendientes</option>
+            <option value="in-progress">En Curso</option>
+            <option value="on-hold">En Pausa</option>
+            <option value="completed">Completados</option>
+          </select>
+          <select
+            className="h-10 px-2 md:px-3 py-2 text-xs md:text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 min-w-0 md:w-48 truncate"
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+          >
+            <option value="all">Todas las Prioridades</option>
+            <option value="critical">Prioridad Crítica</option>
+            <option value="high">Prioridad Alta</option>
+            <option value="medium">Prioridad Media</option>
+            <option value="low">Prioridad Baja</option>
+          </select>
+        </div>
       </div>
 
       {/* Objectives Cards Grid */}
