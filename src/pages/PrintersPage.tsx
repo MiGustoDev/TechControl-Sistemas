@@ -383,16 +383,16 @@ export function PrintersPage() {
       </div>
 
       {/* Stats */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-2 sm:gap-3">
         {[
           { label: "OK", value: stats.ok, color: "text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/20" },
           { label: "Con alerta", value: stats.alert, color: "text-amber-800 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/20" },
           { label: "Mantenimiento", value: stats.maintenance, color: "text-rose-800 dark:text-rose-400 bg-rose-100 dark:bg-rose-500/10 border-rose-300 dark:border-rose-500/20" },
           { label: "Sin conexión", value: stats.offline, color: "text-slate-700 dark:text-slate-400 bg-slate-100 dark:bg-slate-500/10 border-slate-300 dark:border-slate-500/20" },
         ].map((s) => (
-          <div key={s.label} className={`flex items-center gap-3 rounded-xl border px-5 h-14 shadow-sm transition-all hover:shadow-md ${s.color}`}>
-            <span className="text-2xl font-bold">{s.value}</span>
-            <span className="text-xs font-bold uppercase tracking-wide whitespace-nowrap">{s.label}</span>
+          <div key={s.label} className={`flex items-center gap-1.5 sm:gap-3 rounded-xl border px-2.5 sm:px-5 h-10 sm:h-14 shadow-sm transition-all hover:shadow-md ${s.color}`}>
+            <span className="text-base sm:text-2xl font-bold">{s.value}</span>
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wide whitespace-nowrap">{s.label}</span>
           </div>
         ))}
       </div>
@@ -430,19 +430,25 @@ export function PrintersPage() {
         </div>
       </div>
 
+      {/* Mobile button: between 'Filtrar por área' and search bar */}
+      <Button onClick={openCreate} className="sm:hidden w-fit">
+        <Plus className="size-4" />
+        Nueva impresora
+      </Button>
+
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-lg">
-          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nombre, modelo, toner, unid. de imagen, área o sucursal..."
-            className="pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+      <div className="relative w-full">
+        <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por nombre, modelo, toner, unid. de imagen, área o sucursal..."
+          className="pl-8 w-full"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+      <div className="flex items-center gap-2">
         <Select value={filterSector} onValueChange={setFilterSector}>
-          <SelectTrigger className="w-52 font-medium">
+          <SelectTrigger className="flex-1 min-w-0 font-medium">
             <SelectValue placeholder="Área" />
           </SelectTrigger>
           <SelectContent>
@@ -455,7 +461,7 @@ export function PrintersPage() {
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="flex-1 min-w-0">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
           <SelectContent>
@@ -470,7 +476,7 @@ export function PrintersPage() {
           </SelectContent>
         </Select>
         <Select value={filterBranch} onValueChange={setFilterBranch}>
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="flex-1 min-w-0">
             <SelectValue placeholder="Sucursal" />
           </SelectTrigger>
           <SelectContent>
@@ -481,7 +487,8 @@ export function PrintersPage() {
           </SelectContent>
         </Select>
 
-        <Button onClick={openCreate} className="ml-auto">
+        {/* Button only visible on sm+ (desktop) */}
+        <Button onClick={openCreate} className="ml-auto hidden sm:flex">
           <Plus className="size-4" />
           Nueva impresora
         </Button>

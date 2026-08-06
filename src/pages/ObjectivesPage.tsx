@@ -332,7 +332,7 @@ export function ObjectivesPage() {
             Gestión, seguimiento y control de objetivos y metas del equipo de Sistemas IT.
           </p>
         </div>
-        <Button onClick={handleOpenCreate} className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shrink-0 shadow-md">
+        <Button onClick={handleOpenCreate} className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium w-fit shrink-0 shadow-md">
           <Plus className="mr-2 size-4" /> Nuevo objetivo
         </Button>
       </div>
@@ -340,42 +340,40 @@ export function ObjectivesPage() {
       <Separator />
 
       {/* Filters Bar */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="relative md:col-span-2">
-          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por título o descripción..."
-            className="pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div>
-          <select
-            className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">Todos los Estados</option>
-            <option value="pending">Pendientes</option>
-            <option value="in-progress">En Curso</option>
-            <option value="on-hold">En Pausa</option>
-            <option value="completed">Completados</option>
-          </select>
-        </div>
-        <div>
-          <select
-            className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-          >
-            <option value="all">Todas las Prioridades</option>
-            <option value="critical">Prioridad Crítica</option>
-            <option value="high">Prioridad Alta</option>
-            <option value="medium">Prioridad Media</option>
-            <option value="low">Prioridad Baja</option>
-          </select>
-        </div>
+      {/* Search row - full width */}
+      <div className="relative w-full">
+        <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por título o descripción..."
+          className="pl-8 w-full"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+      {/* Selects row - always one line */}
+      <div className="flex gap-3 items-center">
+        <select
+          className="flex-1 min-w-0 h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="all">Todos los Estados</option>
+          <option value="pending">Pendientes</option>
+          <option value="in-progress">En Curso</option>
+          <option value="on-hold">En Pausa</option>
+          <option value="completed">Completados</option>
+        </select>
+        <select
+          className="flex-1 min-w-0 h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value)}
+        >
+          <option value="all">Todas las Prioridades</option>
+          <option value="critical">Prioridad Crítica</option>
+          <option value="high">Prioridad Alta</option>
+          <option value="medium">Prioridad Media</option>
+          <option value="low">Prioridad Baja</option>
+        </select>
       </div>
 
       {/* Objectives Cards Grid */}
@@ -469,7 +467,7 @@ export function ObjectivesPage() {
                         {isExpanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
                       </Button>
                       
-                      {(!expandedCards.hasOwnProperty(obj.id) || isExpanded) && (
+                      {isExpanded && (
                         <div className="mt-2 space-y-1.5 pl-2 pr-1 max-h-48 overflow-y-auto no-scrollbar">
                           {obj.tasks.map((task) => (
                             <div 

@@ -378,19 +378,25 @@ export function NotebooksPage() {
         ))}
       </div>
 
+      {/* Mobile button: between badges and search bar, left-aligned */}
+      <Button onClick={openCreate} className="sm:hidden w-fit">
+        <Plus className="size-4" />
+        Nuevo equipo
+      </Button>
+
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por código, marca, usuario, área..."
-            className="pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+      <div className="relative w-full">
+        <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por código, marca, usuario, área..."
+          className="pl-8 w-full"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+      <div className="flex items-center gap-3">
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="flex-1 min-w-0">
             <SelectValue placeholder="Todos los estados" />
           </SelectTrigger>
           <SelectContent>
@@ -404,7 +410,7 @@ export function NotebooksPage() {
         </Select>
 
         <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="flex-1 min-w-0">
             <SelectValue placeholder="Categoría" />
           </SelectTrigger>
           <SelectContent>
@@ -414,7 +420,8 @@ export function NotebooksPage() {
           </SelectContent>
         </Select>
 
-        <Button onClick={openCreate} className="ml-auto">
+        {/* Button only visible on sm+ (desktop) */}
+        <Button onClick={openCreate} className="ml-auto hidden sm:flex">
           <Plus className="size-4" />
           Nuevo equipo
         </Button>
