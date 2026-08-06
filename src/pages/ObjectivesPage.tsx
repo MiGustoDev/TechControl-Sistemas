@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
 import { 
   Plus, Search, Calendar, User, CheckSquare, ListTodo, Edit2, Trash2, 
-  AlertCircle, ChevronDown, ChevronUp, Flag, CheckSquare2, Square, Info
+  ChevronDown, ChevronUp, Flag, CheckSquare2, Square, Info
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
