@@ -141,24 +141,6 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               )}
 
-              {/* Tareas Especiales */}
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={currentPage === "special-tasks"}
-                  onClick={() => handlePageChange("special-tasks")}
-                  tooltip="Tareas Especiales"
-                >
-                  <Sparkles className="size-4 text-orange-500" />
-                  <span>Tareas Especiales</span>
-                </SidebarMenuButton>
-                {!isCollapsed && totalActiveSpecialTasks > 0 && (
-                  <SidebarMenuBadge className="bg-orange-500/15 font-bold text-orange-700 dark:text-orange-400">
-                    {totalActiveSpecialTasks}
-                  </SidebarMenuBadge>
-                )}
-              </SidebarMenuItem>
-
-
               {/* Guardias IT — pantalla principal */}
               <SidebarMenuItem>
                 <SidebarMenuButton
@@ -172,6 +154,40 @@ export function AppSidebar() {
                 {!isCollapsed && totalGuardias > 0 && (
                   <SidebarMenuBadge className="bg-amber-500/15 font-bold text-amber-700 dark:text-amber-400">
                     {totalGuardias}
+                  </SidebarMenuBadge>
+                )}
+              </SidebarMenuItem>
+
+              {/* Tareas Oficina */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "office-tickets"}
+                  onClick={() => handlePageChange("office-tickets")}
+                  tooltip="Tareas Oficina"
+                >
+                  <Ticket className="size-4" />
+                  <span>Tareas Oficina</span>
+                </SidebarMenuButton>
+                {!isCollapsed && totalOfficeTickets > 0 && (
+                  <SidebarMenuBadge className="bg-indigo-500/10 font-bold text-indigo-600 dark:text-indigo-400">
+                    {totalOfficeTickets}
+                  </SidebarMenuBadge>
+                )}
+              </SidebarMenuItem>
+
+              {/* Tareas Promocionales */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "special-tasks"}
+                  onClick={() => handlePageChange("special-tasks")}
+                  tooltip="Tareas Promocionales"
+                >
+                  <Sparkles className="size-4 text-orange-500" />
+                  <span>Tareas Promocionales</span>
+                </SidebarMenuButton>
+                {!isCollapsed && totalActiveSpecialTasks > 0 && (
+                  <SidebarMenuBadge className="bg-orange-500/15 font-bold text-orange-700 dark:text-orange-400">
+                    {totalActiveSpecialTasks}
                   </SidebarMenuBadge>
                 )}
               </SidebarMenuItem>
@@ -248,19 +264,19 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               </Collapsible>
 
-              {/* Tareas Oficina */}
+              {/* DataliveTV */}
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={currentPage === "office-tickets"}
-                  onClick={() => handlePageChange("office-tickets")}
-                  tooltip="Tareas Oficina"
+                  isActive={currentPage === "datalive"}
+                  onClick={() => handlePageChange("datalive")}
+                  tooltip="Credenciales DataliveTV"
                 >
-                  <Ticket className="size-4" />
-                  <span>Tareas Oficina</span>
+                  <Tv className="size-4" />
+                  <span>DataliveTV</span>
                 </SidebarMenuButton>
-                {!isCollapsed && totalOfficeTickets > 0 && (
-                  <SidebarMenuBadge className="bg-indigo-500/10 font-bold text-indigo-600 dark:text-indigo-400">
-                    {totalOfficeTickets}
+                {!isCollapsed && totalDataliveBranches > 0 && (
+                  <SidebarMenuBadge className="bg-muted-foreground/10 font-bold text-foreground">
+                    {totalDataliveBranches}
                   </SidebarMenuBadge>
                 )}
               </SidebarMenuItem>
@@ -295,23 +311,6 @@ export function AppSidebar() {
                 {!isCollapsed && totalDatabaseCredentials > 0 && (
                   <SidebarMenuBadge className="bg-muted-foreground/10 font-bold text-foreground">
                     {totalDatabaseCredentials}
-                  </SidebarMenuBadge>
-                )}
-              </SidebarMenuItem>
-
-              {/* DataliveTV */}
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={currentPage === "datalive"}
-                  onClick={() => handlePageChange("datalive")}
-                  tooltip="Credenciales DataliveTV"
-                >
-                  <Tv className="size-4" />
-                  <span>DataliveTV</span>
-                </SidebarMenuButton>
-                {!isCollapsed && totalDataliveBranches > 0 && (
-                  <SidebarMenuBadge className="bg-muted-foreground/10 font-bold text-foreground">
-                    {totalDataliveBranches}
                   </SidebarMenuBadge>
                 )}
               </SidebarMenuItem>

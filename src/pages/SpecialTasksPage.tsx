@@ -13,7 +13,6 @@ import { useApp } from "@/context/AppContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -308,14 +307,14 @@ export function SpecialTasksPage() {
     try {
       if (editingTask) {
         await updateSpecialTask(editingTask.id, payload);
-        toast.success("Tarea especial actualizada correctamente");
+        toast.success("Tarea promocional actualizada correctamente");
       } else {
         await addSpecialTask(payload);
-        toast.success("Tarea especial creada correctamente");
+        toast.success("Tarea promocional creada correctamente");
       }
       setIsDialogOpen(false);
     } catch (err) {
-      toast.error("Hubo un error al guardar la tarea especial");
+      toast.error("Hubo un error al guardar la tarea promocional");
     }
   };
 
@@ -328,9 +327,9 @@ export function SpecialTasksPage() {
     if (!deleteConfirmId) return;
     try {
       await deleteSpecialTask(deleteConfirmId);
-      toast.success("Tarea especial eliminada");
+      toast.success("Tarea promocional eliminada");
     } catch (err) {
-      toast.error("Error al eliminar la tarea especial");
+      toast.error("Error al eliminar la tarea promocional");
     } finally {
       setDeleteConfirmId(null);
     }
@@ -403,14 +402,14 @@ export function SpecialTasksPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-orange-500 to-amber-600 bg-clip-text text-transparent flex items-center gap-2">
-            <Sparkles className="size-7 text-orange-500" /> Tareas Especiales
+            <Sparkles className="size-7 text-orange-500" /> Tareas Promocionales
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Gestión, seguimiento y control de promociones, eventos, campañas y días especiales del equipo de Sistemas IT.
           </p>
         </div>
         <Button onClick={handleOpenCreate} className="bg-orange-600 hover:bg-orange-700 text-white font-medium w-fit shrink-0 shadow-md">
-          <Plus className="mr-2 size-4" /> Nueva tarea especial
+          <Plus className="mr-2 size-4" /> Nueva tarea promocional
         </Button>
       </div>
 
@@ -468,10 +467,10 @@ export function SpecialTasksPage() {
       {/* Tasks Cards Grid */}
       {filteredTasks.length === 0 ? (
         <EmptyState
-          title="No se encontraron tareas especiales"
+          title="No se encontraron tareas promocionales"
           description={search || statusFilter !== "all" || priorityFilter !== "all" || categoryFilter !== "all"
             ? "Probá ajustando los filtros de búsqueda o categoría." 
-            : "Comenzá creando una nueva tarea especial, campaña o evento."}
+            : "Comenzá creando una nueva tarea promocional, campaña o evento."}
           icon={ListTodo}
         />
       ) : (
@@ -640,7 +639,7 @@ export function SpecialTasksPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
           <DialogHeader>
-            <DialogTitle>{editingTask ? "Editar Tarea Especial" : "Nueva Tarea Especial"}</DialogTitle>
+            <DialogTitle>{editingTask ? "Editar Tarea Promocional" : "Nueva Tarea Promocional"}</DialogTitle>
             <DialogDescription>
               Completá los detalles de la tarea, campaña, promoción o evento de Sistemas.
             </DialogDescription>
@@ -860,7 +859,7 @@ export function SpecialTasksPage() {
 
             <DialogFooter className="pt-2 justify-end gap-2">
               <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white font-medium">
-                {editingTask ? "Guardar Cambios" : "Crear Tarea Especial"}
+                {editingTask ? "Guardar Cambios" : "Crear Tarea Promocional"}
               </Button>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
@@ -876,7 +875,7 @@ export function SpecialTasksPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Confirmás la eliminación?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer y borrará la tarea especial con todos sus requerimientos y progreso asociados.
+              Esta acción no se puede deshacer y borrará la tarea promocional con todos sus requerimientos y progreso asociados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
