@@ -1445,7 +1445,15 @@ export function GuardiasPage() {
                             <div className="flex-1 flex flex-col gap-1 mt-1 justify-end min-h-0">
                               {/* Holiday Badge with Helper */}
                               {holidayName && showFeriados && (
-                                <div className="rounded border border-amber-500/20 bg-amber-500/5 dark:bg-amber-950/20 p-1.5 space-y-0.5 select-none shrink-0" title={`Feriado: ${holidayName}`}>
+                                <div 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedHolidayDate(cell.dateStr);
+                                    setHolidayDialogOpen(true);
+                                  }}
+                                  className="rounded border border-amber-500/20 bg-amber-500/5 dark:bg-amber-950/20 p-1.5 space-y-0.5 select-none shrink-0 cursor-pointer hover:bg-amber-500/15 dark:hover:bg-amber-950/40 transition-colors" 
+                                  title={`Feriado: ${holidayName}. Hacer click para asignar responsable.`}
+                                >
                                   <div className="text-[9px] font-extrabold text-amber-600 dark:text-amber-400 truncate">
                                     🎉 {holidayName}
                                   </div>
@@ -2289,7 +2297,15 @@ export function GuardiasPage() {
                           <div className="flex-1 flex flex-col gap-1 mt-1 justify-end min-h-0">
                             {/* Holiday Badge with Helper */}
                             {holidayName && showFeriados && (
-                              <div className="rounded border border-amber-500/20 bg-amber-500/5 dark:bg-amber-950/20 p-1 space-y-0.5 select-none shrink-0" title={`Feriado: ${holidayName}`}>
+                              <div 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedHolidayDate(cell.dateStr);
+                                  setHolidayDialogOpen(true);
+                                }}
+                                className="rounded border border-amber-500/20 bg-amber-500/5 dark:bg-amber-950/20 p-1 space-y-0.5 select-none shrink-0 cursor-pointer hover:bg-amber-500/15 dark:hover:bg-amber-950/40 transition-colors" 
+                                title={`Feriado: ${holidayName}. Hacer click para asignar responsable.`}
+                              >
                                 <div className="text-[8px] font-extrabold text-amber-600 dark:text-amber-400 truncate">
                                   🎉 {holidayName}
                                 </div>
@@ -2980,6 +2996,9 @@ export function GuardiasPage() {
               const originalTurn = getWeeklyTurn(selectedCalDate);
               const overriddenTurn = turnOverrides[selectedCalDate];
               const hasOverride = overriddenTurn && overriddenTurn !== originalTurn;
+              const holidayName = getHolidayInfo(selectedCalDate);
+              const assignedUserId = holidayAssignments[selectedCalDate];
+              const assignedUser = assignedUserId ? users.find(u => u.id === assignedUserId) : null;
               
               return (
                 <div className="space-y-6">
@@ -3058,6 +3077,41 @@ export function GuardiasPage() {
                       </CardContent>
                     </Card>
                   </div>
+
+                  {/* Responsable de Feriado */}
+                  {holidayName && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 border-b border-muted-foreground/10 pb-1.5">
+                        🎉 Responsable de Feriado: {holidayName}
+                      </h3>
+                      <Card className="border border-amber-500/20 bg-amber-500/5 dark:bg-amber-950/10">
+                        <CardContent className="p-3 flex items-center justify-between gap-4 flex-wrap">
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground font-medium">Colaborador asignado para el feriado:</p>
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                              assignedUser 
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" 
+                                : "bg-muted text-muted-foreground"
+                            }`}>
+                              {assignedUser ? assignedUser.fullName : "Sin asignar / Nadie"}
+                            </span>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 border-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                            onClick={() => {
+                              setSelectedHolidayDate(selectedCalDate);
+                              setTempAssignedId(assignedUserId || "none");
+                              setHolidayDialogOpen(true);
+                            }}
+                          >
+                            {assignedUser ? "Cambiar Responsable" : "Asignar Responsable"}
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
 
                   {/* Eventos Especiales */}
                   <div className="space-y-2">
