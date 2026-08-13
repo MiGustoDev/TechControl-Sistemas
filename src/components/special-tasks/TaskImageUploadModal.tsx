@@ -267,17 +267,17 @@ export function TaskImageUploadModal({
           )}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0 pt-2">
-          <Button type="button" variant="outline" onClick={handleClose}>
-            Cancelar
-          </Button>
+        <DialogFooter className="gap-2 sm:gap-2 pt-2 flex flex-row justify-end">
           <Button
             type="button"
             disabled={!selectedImage || isProcessing}
             onClick={handleConfirm}
             className="bg-orange-600 hover:bg-orange-700 text-white font-semibold flex items-center gap-1.5"
           >
-            <CheckCircle2 className="size-4" /> Confirmar y Marcar Completada
+            <CheckCircle2 className="size-4" /> Confirmar y marcar
+          </Button>
+          <Button type="button" variant="outline" onClick={handleClose}>
+            Cancelar
           </Button>
         </DialogFooter>
       </DialogContent>

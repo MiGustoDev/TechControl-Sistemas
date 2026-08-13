@@ -208,6 +208,7 @@ export function SpecialTasksPage() {
 
   const [viewerModalState, setViewerModalState] = useState<{
     isOpen: boolean;
+    taskId: string;
     imageUrl: string;
     title: string;
     subtitle?: string;
@@ -476,6 +477,32 @@ export function SpecialTasksPage() {
     toast.success("¡Comprobante guardado y tarea completada!");
   };
 
+  const handleSetTaskBanner = async (taskId: string, imageUrl: string) => {
+    const calEvent = calendarEvents.find(e => e.id === taskId);
+    if (calEvent) {
+      const updatedEvent = {
+        ...calEvent,
+        bannerUrl: imageUrl,
+        updatedAt: new Date().toISOString()
+      };
+      const success = await saveSpecialEvent(updatedEvent);
+      if (success) {
+        toast.success("Imagen asignada como banner de la tarjeta");
+      } else {
+        toast.error("Error al asignar el banner");
+      }
+      return;
+    }
+
+    const task = specialTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    await updateSpecialTask(taskId, {
+      bannerUrl: imageUrl
+    });
+    toast.success("Imagen asignada como banner de la tarjeta");
+  };
+
   // Toggle card expansion
   const toggleExpand = (id: string) => {
     setExpandedCards(prev => ({ ...prev, [id]: !prev[id] }));
@@ -680,6 +707,7 @@ export function SpecialTasksPage() {
                             className="size-7 rounded-full text-white/80 hover:text-white hover:bg-black/40 backdrop-blur-xs"
                             onClick={() => setViewerModalState({
                               isOpen: true,
+                              taskId: task.id,
                               imageUrl: task.bannerUrl!,
                               title: `Banner: ${task.title}`,
                               subtitle: "Último comprobante subido"
@@ -803,6 +831,7 @@ export function SpecialTasksPage() {
                                     e.stopPropagation();
                                     setViewerModalState({
                                       isOpen: true,
+                                      taskId: task.id,
                                       imageUrl: subTask.imageUrl!,
                                       title: `Comprobante: ${subTask.title}`,
                                       subtitle: `Evento: ${task.title}`
@@ -1133,6 +1162,15 @@ export function SpecialTasksPage() {
         imageUrl={viewerModalState?.imageUrl ?? null}
         title={viewerModalState?.title ?? ""}
         subtitle={viewerModalState?.subtitle}
+        isCurrentBanner={
+          viewerModalState ? (
+            (calendarEvents.find(e => e.id === viewerModalState.taskId)?.bannerUrl === viewerModalState.imageUrl) ||
+            (specialTasks.find(t => t.id === viewerModalState.taskId)?.bannerUrl === viewerModalState.imageUrl)
+          ) : false
+        }
+        onSetAsBanner={
+          viewerModalState ? () => handleSetTaskBanner(viewerModalState.taskId, viewerModalState.imageUrl) : undefined
+        }
       />
     </div>
   );
