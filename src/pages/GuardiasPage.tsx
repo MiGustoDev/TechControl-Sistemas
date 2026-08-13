@@ -303,6 +303,8 @@ export function GuardiasPage() {
     guardiasViewMode,
     setGuardiasViewMode,
     specialEvents,
+    specialTasks,
+    addSpecialTask,
     saveSpecialEvent,
     deleteSpecialEvent,
     syncSpecialEventsFromSupabase
@@ -488,9 +490,34 @@ export function GuardiasPage() {
       });
     }
 
+    const seenIds = new Set<string>();
     const matches = manualEvents.filter(e => e.date === dateStr);
     for (const m of matches) {
+      seenIds.add(m.id);
       list.push(m);
+    }
+
+    for (const st of (specialTasks || [])) {
+      if (st.startDate === dateStr && !seenIds.has(st.id)) {
+        seenIds.add(st.id);
+        list.push({
+          id: st.id,
+          name: st.title,
+          date: st.startDate,
+          type: st.category === "special-day" ? "break" : st.category === "campaign" ? "onfire" : st.category === "promotion" ? "promotion" : "event",
+          tasks: (st.tasks || []).map(t => ({
+            id: t.id,
+            name: t.title,
+            title: t.title,
+            completed: t.completed,
+            imageUrl: t.imageUrl,
+            completedAt: t.completedAt
+          })),
+          bannerUrl: st.bannerUrl,
+          createdAt: st.createdAt,
+          updatedAt: st.updatedAt
+        });
+      }
     }
 
     return list;

@@ -26,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { SpecialTaskCategory, SpecialTask } from "@/types";
+import type { SpecialTaskCategory, SpecialTask, SpecialEvent } from "@/types";
 
 // Helper for priority styling
 const getPriorityBadge = (priority: string) => {
@@ -178,7 +178,8 @@ export function SpecialTasksPage() {
     deleteSpecialTask, 
     users,
     specialEvents,
-    saveSpecialEvent
+    saveSpecialEvent,
+    deleteSpecialEvent
   } = useApp();
 
   const calendarEvents = specialEvents;
@@ -337,9 +338,50 @@ export function SpecialTasksPage() {
     try {
       if (editingTask) {
         await updateSpecialTask(editingTask.id, payload);
+
+        // Always sync with specialEvents so it reflects in Calendar
+        if (startDate) {
+          const calEventPayload: SpecialEvent = {
+            id: editingTask.id,
+            name: title.trim(),
+            date: startDate,
+            type: category === "special-day" ? "break" : category === "campaign" ? "onfire" : category === "promotion" ? "promotion" : "event",
+            tasks: formTasks.map(t => ({
+              id: t.id,
+              name: t.title,
+              title: t.title,
+              completed: t.completed
+            })),
+            bannerUrl: editingTask.bannerUrl,
+            updatedAt: new Date().toISOString()
+          };
+          await saveSpecialEvent(calEventPayload);
+        }
+
         toast.success("Campaña / evento actualizado correctamente");
       } else {
-        await addSpecialTask(payload);
+        const createdTask = await addSpecialTask(payload);
+        const unifiedId = createdTask?.id;
+
+        // Always sync with specialEvents using the EXACT SAME id so it reflects in Calendar without duplicating
+        if (startDate && unifiedId) {
+          const calEventPayload: SpecialEvent = {
+            id: unifiedId,
+            name: title.trim(),
+            date: startDate,
+            type: category === "special-day" ? "break" : category === "campaign" ? "onfire" : category === "promotion" ? "promotion" : "event",
+            tasks: formTasks.map(t => ({
+              id: t.id,
+              name: t.title,
+              title: t.title,
+              completed: t.completed
+            })),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          await saveSpecialEvent(calEventPayload);
+        }
+
         toast.success("Campaña / evento creado correctamente");
       }
       setIsDialogOpen(false);
@@ -357,6 +399,7 @@ export function SpecialTasksPage() {
     if (!deleteConfirmId) return;
     try {
       await deleteSpecialTask(deleteConfirmId);
+      await deleteSpecialEvent(deleteConfirmId);
       toast.success("Campaña / evento eliminado");
     } catch (err) {
       toast.error("Error al eliminar la campaña / evento");
@@ -551,7 +594,16 @@ export function SpecialTasksPage() {
       };
     });
 
-    const combined = [...(specialTasks || []), ...mappedCalEvents];
+    // Deduplicate by ID to prevent ANY duplicate card from ever rendering
+    const combinedMap = new Map<string, SpecialTask>();
+    (specialTasks || []).forEach(t => combinedMap.set(t.id, t));
+    mappedCalEvents.forEach(evt => {
+      if (!combinedMap.has(evt.id)) {
+        combinedMap.set(evt.id, evt);
+      }
+    });
+
+    const combined = Array.from(combinedMap.values());
 
     return combined.filter(t => {
       const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase()) || 
@@ -678,9 +730,9 @@ export function SpecialTasksPage() {
                       <img
                         src={task.bannerUrl}
                         alt={`Banner ${task.title}`}
-                        className="w-full h-full object-cover filter brightness-[0.6] hover:brightness-[0.75] transition-all duration-300 scale-105"
+                        className="w-full h-full object-cover filter brightness-[0.8] hover:brightness-[0.95] transition-all duration-300 scale-105"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-card via-card/75 to-black/45" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-black/30" />
                     </div>
                   )}
 
@@ -718,32 +770,29 @@ export function SpecialTasksPage() {
                           </Button>
                         )}
 
-                        {!task.isCalendarEvent ? (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-7 rounded-full text-muted-foreground hover:text-foreground backdrop-blur-md"
-                              onClick={() => handleOpenEdit(task)}
-                              title="Editar"
-                            >
-                              <Edit2 className="size-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-7 rounded-full text-muted-foreground hover:text-rose-500 backdrop-blur-md"
-                              onClick={() => handleDeleteTrigger(task.id)}
-                              title="Eliminar"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </Button>
-                          </>
-                        ) : (
+                        {task.isCalendarEvent && (
                           <Badge variant="outline" className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20 text-[9.5px] backdrop-blur-md">
                             📅 Calendario
                           </Badge>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 rounded-full text-muted-foreground hover:text-foreground backdrop-blur-md"
+                          onClick={() => handleOpenEdit(task)}
+                          title="Editar"
+                        >
+                          <Edit2 className="size-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 rounded-full text-muted-foreground hover:text-rose-500 backdrop-blur-md"
+                          onClick={() => handleDeleteTrigger(task.id)}
+                          title="Eliminar"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
                       </div>
                     </div>
                     <CardTitle className="line-clamp-2 text-lg font-bold text-foreground drop-shadow-sm">
@@ -1137,11 +1186,11 @@ export function SpecialTasksPage() {
               Esta acción no se puede deshacer y borrará la tarea promocional con todos sus requerimientos y progreso asociados.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="flex flex-row justify-end gap-2 sm:gap-2">
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-rose-600 hover:bg-rose-700 text-white">
               Eliminar
             </AlertDialogAction>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

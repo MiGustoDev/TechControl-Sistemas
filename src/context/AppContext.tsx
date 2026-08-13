@@ -157,7 +157,7 @@ interface AppContextValue {
   deleteObjective: (id: string) => Promise<void>;
 
   specialTasks: SpecialTask[];
-  addSpecialTask: (specialTask: Omit<SpecialTask, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  addSpecialTask: (specialTask: Omit<SpecialTask, "id" | "createdAt" | "updatedAt">) => Promise<SpecialTask>;
   updateSpecialTask: (id: string, data: Partial<SpecialTask>) => Promise<void>;
   deleteSpecialTask: (id: string) => Promise<void>;
 
@@ -720,18 +720,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const mapped = (data ?? []).map((row: any) => ({
-        id: row.id as string,
-        date: row.date as string,
-        name: row.name as string,
-        type: row.type as string,
-        tasks: Array.isArray(row.tasks) ? row.tasks : [],
-        createdAt: row.created_at as string | undefined,
-        updatedAt: row.updated_at as string | undefined,
-      }));
+      if (data && data.length > 0) {
+        const mapped: SpecialEvent[] = data.map((row: any) => ({
+          id: row.id as string,
+          date: row.date as string,
+          name: row.name as string,
+          type: row.type as string,
+          tasks: Array.isArray(row.tasks) ? row.tasks : [],
+          bannerUrl: row.banner_url || undefined,
+          createdAt: row.created_at as string | undefined,
+          updatedAt: row.updated_at as string | undefined,
+        }));
 
-      setSpecialEvents(mapped);
-      localStorage.setItem("techcontrol_special_events", JSON.stringify(mapped));
+        setSpecialEvents(prev => {
+          const map = new Map<string, SpecialEvent>();
+          prev.forEach(e => map.set(e.id, e));
+          mapped.forEach(e => map.set(e.id, e));
+          const next = Array.from(map.values());
+          localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
+          return next;
+        });
+      }
     } catch (err) {
       console.warn("No se pudo sincronizar eventos especiales desde Supabase:", err);
     }
@@ -747,7 +756,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
 
-    const payload = {
+    const payload: Record<string, any> = {
       id: event.id,
       date: event.date,
       name: event.name,
@@ -758,7 +767,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updated_at: event.updatedAt ?? new Date().toISOString(),
     };
 
-    const { error } = await supabase.from("special_events").upsert(payload, { onConflict: "id" });
+    let { error } = await supabase.from("special_events").upsert(payload, { onConflict: "id" });
+    if (error && (error.message?.includes("banner_url") || error.message?.includes("schema cache") || error.code === "PGRST204")) {
+      delete payload.banner_url;
+      const retry = await supabase.from("special_events").upsert(payload, { onConflict: "id" });
+      error = retry.error;
+    }
+
     if (error) {
       console.warn("No se pudo guardar el evento especial en Supabase:", error);
       return false;
@@ -2130,7 +2145,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
 
-    const { error } = await supabase.from("special_tasks").insert({
+    const dbPayload: Record<string, any> = {
       id: newSpecialTask.id,
       title: newSpecialTask.title,
       description: newSpecialTask.description || null,
@@ -2146,16 +2161,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       banner_url: newSpecialTask.bannerUrl || null,
       created_at: newSpecialTask.createdAt,
       updated_at: newSpecialTask.updatedAt
-    });
+    };
+
+    let { error } = await supabase.from("special_tasks").insert(dbPayload);
+    if (error && (error.message?.includes("banner_url") || error.message?.includes("schema cache") || error.code === "PGRST204")) {
+      delete dbPayload.banner_url;
+      const retry = await supabase.from("special_tasks").insert(dbPayload);
+      error = retry.error;
+    }
 
     if (error) {
       if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
         console.warn("La tabla special_tasks aún no existe en Supabase. Se guardó localmente.");
       } else {
-        console.error("Error adding special task to Supabase:", error);
-        toast.error("Error al sincronizar tarea especial: " + error.message);
+        console.warn("Error adding special task to Supabase:", error);
       }
     }
+
+    return newSpecialTask;
   }, []);
 
   const updateSpecialTask = useCallback(async (id: string, data: Partial<SpecialTask>) => {
@@ -2180,13 +2203,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (data.notes !== undefined) dbPayload.notes = data.notes;
     if (data.bannerUrl !== undefined) dbPayload.banner_url = data.bannerUrl;
 
-    const { error } = await supabase.from("special_tasks").update(dbPayload).eq("id", id);
+    let { error } = await supabase.from("special_tasks").update(dbPayload).eq("id", id);
+    if (error && (error.message?.includes("banner_url") || error.message?.includes("schema cache") || error.code === "PGRST204")) {
+      delete dbPayload.banner_url;
+      const retry = await supabase.from("special_tasks").update(dbPayload).eq("id", id);
+      error = retry.error;
+    }
+
     if (error) {
       if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
         console.warn("La tabla special_tasks aún no existe en Supabase.");
       } else {
-        console.error("Error updating special task in Supabase:", error);
-        toast.error("Error al actualizar tarea especial: " + error.message);
+        console.warn("Error updating special task in Supabase:", error);
       }
     }
   }, []);
