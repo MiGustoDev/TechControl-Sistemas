@@ -670,33 +670,33 @@ export function SpecialTasksPage() {
             const daysInfo = getDaysRemainingLabel(task.endDate, task.status);
             
             return (
-              <Card key={task.id} className={`flex flex-col h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-l-4 ${getPriorityBorderColor(task.priority)}`}>
-                {/* Red Box Region: Card Banner Header */}
-                <div className="relative overflow-hidden transition-all duration-300 border-b border-border/40">
+              <Card key={task.id} className={`flex flex-col h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-l-4 rounded-xl py-0 pt-0 gap-0 ${getPriorityBorderColor(task.priority)}`}>
+                {/* Red Box Region: Card Banner Header (Badges + Title + Description) */}
+                <div className="relative overflow-hidden rounded-t-xl transition-all duration-300 border-b border-border/40 shrink-0">
                   {task.bannerUrl && (
-                    <div className="absolute inset-0 z-0 overflow-hidden">
+                    <div className="absolute inset-0 z-0 overflow-hidden rounded-t-xl">
                       <img
                         src={task.bannerUrl}
                         alt={`Banner ${task.title}`}
-                        className="w-full h-full object-cover filter brightness-[0.45] hover:brightness-[0.6] transition-all duration-300 scale-105"
+                        className="w-full h-full object-cover filter brightness-[0.6] hover:brightness-[0.75] transition-all duration-300 scale-105"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-card via-card/75 to-black/40" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-card via-card/75 to-black/45" />
                     </div>
                   )}
 
-                  <CardHeader className="pb-2 relative z-10">
+                  <CardHeader className="pt-4 px-5 pb-2 relative z-10">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex flex-wrap gap-1.5 items-center">
-                        <Badge variant="outline" className={`${getCategoryBadge(task.category)} flex items-center text-[11px] backdrop-blur-xs`}>
+                        <Badge variant="outline" className={`${getCategoryBadge(task.category)} flex items-center text-[11px] backdrop-blur-md`}>
                           {getCategoryIcon(task.category)}
                           {getCategoryLabel(task.category)}
                         </Badge>
-                        <Badge variant="outline" className={`${getPriorityBadge(task.priority)} backdrop-blur-xs`}>
+                        <Badge variant="outline" className={`${getPriorityBadge(task.priority)} backdrop-blur-md`}>
                           {getPriorityLabel(task.priority)}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Badge variant="outline" className={`${getStatusBadge(task.status)} text-[10px] px-2 py-0.5 backdrop-blur-xs`}>
+                        <Badge variant="outline" className={`${getStatusBadge(task.status)} text-[10px] px-2 py-0.5 backdrop-blur-md`}>
                           {getStatusLabel(task.status)}
                         </Badge>
 
@@ -704,7 +704,7 @@ export function SpecialTasksPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="size-7 rounded-full text-white/80 hover:text-white hover:bg-black/40 backdrop-blur-xs"
+                            className="size-7 rounded-full text-white/90 hover:text-white hover:bg-black/50 backdrop-blur-md"
                             onClick={() => setViewerModalState({
                               isOpen: true,
                               taskId: task.id,
@@ -723,7 +723,7 @@ export function SpecialTasksPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="size-7 rounded-full text-muted-foreground hover:text-foreground backdrop-blur-xs"
+                              className="size-7 rounded-full text-muted-foreground hover:text-foreground backdrop-blur-md"
                               onClick={() => handleOpenEdit(task)}
                               title="Editar"
                             >
@@ -732,7 +732,7 @@ export function SpecialTasksPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="size-7 rounded-full text-muted-foreground hover:text-rose-500 backdrop-blur-xs"
+                              className="size-7 rounded-full text-muted-foreground hover:text-rose-500 backdrop-blur-md"
                               onClick={() => handleDeleteTrigger(task.id)}
                               title="Eliminar"
                             >
@@ -740,7 +740,7 @@ export function SpecialTasksPage() {
                             </Button>
                           </>
                         ) : (
-                          <Badge variant="outline" className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20 text-[9.5px] backdrop-blur-xs">
+                          <Badge variant="outline" className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20 text-[9.5px] backdrop-blur-md">
                             📅 Calendario
                           </Badge>
                         )}
@@ -752,15 +752,15 @@ export function SpecialTasksPage() {
                   </CardHeader>
 
                   {task.description && (
-                    <div className="px-6 pb-4 relative z-10">
-                      <p className="text-sm text-muted-foreground line-clamp-3">
+                    <div className="px-5 pb-4 relative z-10">
+                      <p className="text-sm text-muted-foreground line-clamp-3 drop-shadow-xs">
                         {task.description}
                       </p>
                     </div>
                   )}
                 </div>
 
-                <CardContent className="flex-1 flex flex-col pt-4 pb-4">
+                <CardContent className="flex-1 flex flex-col p-5 pt-4 pb-4">
                   {/* Progress Section */}
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-xs font-semibold">
