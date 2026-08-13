@@ -299,7 +299,26 @@ export interface SpecialTask {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  isCalendarEvent?: boolean;
 }
+
+export interface SpecialEventTask {
+  id: string;
+  name: string;
+  title?: string;
+  completed: boolean;
+}
+
+export interface SpecialEvent {
+  id: string;
+  name: string;
+  date: string;
+  type: string;
+  tasks?: SpecialEventTask[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 
 
 

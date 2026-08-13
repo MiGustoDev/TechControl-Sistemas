@@ -122,6 +122,23 @@ export function AppSidebar() {
           <SidebarGroupLabel>Módulos</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              {/* Campañas y Eventos */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentPage === "special-tasks"}
+                  onClick={() => handlePageChange("special-tasks")}
+                  tooltip="Campañas y Eventos"
+                >
+                  <Sparkles className="size-4 text-orange-500" />
+                  <span>Campañas y Eventos</span>
+                </SidebarMenuButton>
+                {!isCollapsed && totalActiveSpecialTasks > 0 && (
+                  <SidebarMenuBadge className="bg-orange-500/15 font-bold text-orange-700 dark:text-orange-400">
+                    {totalActiveSpecialTasks}
+                  </SidebarMenuBadge>
+                )}
+              </SidebarMenuItem>
+
               {/* Objetivos del equipo */}
               {SHOW_OBJECTIVES && (
                 <SidebarMenuItem>
@@ -171,23 +188,6 @@ export function AppSidebar() {
                 {!isCollapsed && totalOfficeTickets > 0 && (
                   <SidebarMenuBadge className="bg-indigo-500/10 font-bold text-indigo-600 dark:text-indigo-400">
                     {totalOfficeTickets}
-                  </SidebarMenuBadge>
-                )}
-              </SidebarMenuItem>
-
-              {/* Tareas Promocionales */}
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={currentPage === "special-tasks"}
-                  onClick={() => handlePageChange("special-tasks")}
-                  tooltip="Tareas Promocionales"
-                >
-                  <Sparkles className="size-4 text-orange-500" />
-                  <span>Tareas Promocionales</span>
-                </SidebarMenuButton>
-                {!isCollapsed && totalActiveSpecialTasks > 0 && (
-                  <SidebarMenuBadge className="bg-orange-500/15 font-bold text-orange-700 dark:text-orange-400">
-                    {totalActiveSpecialTasks}
                   </SidebarMenuBadge>
                 )}
               </SidebarMenuItem>

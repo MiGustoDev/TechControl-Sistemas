@@ -31,6 +31,8 @@ export function DatabasesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterEngine, setFilterEngine] = useState("all");
   const [revealPasswordId, setRevealPasswordId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [draggedInfo, setDraggedInfo] = useState<{ sourceId: string; projectSlot: string; projectName: string } | null>(null);
 
   // Form Dialog state (Add / Edit)
   const [isOpen, setIsOpen] = useState(false);
@@ -260,8 +262,74 @@ export function DatabasesPage() {
             const engineConfig = ENGINES.find(e => e.id === c.engine) || ENGINES[6];
             const isRevealed = revealPasswordId === c.id;
 
+            const isDragOver = dragOverId === c.id;
+            const hasSpace = !c.project1 || !c.project2;
+            const isSource = draggedInfo?.sourceId === c.id;
+
             return (
-              <Card key={c.id} className="border border-muted-foreground/10 hover:border-indigo-500/20 shadow-sm relative group flex flex-col h-full bg-card hover:shadow-md transition-all duration-300 rounded-2xl overflow-hidden">
+              <Card 
+                key={c.id} 
+                onDragOver={(e) => {
+                  if (hasSpace && draggedInfo?.sourceId !== c.id) {
+                    e.preventDefault();
+                  }
+                }}
+                onDragEnter={() => {
+                  if (hasSpace && draggedInfo?.sourceId !== c.id) {
+                    setDragOverId(c.id);
+                  }
+                }}
+                onDragLeave={() => {
+                  setDragOverId(null);
+                }}
+                onDrop={async (e) => {
+                  setDragOverId(null);
+                  e.preventDefault();
+                  try {
+                    const rawData = e.dataTransfer.getData("text/plain");
+                    if (!rawData) return;
+                    const dragData = JSON.parse(rawData);
+                    const { sourceId, projectSlot, projectName } = dragData;
+                    
+                    if (sourceId === c.id) return; // Drop on itself
+
+                    let targetSlot = "";
+                    if (!c.project1) {
+                      targetSlot = "project1";
+                    } else if (!c.project2) {
+                      targetSlot = "project2";
+                    }
+
+                    if (!targetSlot) {
+                      toast.error("Esta base de datos ya tiene el límite de 2 proyectos.");
+                      return;
+                    }
+
+                    // 1. Remove project from source database
+                    const sourceCred = databaseCredentials.find(x => x.id === sourceId);
+                    if (sourceCred) {
+                      const sourcePayload = {
+                        [projectSlot]: ""
+                      };
+                      await updateDatabaseCredential(sourceId, sourcePayload);
+                    }
+
+                    // 2. Add project to target database
+                    const targetPayload = {
+                      [targetSlot]: projectName
+                    };
+                    await updateDatabaseCredential(c.id, targetPayload);
+
+                    toast.success(`Proyecto "${projectName}" movido a "${c.name}"`);
+                  } catch (err) {
+                    console.error("Error moving project:", err);
+                    toast.error("Error al mover el proyecto");
+                  }
+                }}
+                className={`border border-muted-foreground/10 hover:border-indigo-500/20 shadow-sm relative group flex flex-col h-full bg-card hover:shadow-md transition-all duration-300 rounded-2xl overflow-hidden ${
+                  isDragOver ? "border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10 scale-[1.02] z-10" : ""
+                } ${isSource ? "opacity-60 border-dashed border-indigo-500/40" : ""}`}
+              >
                 {/* Header card indicator line */}
                 <div className={`h-1.5 w-full ${
                   c.engine === 'postgres' ? 'bg-blue-500' :
@@ -393,25 +461,83 @@ export function DatabasesPage() {
                     <span className="text-[9px] text-muted-foreground block font-semibold uppercase tracking-wider">Proyectos ({[c.project1, c.project2].filter(Boolean).length}/2)</span>
                     <div className="grid grid-cols-2 gap-2">
                       {c.project1 ? (
-                        <div className="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/20 px-2 py-1.5 rounded-xl flex items-center gap-1.5 min-w-0 shadow-sm">
+                        <div 
+                          draggable={true}
+                          onDragStart={(e) => {
+                            const info = { sourceId: c.id, projectSlot: "project1", projectName: c.project1 || "" };
+                            setDraggedInfo(info);
+                            e.dataTransfer.setData("text/plain", JSON.stringify(info));
+                          }}
+                          onDragEnd={() => {
+                            setDraggedInfo(null);
+                          }}
+                          className={`bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/20 px-2 py-1.5 rounded-xl flex items-center gap-1.5 min-w-0 shadow-sm cursor-grab active:cursor-grabbing hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-all ${
+                            draggedInfo?.sourceId === c.id && draggedInfo?.projectSlot === "project1" 
+                              ? "opacity-20 border-dashed border-indigo-500 bg-transparent scale-95" 
+                              : ""
+                          }`}
+                        >
                           <span className="size-1.5 rounded-full bg-indigo-500 shrink-0" />
                           <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 truncate">{c.project1}</span>
                         </div>
                       ) : (
-                        <div className="border border-dashed border-muted-foreground/20 px-2 py-1.5 rounded-xl flex items-center justify-center bg-muted/5 min-w-0">
-                          <span className="text-[10px] text-muted-foreground/60 font-medium italic truncate">Espacio disponible ➕</span>
-                        </div>
+                        (() => {
+                          const isTarget = !c.project1 && draggedInfo && draggedInfo.sourceId !== c.id;
+                          const isHoveredTarget = isTarget && isDragOver;
+                          return (
+                            <div className={`border rounded-xl flex items-center justify-center min-w-0 transition-all duration-200 px-2 py-1.5 ${
+                              isHoveredTarget 
+                                ? "border-indigo-500 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-solid scale-[1.03] shadow-md shadow-indigo-500/10 font-bold animate-bounce" 
+                                : isTarget 
+                                  ? "border-indigo-500/40 bg-indigo-500/5 dark:bg-indigo-500/10 border-dashed animate-pulse text-indigo-500 dark:text-indigo-400 font-semibold"
+                                  : "border-dashed border-muted-foreground/20 bg-muted/5 text-muted-foreground/60 font-medium italic"
+                            }`}>
+                              <span className="text-[10px] truncate">
+                                {isHoveredTarget ? "¡Soltar aquí! 📥" : isTarget ? "Espacio disponible ➕" : "Espacio disponible ➕"}
+                              </span>
+                            </div>
+                          );
+                        })()
                       )}
 
                       {c.project2 ? (
-                        <div className="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/20 px-2 py-1.5 rounded-xl flex items-center gap-1.5 min-w-0 shadow-sm">
+                        <div 
+                          draggable={true}
+                          onDragStart={(e) => {
+                            const info = { sourceId: c.id, projectSlot: "project2", projectName: c.project2 || "" };
+                            setDraggedInfo(info);
+                            e.dataTransfer.setData("text/plain", JSON.stringify(info));
+                          }}
+                          onDragEnd={() => {
+                            setDraggedInfo(null);
+                          }}
+                          className={`bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/20 px-2 py-1.5 rounded-xl flex items-center gap-1.5 min-w-0 shadow-sm cursor-grab active:cursor-grabbing hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-all ${
+                            draggedInfo?.sourceId === c.id && draggedInfo?.projectSlot === "project2" 
+                              ? "opacity-20 border-dashed border-indigo-500 bg-transparent scale-95" 
+                              : ""
+                          }`}
+                        >
                           <span className="size-1.5 rounded-full bg-indigo-500 shrink-0" />
                           <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 truncate">{c.project2}</span>
                         </div>
                       ) : (
-                        <div className="border border-dashed border-muted-foreground/20 px-2 py-1.5 rounded-xl flex items-center justify-center bg-muted/5 min-w-0">
-                          <span className="text-[10px] text-muted-foreground/60 font-medium italic truncate">Espacio disponible ➕</span>
-                        </div>
+                        (() => {
+                          const isTarget = c.project1 && !c.project2 && draggedInfo && draggedInfo.sourceId !== c.id;
+                          const isHoveredTarget = isTarget && isDragOver;
+                          return (
+                            <div className={`border rounded-xl flex items-center justify-center min-w-0 transition-all duration-200 px-2 py-1.5 ${
+                              isHoveredTarget 
+                                ? "border-indigo-500 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-solid scale-[1.03] shadow-md shadow-indigo-500/10 font-bold animate-bounce" 
+                                : isTarget 
+                                  ? "border-indigo-500/40 bg-indigo-500/5 dark:bg-indigo-500/10 border-dashed animate-pulse text-indigo-500 dark:text-indigo-400 font-semibold"
+                                  : "border-dashed border-muted-foreground/20 bg-muted/5 text-muted-foreground/60 font-medium italic"
+                            }`}>
+                              <span className="text-[10px] truncate">
+                                {isHoveredTarget ? "¡Soltar aquí! 📥" : isTarget ? "Espacio disponible ➕" : "Espacio disponible ➕"}
+                              </span>
+                            </div>
+                          );
+                        })()
                       )}
                     </div>
                   </div>

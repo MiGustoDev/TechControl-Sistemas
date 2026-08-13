@@ -13,6 +13,7 @@ import { useApp } from "@/context/AppContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -168,7 +169,17 @@ function AutoGrowTextarea({
 }
 
 export function SpecialTasksPage() {
-  const { specialTasks, addSpecialTask, updateSpecialTask, deleteSpecialTask, users } = useApp();
+  const { 
+    specialTasks, 
+    addSpecialTask, 
+    updateSpecialTask, 
+    deleteSpecialTask, 
+    users,
+    specialEvents,
+    saveSpecialEvent
+  } = useApp();
+
+  const calendarEvents = specialEvents;
 
   // Filters state
   const [search, setSearch] = useState("");
@@ -307,14 +318,14 @@ export function SpecialTasksPage() {
     try {
       if (editingTask) {
         await updateSpecialTask(editingTask.id, payload);
-        toast.success("Tarea promocional actualizada correctamente");
+        toast.success("Campaña / evento actualizado correctamente");
       } else {
         await addSpecialTask(payload);
-        toast.success("Tarea promocional creada correctamente");
+        toast.success("Campaña / evento creado correctamente");
       }
       setIsDialogOpen(false);
     } catch (err) {
-      toast.error("Hubo un error al guardar la tarea promocional");
+      toast.error("Hubo un error al guardar la campaña / evento");
     }
   };
 
@@ -327,9 +338,9 @@ export function SpecialTasksPage() {
     if (!deleteConfirmId) return;
     try {
       await deleteSpecialTask(deleteConfirmId);
-      toast.success("Tarea promocional eliminada");
+      toast.success("Campaña / evento eliminado");
     } catch (err) {
-      toast.error("Error al eliminar la tarea promocional");
+      toast.error("Error al eliminar la campaña / evento");
     } finally {
       setDeleteConfirmId(null);
     }
@@ -337,6 +348,28 @@ export function SpecialTasksPage() {
 
   // Direct toggle task completion in the card view
   const handleToggleCardTask = async (taskId: string, subTaskId: string) => {
+    // Check if it's a calendar event
+    const calEvent = calendarEvents.find(e => e.id === taskId);
+    if (calEvent) {
+      const updatedTasks = (calEvent.tasks || []).map((t: any) => 
+        t.id === subTaskId ? { ...t, completed: !t.completed } : t
+      );
+      
+      const updatedEvent = {
+        ...calEvent,
+        tasks: updatedTasks,
+        updatedAt: new Date().toISOString()
+      };
+
+      const success = await saveSpecialEvent(updatedEvent);
+      if (success) {
+        toast.success("Tarea del calendario actualizada");
+      } else {
+        toast.error("Error al actualizar la tarea");
+      }
+      return;
+    }
+
     const task = specialTasks.find(t => t.id === taskId);
     if (!task || !task.tasks) return;
 
@@ -361,9 +394,49 @@ export function SpecialTasksPage() {
     setExpandedCards(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Filtered tasks list
+  // Filtered tasks list including calendar special events
   const filteredTasks = useMemo(() => {
-    return (specialTasks || []).filter(t => {
+    const mappedCalEvents: SpecialTask[] = calendarEvents.map(evt => {
+      const tasks = Array.isArray(evt.tasks) ? evt.tasks : [];
+      const completedCount = tasks.filter((t: any) => t.completed).length;
+      const progress = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
+      const status = progress === 100 ? "completed" : "in-progress";
+
+      // Map type to category
+      let category: SpecialTaskCategory = "event";
+      if (evt.type === "break" || evt.id === "first-wednesday-break") {
+        category = "special-day";
+      } else if (evt.type === "onfire" || evt.id === "last-thursday-onfire") {
+        category = "campaign";
+      } else if (evt.type === "promotion") {
+        category = "promotion";
+      }
+
+      return {
+        id: evt.id,
+        title: evt.name,
+        description: `Evento especial del calendario operativo (${evt.type === "break" ? "MG Break" : evt.type === "onfire" ? "OnFire" : "Personalizado"}).`,
+        category,
+        status,
+        priority: "medium",
+        startDate: evt.date,
+        endDate: evt.date,
+        progress,
+        tasks: tasks.map((t: any) => ({
+          id: t.id,
+          title: t.title || t.name,
+          completed: !!t.completed
+        })),
+        assignedTo: ["Equipo IT"],
+        isCalendarEvent: true,
+        createdAt: evt.createdAt || evt.date,
+        updatedAt: evt.updatedAt || evt.date
+      };
+    });
+
+    const combined = [...(specialTasks || []), ...mappedCalEvents];
+
+    return combined.filter(t => {
       const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase()) || 
         (t.description || "").toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === "all" || t.status === statusFilter;
@@ -371,7 +444,7 @@ export function SpecialTasksPage() {
       const matchesCategory = categoryFilter === "all" || t.category === categoryFilter;
       return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
     });
-  }, [specialTasks, search, statusFilter, priorityFilter, categoryFilter]);
+  }, [specialTasks, calendarEvents, search, statusFilter, priorityFilter, categoryFilter]);
 
   // Compute days remaining. Returns urgent=true when < 7 days
   const getDaysRemainingLabel = (endDateStr?: string, status?: string) => {
@@ -380,10 +453,10 @@ export function SpecialTasksPage() {
     
     const end = new Date(endDateStr + "T12:00:00");
     const today = new Date();
-    today.setHours(0,0,0,0);
+    today.setHours(12,0,0,0);
     
     const diffTime = end.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) {
       return { text: `Vencido por ${Math.abs(diffDays)} d.`, color: "text-rose-500 font-bold", urgent: true };
@@ -402,14 +475,14 @@ export function SpecialTasksPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-orange-500 to-amber-600 bg-clip-text text-transparent flex items-center gap-2">
-            <Sparkles className="size-7 text-orange-500" /> Tareas Promocionales
+            <Sparkles className="size-7 text-orange-500" /> Campañas y Eventos
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Gestión, seguimiento y control de promociones, eventos, campañas y días especiales del equipo de Sistemas IT.
+            Gestión, seguimiento y control de promociones, eventos, campañas y objetivos de corto plazo del equipo de Sistemas IT.
           </p>
         </div>
         <Button onClick={handleOpenCreate} className="bg-orange-600 hover:bg-orange-700 text-white font-medium w-fit shrink-0 shadow-md">
-          <Plus className="mr-2 size-4" /> Nueva tarea promocional
+          <Plus className="mr-2 size-4" /> Nueva campaña / evento
         </Button>
       </div>
 
@@ -467,10 +540,10 @@ export function SpecialTasksPage() {
       {/* Tasks Cards Grid */}
       {filteredTasks.length === 0 ? (
         <EmptyState
-          title="No se encontraron tareas promocionales"
+          title="No se encontraron campañas o eventos"
           description={search || statusFilter !== "all" || priorityFilter !== "all" || categoryFilter !== "all"
             ? "Probá ajustando los filtros de búsqueda o categoría." 
-            : "Comenzá creando una nueva tarea promocional, campaña o evento."}
+            : "Comenzá creando una nueva campaña, evento o tarea de corto plazo."}
           icon={ListTodo}
         />
       ) : (
@@ -496,24 +569,32 @@ export function SpecialTasksPage() {
                       <Badge variant="outline" className={`${getStatusBadge(task.status)} text-[10px] px-2 py-0.5`}>
                         {getStatusLabel(task.status)}
                       </Badge>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 rounded-full text-muted-foreground hover:text-foreground"
-                        onClick={() => handleOpenEdit(task)}
-                        title="Editar"
-                      >
-                        <Edit2 className="size-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 rounded-full text-muted-foreground hover:text-rose-500"
-                        onClick={() => handleDeleteTrigger(task.id)}
-                        title="Eliminar"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                      {!task.isCalendarEvent ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 rounded-full text-muted-foreground hover:text-foreground"
+                            onClick={() => handleOpenEdit(task)}
+                            title="Editar"
+                          >
+                            <Edit2 className="size-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 rounded-full text-muted-foreground hover:text-rose-500"
+                            onClick={() => handleDeleteTrigger(task.id)}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Badge variant="outline" className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20 text-[9.5px]">
+                          📅 Calendario
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <CardTitle className="line-clamp-2 text-lg font-bold text-foreground">

@@ -16,6 +16,7 @@ import type {
   DatabaseCredential,
   Objective,
   SpecialTask,
+  SpecialEvent,
 } from "../types";
 import {
   stockItems as initialItems,
@@ -160,6 +161,11 @@ interface AppContextValue {
   updateSpecialTask: (id: string, data: Partial<SpecialTask>) => Promise<void>;
   deleteSpecialTask: (id: string) => Promise<void>;
 
+  specialEvents: SpecialEvent[];
+  saveSpecialEvent: (event: SpecialEvent) => Promise<boolean>;
+  deleteSpecialEvent: (eventId: string) => Promise<boolean>;
+  syncSpecialEventsFromSupabase: () => Promise<void>;
+
 
   // Holiday and Turn Overrides
   holidayAssignments: Record<string, string>;
@@ -196,6 +202,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [databaseCredentials, setDatabaseCredentials] = useState<DatabaseCredential[]>([]);
   const [objectives, setObjectives] = useState<Objective[]>([]);
   const [specialTasks, setSpecialTasks] = useState<SpecialTask[]>([]);
+  const [specialEvents, setSpecialEvents] = useState<SpecialEvent[]>(() => {
+    const saved = localStorage.getItem("techcontrol_special_events");
+    return saved ? JSON.parse(saved) : [];
+  });
   const [currentPage, setCurrentPage] = useState("guardias");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -697,9 +707,82 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const syncSpecialEventsFromSupabase = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from("special_events").select("*").order("date", { ascending: true });
+      if (error) {
+        if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+          console.warn("La tabla special_events aún no existe en Supabase.");
+        } else {
+          console.warn("No se pudieron cargar los eventos especiales desde Supabase:", error);
+        }
+        return;
+      }
+
+      const mapped = (data ?? []).map((row: any) => ({
+        id: row.id as string,
+        date: row.date as string,
+        name: row.name as string,
+        type: row.type as string,
+        tasks: Array.isArray(row.tasks) ? row.tasks : [],
+        createdAt: row.created_at as string | undefined,
+        updatedAt: row.updated_at as string | undefined,
+      }));
+
+      setSpecialEvents(mapped);
+      localStorage.setItem("techcontrol_special_events", JSON.stringify(mapped));
+    } catch (err) {
+      console.warn("No se pudo sincronizar eventos especiales desde Supabase:", err);
+    }
+  }, []);
+
+  const saveSpecialEvent = useCallback(async (event: SpecialEvent) => {
+    setSpecialEvents(prev => {
+      const exists = prev.some(e => e.id === event.id);
+      const next = exists 
+        ? prev.map(e => e.id === event.id ? event : e)
+        : [...prev, event];
+      localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
+      return next;
+    });
+
+    const payload = {
+      id: event.id,
+      date: event.date,
+      name: event.name,
+      type: event.type,
+      tasks: event.tasks ?? [],
+      created_at: event.createdAt ?? new Date().toISOString(),
+      updated_at: event.updatedAt ?? new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from("special_events").upsert(payload, { onConflict: "id" });
+    if (error) {
+      console.warn("No se pudo guardar el evento especial en Supabase:", error);
+      return false;
+    }
+    return true;
+  }, []);
+
+  const deleteSpecialEvent = useCallback(async (eventId: string) => {
+    setSpecialEvents(prev => {
+      const next = prev.filter(e => e.id !== eventId);
+      localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
+      return next;
+    });
+
+    const { error } = await supabase.from("special_events").delete().eq("id", eventId);
+    if (error) {
+      console.warn("No se pudo eliminar el evento especial desde Supabase:", error);
+      return false;
+    }
+    return true;
+  }, []);
+
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    void syncSpecialEventsFromSupabase();
+  }, [fetchData, syncSpecialEventsFromSupabase]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -2182,6 +2265,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addSpecialTask,
         updateSpecialTask,
         deleteSpecialTask,
+        specialEvents,
+        saveSpecialEvent,
+        deleteSpecialEvent,
+        syncSpecialEventsFromSupabase,
         holidayAssignments,
         turnOverrides,
         setHolidayAssignment,

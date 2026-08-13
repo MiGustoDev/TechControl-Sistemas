@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { 
   Plus, Search, Edit, Save, Trash2, Clock, Check, 
   FileDown, Printer, Filter, Calendar, 
@@ -36,12 +36,12 @@ import {
 import { useApp } from "@/context/AppContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
+
 import { Progress } from "@/components/ui/progress";
 
 import { GUARDIA_TYPES, getGuardiaTypeShortLabel } from "@/data/guardiaTypes";
 import { formatDate, formatToday, formatBranchesForDisplay } from "@/lib/utils-app";
-import type { Guardia, User as AppUser } from "@/types";
+import type { Guardia, User as AppUser, SpecialEvent, SpecialEventTask } from "@/types";
 import { getHolidayInfo } from "@/data/holidays";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { Calendar as CalendarUI } from "@/components/ui/calendar";
@@ -224,21 +224,7 @@ function getGuardiaPeriodRange(dateStr: string): string {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface SpecialEventTask {
-  id: string;
-  name: string;
-  completed: boolean;
-}
 
-interface SpecialEvent {
-  id: string;
-  date: string;
-  name: string;
-  type: string;
-  tasks?: SpecialEventTask[];
-  createdAt?: string;
-  updatedAt?: string;
-}
 
 const EVENT_COLOR_MAP: Record<string, string> = {
   sky: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border-sky-200 dark:border-sky-800",
@@ -271,16 +257,33 @@ function getDynamicEventStyle(tasks?: SpecialEventTask[]) {
       percent: 0
     };
   }
+
   const completed = tasks.filter(t => t.completed).length;
   const pct = completed / tasks.length;
-  const hue = Math.round(pct * 120); // 0 (red) to 120 (green)
-  
+  const isComplete = completed === tasks.length;
+
+  let style = {
+    backgroundColor: "rgba(239, 68, 68, 0.12)",
+    color: "rgb(220, 38, 38)",
+    borderColor: "rgba(239, 68, 68, 0.3)"
+  };
+
+  if (isComplete) {
+    style = {
+      backgroundColor: "rgba(16, 185, 129, 0.12)",
+      color: "rgb(5, 150, 105)",
+      borderColor: "rgba(16, 185, 129, 0.3)"
+    };
+  } else if (completed > 1) {
+    style = {
+      backgroundColor: "rgba(249, 115, 22, 0.12)",
+      color: "rgb(217, 119, 6)",
+      borderColor: "rgba(249, 115, 22, 0.3)"
+    };
+  }
+
   return {
-    style: {
-      backgroundColor: `hsla(${hue}, 80%, 45%, 0.12)`,
-      color: `hsl(${hue}, 80%, 38%)`,
-      borderColor: `hsla(${hue}, 80%, 45%, 0.3)`
-    },
+    style,
     percent: Math.round(pct * 100)
   };
 }
@@ -298,7 +301,11 @@ export function GuardiasPage() {
     setTurnOverride,
     clearTurnOverride,
     guardiasViewMode,
-    setGuardiasViewMode
+    setGuardiasViewMode,
+    specialEvents,
+    saveSpecialEvent,
+    deleteSpecialEvent,
+    syncSpecialEventsFromSupabase
   } = useApp();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -357,19 +364,8 @@ export function GuardiasPage() {
     }
   }, [holidayDialogOpen, selectedHolidayDate, holidayAssignments]);
 
-  // Special events states
-  const [manualEvents, setManualEvents] = useState<SpecialEvent[]>(() => {
-    const saved = localStorage.getItem("techcontrol_special_events");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return [];
-  });
+  // Special events states (pulled from global context)
+  const manualEvents = specialEvents;
 
   const [eventTypes, setEventTypes] = useState<{ id: string; name: string; color: string }[]>(() => {
     const saved = localStorage.getItem("techcontrol_calendar_event_types");
@@ -412,62 +408,7 @@ export function GuardiasPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<SpecialEvent | null>(null);
 
-  const syncSpecialEventsFromSupabase = useCallback(async () => {
-    try {
-      const { data, error } = await supabase.from("special_events").select("*").order("date", { ascending: true });
-      if (error) {
-        if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
-          console.warn("La tabla special_events aún no existe en Supabase. Ejecutá el SQL de supabase_setup.sql para compartir los eventos entre usuarios.");
-        } else {
-          console.warn("No se pudieron cargar los eventos especiales desde Supabase:", error);
-        }
-        return;
-      }
 
-      const mapped = (data ?? []).map((row: any) => ({
-        id: row.id as string,
-        date: row.date as string,
-        name: row.name as string,
-        type: row.type as SpecialEvent["type"],
-        tasks: Array.isArray(row.tasks) ? row.tasks : [],
-        createdAt: row.created_at as string | undefined,
-        updatedAt: row.updated_at as string | undefined,
-      }));
-
-      setManualEvents(mapped);
-      localStorage.setItem("techcontrol_special_events", JSON.stringify(mapped));
-    } catch (err) {
-      console.warn("No se pudo sincronizar eventos especiales desde Supabase:", err);
-    }
-  }, []);
-
-  const saveSpecialEventToSupabase = useCallback(async (event: SpecialEvent) => {
-    const payload = {
-      id: event.id,
-      date: event.date,
-      name: event.name,
-      type: event.type,
-      tasks: event.tasks ?? [],
-      created_at: event.createdAt ?? new Date().toISOString(),
-      updated_at: event.updatedAt ?? new Date().toISOString(),
-    };
-
-    const { error } = await supabase.from("special_events").upsert(payload, { onConflict: "id" });
-    if (error) {
-      console.warn("No se pudo guardar el evento especial en Supabase:", error);
-      return false;
-    }
-    return true;
-  }, []);
-
-  const deleteSpecialEventFromSupabase = useCallback(async (eventId: string) => {
-    const { error } = await supabase.from("special_events").delete().eq("id", eventId);
-    if (error) {
-      console.warn("No se pudo eliminar el evento especial desde Supabase:", error);
-      return false;
-    }
-    return true;
-  }, []);
 
   const openDetailEvent = (evt: SpecialEvent) => {
     setDetailEvent(evt);
@@ -481,12 +422,7 @@ export function GuardiasPage() {
     );
     const updatedEvent = { ...detailEvent, tasks: updatedTasks, updatedAt: new Date().toISOString() };
     setDetailEvent(updatedEvent);
-    setManualEvents(prev => {
-      const next = prev.map(e => e.id === detailEvent.id ? updatedEvent : e);
-      localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
-      return next;
-    });
-    void saveSpecialEventToSupabase(updatedEvent);
+    void saveSpecialEvent(updatedEvent);
   };
 
   const handleEditFromDetail = () => {
@@ -497,13 +433,8 @@ export function GuardiasPage() {
 
   const handleDeleteFromDetail = () => {
     if (!detailEvent) return;
-    setManualEvents(prev => {
-      const next = prev.filter(e => e.id !== detailEvent.id);
-      localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
-      return next;
-    });
+    void deleteSpecialEvent(detailEvent.id);
     setDetailDialogOpen(false);
-    void deleteSpecialEventFromSupabase(detailEvent.id);
     toast.success("Evento eliminado");
   };
 
@@ -527,13 +458,7 @@ export function GuardiasPage() {
     });
     setEventDialogOpen(true);
   };
-
   useEffect(() => {
-    localStorage.setItem("techcontrol_special_events", JSON.stringify(manualEvents));
-  }, [manualEvents]);
-
-  useEffect(() => {
-    void syncSpecialEventsFromSupabase();
     const intervalId = window.setInterval(() => {
       void syncSpecialEventsFromSupabase();
     }, 10000);
@@ -880,9 +805,9 @@ export function GuardiasPage() {
     const evt = upcoming[0];
     const eventDate = new Date(evt.date + "T12:00:00");
     const todayDate = new Date();
-    todayDate.setHours(0,0,0,0);
+    todayDate.setHours(12,0,0,0);
     const diffTime = eventDate.getTime() - todayDate.getTime();
-    const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const daysRemaining = Math.round(diffTime / (1000 * 60 * 60 * 24));
     
     let daysLabel = "";
     if (daysRemaining === 0) {
@@ -1155,12 +1080,7 @@ export function GuardiasPage() {
         tasks: eventForm.tasks,
         updatedAt: new Date().toISOString(),
       };
-      setManualEvents(prev => {
-        const next = prev.map(e => e.id === eventForm.id ? updatedEvent : e);
-        localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
-        return next;
-      });
-      void saveSpecialEventToSupabase(updatedEvent);
+      void saveSpecialEvent(updatedEvent);
       toast.success("Evento especial actualizado");
     } else {
       const newEvent: SpecialEvent = {
@@ -1172,12 +1092,7 @@ export function GuardiasPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      setManualEvents(prev => {
-        const next = [...prev, newEvent];
-        localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
-        return next;
-      });
-      void saveSpecialEventToSupabase(newEvent);
+      void saveSpecialEvent(newEvent);
       toast.success("Evento especial registrado");
     }
 
@@ -1401,16 +1316,19 @@ export function GuardiasPage() {
                                   let style = {};
                                   let className = "";
                                   const evType = eventTypes.find(t => t.id === evt.type);
-                                  if (evt.id === "last-thursday-onfire") {
+                                  const hasTasks = evt.tasks && evt.tasks.length > 0;
+                                  if (hasTasks) {
+                                    const dynamic = getDynamicEventStyle(evt.tasks);
+                                    style = dynamic.style;
+                                    className = "border";
+                                  } else if (evt.id === "last-thursday-onfire") {
                                     className = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
                                   } else if (evt.id === "first-wednesday-break") {
                                     className = "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30";
                                   } else if (evType) {
                                     className = EVENT_COLOR_MAP[evType.color] || EVENT_COLOR_MAP.gray;
                                   } else {
-                                    const dynamic = getDynamicEventStyle(evt.tasks);
-                                    style = dynamic.style;
-                                    className = "border";
+                                    className = "border bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700";
                                   }
                                   
                                   const isAllCompleted = evt.tasks && evt.tasks.length > 0 && evt.tasks.every(t => t.completed);
@@ -2253,16 +2171,19 @@ export function GuardiasPage() {
                                 let style = {};
                                 let className = "";
                                 const evType = eventTypes.find(t => t.id === evt.type);
-                                if (evt.id === "last-thursday-onfire") {
+                                const hasTasks = evt.tasks && evt.tasks.length > 0;
+                                if (hasTasks) {
+                                  const dynamic = getDynamicEventStyle(evt.tasks);
+                                  style = dynamic.style;
+                                  className = "border";
+                                } else if (evt.id === "last-thursday-onfire") {
                                   className = "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30";
                                 } else if (evt.id === "first-wednesday-break") {
                                   className = "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30";
                                 } else if (evType) {
                                   className = EVENT_COLOR_MAP[evType.color] || EVENT_COLOR_MAP.gray;
                                 } else {
-                                  const dynamic = getDynamicEventStyle(evt.tasks);
-                                  style = dynamic.style;
-                                  className = "border";
+                                  className = "border bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700";
                                 }
                                 
                                 const isAllCompleted = evt.tasks && evt.tasks.length > 0 && evt.tasks.every(t => t.completed);
@@ -2664,12 +2585,7 @@ export function GuardiasPage() {
                             size="icon-xs" 
                             className="h-7 w-7 text-destructive hover:bg-destructive/10"
                             onClick={() => {
-                              setManualEvents(prev => {
-                                const next = prev.filter(e => e.id !== evt.id);
-                                localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
-                                return next;
-                              });
-                              void deleteSpecialEventFromSupabase(evt.id);
+                              void deleteSpecialEvent(evt.id);
                               toast.success("Evento eliminado");
                             }}
                           >
@@ -3177,12 +3093,7 @@ export function GuardiasPage() {
                                     size="icon-xs" 
                                     className="h-7 w-7 text-destructive hover:bg-destructive/10"
                                     onClick={() => {
-                                      setManualEvents(prev => {
-                                        const next = prev.filter(e => e.id !== evt.id);
-                                        localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
-                                        return next;
-                                      });
-                                      void deleteSpecialEventFromSupabase(evt.id);
+                                      void deleteSpecialEvent(evt.id);
                                       toast.success("Evento eliminado");
                                     }}
                                     title="Eliminar evento"
