@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { 
   Plus, Search, Calendar, User, CheckSquare, ListTodo, Edit2, Trash2, 
-  ChevronDown, CheckSquare2, Square, Sparkles, Megaphone, PartyPopper, CalendarHeart, HelpCircle, Check, Flag
+  ChevronDown, CheckSquare2, Square, Sparkles, Megaphone, PartyPopper, CalendarHeart, HelpCircle, Check, Flag, Image as ImageIcon, Eye
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { useApp } from "@/context/AppContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { TaskImageUploadModal } from "@/components/special-tasks/TaskImageUploadModal";
+import { TaskImageViewerModal } from "@/components/special-tasks/TaskImageViewerModal";
 
 import {
   AlertDialog,
@@ -195,6 +197,22 @@ export function SpecialTasksPage() {
   const [editingTask, setEditingTask] = useState<SpecialTask | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
+  // Image Upload and Viewer Modals state
+  const [uploadModalState, setUploadModalState] = useState<{
+    isOpen: boolean;
+    taskId: string;
+    subTaskId: string;
+    taskTitle: string;
+    cardTitle: string;
+  } | null>(null);
+
+  const [viewerModalState, setViewerModalState] = useState<{
+    isOpen: boolean;
+    imageUrl: string;
+    title: string;
+    subtitle?: string;
+  } | null>(null);
+
   // Form fields
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -347,12 +365,37 @@ export function SpecialTasksPage() {
   };
 
   // Direct toggle task completion in the card view
-  const handleToggleCardTask = async (taskId: string, subTaskId: string) => {
-    // Check if it's a calendar event
+  const handleToggleCardTask = (taskId: string, subTaskId: string) => {
+    const calEvent = calendarEvents.find(e => e.id === taskId);
+    const task = specialTasks.find(t => t.id === taskId);
+
+    const cardTitle = calEvent ? calEvent.name : (task?.title || "Campaña / Evento");
+    const subTasks = calEvent ? (calEvent.tasks || []) : (task?.tasks || []);
+    const subTask = subTasks.find((st: any) => st.id === subTaskId);
+
+    if (!subTask) return;
+
+    // If task is not completed yet, open Upload Modal
+    if (!subTask.completed) {
+      setUploadModalState({
+        isOpen: true,
+        taskId,
+        subTaskId,
+        taskTitle: subTask.title || (subTask as any).name || "Tarea",
+        cardTitle
+      });
+      return;
+    }
+
+    // If already completed, uncheck directly
+    void handleUncheckTask(taskId, subTaskId);
+  };
+
+  const handleUncheckTask = async (taskId: string, subTaskId: string) => {
     const calEvent = calendarEvents.find(e => e.id === taskId);
     if (calEvent) {
       const updatedTasks = (calEvent.tasks || []).map((t: any) => 
-        t.id === subTaskId ? { ...t, completed: !t.completed } : t
+        t.id === subTaskId ? { ...t, completed: false } : t
       );
       
       const updatedEvent = {
@@ -363,7 +406,7 @@ export function SpecialTasksPage() {
 
       const success = await saveSpecialEvent(updatedEvent);
       if (success) {
-        toast.success("Tarea del calendario actualizada");
+        toast.success("Tarea desmarcada");
       } else {
         toast.error("Error al actualizar la tarea");
       }
@@ -373,13 +416,9 @@ export function SpecialTasksPage() {
     const task = specialTasks.find(t => t.id === taskId);
     if (!task || !task.tasks) return;
 
-    const updatedTasks = task.tasks.map(t => t.id === subTaskId ? { ...t, completed: !t.completed } : t);
-    
-    // Recalculate progress
+    const updatedTasks = task.tasks.map(t => t.id === subTaskId ? { ...t, completed: false } : t);
     const completed = updatedTasks.filter(t => t.completed).length;
     const progress = Math.round((completed / updatedTasks.length) * 100);
-    
-    // If progress reaches 100%, mark as completed automatically
     const autoStatus = progress === 100 ? "completed" : (task.status === "completed" ? "in-progress" : task.status);
 
     await updateSpecialTask(taskId, {
@@ -387,6 +426,54 @@ export function SpecialTasksPage() {
       progress,
       status: autoStatus
     });
+    toast.success("Tarea desmarcada");
+  };
+
+  const handleConfirmUploadImage = async (imageDataUrl: string) => {
+    if (!uploadModalState) return;
+    const { taskId, subTaskId } = uploadModalState;
+
+    const calEvent = calendarEvents.find(e => e.id === taskId);
+    if (calEvent) {
+      const updatedTasks = (calEvent.tasks || []).map((t: any) => 
+        t.id === subTaskId ? { ...t, completed: true, imageUrl: imageDataUrl, completedAt: new Date().toISOString() } : t
+      );
+      
+      const updatedEvent = {
+        ...calEvent,
+        tasks: updatedTasks,
+        bannerUrl: imageDataUrl,
+        updatedAt: new Date().toISOString()
+      };
+
+      const success = await saveSpecialEvent(updatedEvent);
+      if (success) {
+        toast.success("¡Comprobante guardado y tarea completada!");
+      } else {
+        toast.error("Error al actualizar la tarea");
+      }
+      return;
+    }
+
+    const task = specialTasks.find(t => t.id === taskId);
+    if (!task || !task.tasks) return;
+
+    const updatedTasks = task.tasks.map(t => 
+      t.id === subTaskId ? { ...t, completed: true, imageUrl: imageDataUrl, completedAt: new Date().toISOString() } : t
+    );
+
+    const completed = updatedTasks.filter(t => t.completed).length;
+    const progress = Math.round((completed / updatedTasks.length) * 100);
+    const autoStatus = progress === 100 ? "completed" : (task.status === "completed" ? "in-progress" : task.status);
+
+    await updateSpecialTask(taskId, {
+      tasks: updatedTasks,
+      progress,
+      status: autoStatus,
+      bannerUrl: imageDataUrl
+    });
+
+    toast.success("¡Comprobante guardado y tarea completada!");
   };
 
   // Toggle card expansion
@@ -425,8 +512,11 @@ export function SpecialTasksPage() {
         tasks: tasks.map((t: any) => ({
           id: t.id,
           title: t.title || t.name,
-          completed: !!t.completed
+          completed: !!t.completed,
+          imageUrl: t.imageUrl,
+          completedAt: t.completedAt
         })),
+        bannerUrl: evt.bannerUrl,
         assignedTo: ["Equipo IT"],
         isCalendarEvent: true,
         createdAt: evt.createdAt || evt.date,
@@ -554,61 +644,95 @@ export function SpecialTasksPage() {
             
             return (
               <Card key={task.id} className={`flex flex-col h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-l-4 ${getPriorityBorderColor(task.priority)}`}>
-                <CardHeader className="pb-3 relative">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex flex-wrap gap-1.5 items-center">
-                      <Badge variant="outline" className={`${getCategoryBadge(task.category)} flex items-center text-[11px]`}>
-                        {getCategoryIcon(task.category)}
-                        {getCategoryLabel(task.category)}
-                      </Badge>
-                      <Badge variant="outline" className={getPriorityBadge(task.priority)}>
-                        {getPriorityLabel(task.priority)}
-                      </Badge>
+                {/* Red Box Region: Card Banner Header */}
+                <div className="relative overflow-hidden transition-all duration-300 border-b border-border/40">
+                  {task.bannerUrl && (
+                    <div className="absolute inset-0 z-0 overflow-hidden">
+                      <img
+                        src={task.bannerUrl}
+                        alt={`Banner ${task.title}`}
+                        className="w-full h-full object-cover filter brightness-[0.45] hover:brightness-[0.6] transition-all duration-300 scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-card via-card/75 to-black/40" />
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Badge variant="outline" className={`${getStatusBadge(task.status)} text-[10px] px-2 py-0.5`}>
-                        {getStatusLabel(task.status)}
-                      </Badge>
-                      {!task.isCalendarEvent ? (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-7 rounded-full text-muted-foreground hover:text-foreground"
-                            onClick={() => handleOpenEdit(task)}
-                            title="Editar"
-                          >
-                            <Edit2 className="size-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-7 rounded-full text-muted-foreground hover:text-rose-500"
-                            onClick={() => handleDeleteTrigger(task.id)}
-                            title="Eliminar"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        </>
-                      ) : (
-                        <Badge variant="outline" className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20 text-[9.5px]">
-                          📅 Calendario
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <CardTitle className="line-clamp-2 text-lg font-bold text-foreground">
-                    {task.title}
-                  </CardTitle>
-                </CardHeader>
-
-                <CardContent className="flex-1 flex flex-col pb-4">
-                  {task.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">
-                      {task.description}
-                    </p>
                   )}
 
+                  <CardHeader className="pb-2 relative z-10">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex flex-wrap gap-1.5 items-center">
+                        <Badge variant="outline" className={`${getCategoryBadge(task.category)} flex items-center text-[11px] backdrop-blur-xs`}>
+                          {getCategoryIcon(task.category)}
+                          {getCategoryLabel(task.category)}
+                        </Badge>
+                        <Badge variant="outline" className={`${getPriorityBadge(task.priority)} backdrop-blur-xs`}>
+                          {getPriorityLabel(task.priority)}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="outline" className={`${getStatusBadge(task.status)} text-[10px] px-2 py-0.5 backdrop-blur-xs`}>
+                          {getStatusLabel(task.status)}
+                        </Badge>
+
+                        {task.bannerUrl && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 rounded-full text-white/80 hover:text-white hover:bg-black/40 backdrop-blur-xs"
+                            onClick={() => setViewerModalState({
+                              isOpen: true,
+                              imageUrl: task.bannerUrl!,
+                              title: `Banner: ${task.title}`,
+                              subtitle: "Último comprobante subido"
+                            })}
+                            title="Ver Banner a tamaño completo"
+                          >
+                            <ImageIcon className="size-3.5" />
+                          </Button>
+                        )}
+
+                        {!task.isCalendarEvent ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-7 rounded-full text-muted-foreground hover:text-foreground backdrop-blur-xs"
+                              onClick={() => handleOpenEdit(task)}
+                              title="Editar"
+                            >
+                              <Edit2 className="size-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-7 rounded-full text-muted-foreground hover:text-rose-500 backdrop-blur-xs"
+                              onClick={() => handleDeleteTrigger(task.id)}
+                              title="Eliminar"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </>
+                        ) : (
+                          <Badge variant="outline" className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20 text-[9.5px] backdrop-blur-xs">
+                            📅 Calendario
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <CardTitle className="line-clamp-2 text-lg font-bold text-foreground drop-shadow-sm">
+                      {task.title}
+                    </CardTitle>
+                  </CardHeader>
+
+                  {task.description && (
+                    <div className="px-6 pb-4 relative z-10">
+                      <p className="text-sm text-muted-foreground line-clamp-3">
+                        {task.description}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <CardContent className="flex-1 flex flex-col pt-4 pb-4">
                   {/* Progress Section */}
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-xs font-semibold">
@@ -647,22 +771,47 @@ export function SpecialTasksPage() {
                           {task.tasks.map((subTask) => (
                             <div 
                               key={subTask.id}
-                              className="flex items-start gap-2 text-xs p-1.5 rounded hover:bg-muted/30 transition-colors cursor-pointer"
-                              onClick={() => handleToggleCardTask(task.id, subTask.id)}
+                              className="flex items-center justify-between gap-2 text-xs p-1.5 rounded hover:bg-muted/30 transition-colors group"
                             >
-                              <span className="shrink-0 mt-0.5">
-                                {subTask.completed ? (
-                                  <CheckSquare2 className="size-4 text-emerald-600 dark:text-emerald-500" />
-                                ) : (
-                                  <Square className="size-4 text-muted-foreground/60" />
-                                )}
-                              </span>
-                              <span className={`leading-normal ${subTask.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                                {subTask.title}
-                                {!subTask.completed && (
-                                  <span className="ml-0.5 text-amber-500 font-bold text-[11px]" title="Pendiente">!</span>
-                                )}
-                              </span>
+                              <div
+                                className="flex items-start gap-2 flex-1 cursor-pointer min-w-0"
+                                onClick={() => handleToggleCardTask(task.id, subTask.id)}
+                              >
+                                <span className="shrink-0 mt-0.5">
+                                  {subTask.completed ? (
+                                    <CheckSquare2 className="size-4 text-emerald-600 dark:text-emerald-500" />
+                                  ) : (
+                                    <Square className="size-4 text-muted-foreground/60" />
+                                  )}
+                                </span>
+                                <span className={`leading-normal truncate ${subTask.completed ? "line-through text-muted-foreground" : "text-foreground font-medium"}`}>
+                                  {subTask.title}
+                                  {!subTask.completed && (
+                                    <span className="ml-1 text-amber-500 font-bold text-[11px]" title="Requiere comprobante de imagen">!</span>
+                                  )}
+                                </span>
+                              </div>
+
+                              {subTask.imageUrl && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-6 text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 rounded-full shrink-0"
+                                  title="Ver comprobante de imagen"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setViewerModalState({
+                                      isOpen: true,
+                                      imageUrl: subTask.imageUrl!,
+                                      title: `Comprobante: ${subTask.title}`,
+                                      subtitle: `Evento: ${task.title}`
+                                    });
+                                  }}
+                                >
+                                  <ImageIcon className="size-3.5" />
+                                </Button>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -967,6 +1116,24 @@ export function SpecialTasksPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Task Image Upload Modal */}
+      <TaskImageUploadModal
+        isOpen={uploadModalState?.isOpen ?? false}
+        onClose={() => setUploadModalState(null)}
+        onConfirm={handleConfirmUploadImage}
+        taskTitle={uploadModalState?.taskTitle ?? ""}
+        cardTitle={uploadModalState?.cardTitle ?? ""}
+      />
+
+      {/* Task Image Viewer Modal */}
+      <TaskImageViewerModal
+        isOpen={viewerModalState?.isOpen ?? false}
+        onClose={() => setViewerModalState(null)}
+        imageUrl={viewerModalState?.imageUrl ?? null}
+        title={viewerModalState?.title ?? ""}
+        subtitle={viewerModalState?.subtitle}
+      />
     </div>
   );
 }

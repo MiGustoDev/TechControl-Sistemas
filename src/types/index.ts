@@ -264,6 +264,8 @@ export interface ProjectTask {
   id: string;
   title: string;
   completed: boolean;
+  imageUrl?: string;
+  completedAt?: string;
 }
 
 export interface Objective {
@@ -297,6 +299,7 @@ export interface SpecialTask {
   assignedTo?: string[];
   tasks?: ProjectTask[];
   notes?: string;
+  bannerUrl?: string;
   createdAt: string;
   updatedAt: string;
   isCalendarEvent?: boolean;
@@ -307,6 +310,8 @@ export interface SpecialEventTask {
   name: string;
   title?: string;
   completed: boolean;
+  imageUrl?: string;
+  completedAt?: string;
 }
 
 export interface SpecialEvent {
@@ -315,6 +320,7 @@ export interface SpecialEvent {
   date: string;
   type: string;
   tasks?: SpecialEventTask[];
+  bannerUrl?: string;
   createdAt?: string;
   updatedAt?: string;
 }

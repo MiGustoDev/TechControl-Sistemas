@@ -611,6 +611,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           assignedTo: Array.isArray(o.assigned_to) ? o.assigned_to : [],
           tasks: Array.isArray(o.tasks) ? o.tasks : [],
           notes: o.notes || undefined,
+          bannerUrl: o.banner_url || o.bannerUrl || undefined,
           createdAt: o.created_at,
           updatedAt: o.updated_at
         }));
@@ -752,6 +753,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       name: event.name,
       type: event.type,
       tasks: event.tasks ?? [],
+      banner_url: event.bannerUrl ?? null,
       created_at: event.createdAt ?? new Date().toISOString(),
       updated_at: event.updatedAt ?? new Date().toISOString(),
     };
@@ -2141,6 +2143,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       assigned_to: newSpecialTask.assignedTo || [],
       tasks: newSpecialTask.tasks || [],
       notes: newSpecialTask.notes || null,
+      banner_url: newSpecialTask.bannerUrl || null,
       created_at: newSpecialTask.createdAt,
       updated_at: newSpecialTask.updatedAt
     });
@@ -2175,6 +2178,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (data.assignedTo !== undefined) dbPayload.assigned_to = data.assignedTo;
     if (data.tasks !== undefined) dbPayload.tasks = data.tasks;
     if (data.notes !== undefined) dbPayload.notes = data.notes;
+    if (data.bannerUrl !== undefined) dbPayload.banner_url = data.bannerUrl;
 
     const { error } = await supabase.from("special_tasks").update(dbPayload).eq("id", id);
     if (error) {
