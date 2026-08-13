@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Printer, Laptop, ShoppingCart, TriangleAlert as AlertTriangle, 
   Monitor, Tv, ChevronRight, Package, Clock, Users, Calendar, Database,
@@ -40,7 +40,8 @@ export function AppSidebar() {
     officeTickets,
     databaseCredentials,
     objectives,
-    specialTasks
+    specialTasks,
+    specialEvents
   } = useApp();
   const { state, isMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -65,7 +66,12 @@ export function AppSidebar() {
   const totalOfficeTickets = officeTickets?.length || 0;
   const totalDatabaseCredentials = databaseCredentials?.length || 0;
   const totalActiveObjectives = objectives?.filter(o => o.status === "in-progress" || o.status === "pending").length || 0;
-  const totalActiveSpecialTasks = specialTasks?.filter(o => o.status === "in-progress" || o.status === "pending").length || 0;
+  const totalSpecialTasks = useMemo(() => {
+    const ids = new Set<string>();
+    (specialTasks || []).forEach(t => ids.add(t.id));
+    (specialEvents || []).forEach(e => ids.add(e.id));
+    return ids.size;
+  }, [specialTasks, specialEvents]);
 
   const [isStockOpen, setIsStockOpen] = useState(() => {
     return ["notebooks", "printers", "monitors"].includes(currentPage);
@@ -132,9 +138,9 @@ export function AppSidebar() {
                   <Sparkles className="size-4 text-orange-500" />
                   <span>Campañas y Eventos</span>
                 </SidebarMenuButton>
-                {!isCollapsed && totalActiveSpecialTasks > 0 && (
+                {!isCollapsed && totalSpecialTasks > 0 && (
                   <SidebarMenuBadge className="bg-orange-500/15 font-bold text-orange-700 dark:text-orange-400">
-                    {totalActiveSpecialTasks}
+                    {totalSpecialTasks}
                   </SidebarMenuBadge>
                 )}
               </SidebarMenuItem>
