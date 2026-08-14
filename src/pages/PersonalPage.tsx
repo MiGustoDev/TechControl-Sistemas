@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Search, MapPin, Edit, Save, Trash2, Laptop, Monitor, UserCircle, Clock, Award } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,14 @@ export function PersonalPage() {
   
   const [form, setForm] = useState(defaultForm);
 
-  const filteredUsers = users.filter((u) => 
+  const systemsUsers = useMemo(() => {
+    return users.filter(u => 
+      (u.location && u.location.toLowerCase().includes("sistemas")) ||
+      ["Facundo Carrizo", "Gustavo Gonzalez", "Ramiro Lacci"].includes(u.fullName)
+    );
+  }, [users]);
+
+  const filteredUsers = systemsUsers.filter((u) => 
     u.username.toLowerCase().includes(search.toLowerCase()) ||
     u.fullName.toLowerCase().includes(search.toLowerCase()) ||
     (u.email ?? "").toLowerCase().includes(search.toLowerCase()) ||

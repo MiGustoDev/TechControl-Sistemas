@@ -41,7 +41,8 @@ export function AppSidebar() {
     databaseCredentials,
     objectives,
     specialTasks,
-    specialEvents
+    specialEvents,
+    users
   } = useApp();
   const { state, isMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -72,6 +73,12 @@ export function AppSidebar() {
     (specialEvents || []).forEach(e => ids.add(e.id));
     return ids.size;
   }, [specialTasks, specialEvents]);
+  const totalPersonal = useMemo(() => {
+    return users.filter(u => 
+      (u.location && u.location.toLowerCase().includes("sistemas")) ||
+      ["Facundo Carrizo", "Gustavo Gonzalez", "Ramiro Lacci"].includes(u.fullName)
+    ).length;
+  }, [users]);
 
   const [isStockOpen, setIsStockOpen] = useState(() => {
     return ["notebooks", "printers", "monitors"].includes(currentPage);
@@ -402,6 +409,11 @@ export function AppSidebar() {
                   <Users className="size-4" />
                   <span>Personal</span>
                 </SidebarMenuButton>
+                {!isCollapsed && totalPersonal > 0 && (
+                  <SidebarMenuBadge className="bg-muted-foreground/10 font-bold text-foreground">
+                    {totalPersonal}
+                  </SidebarMenuBadge>
+                )}
               </SidebarMenuItem>
 
             </SidebarMenu>
