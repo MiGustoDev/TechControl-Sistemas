@@ -212,8 +212,12 @@ export function AppSidebar() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  {isStockOpen && (
-                    <>
+                  <div
+                    className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+                      isStockOpen ? "grid-rows-[1fr] opacity-100 mt-1" : "grid-rows-[0fr] opacity-0 pointer-events-none"
+                    }`}
+                  >
+                    <div className="overflow-hidden space-y-1">
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           isActive={currentPage === "notebooks"}
@@ -246,8 +250,8 @@ export function AppSidebar() {
                           <span>Monitores</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                    </>
-                  )}
+                    </div>
+                  </div>
                 </>
               ) : (
                 <Collapsible open={isStockOpen} onOpenChange={setIsStockOpen} className="w-full">

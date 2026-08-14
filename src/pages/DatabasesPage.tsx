@@ -148,7 +148,7 @@ export function DatabasesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
             Credenciales de Bases de Datos
           </h1>
           <p className="text-muted-foreground text-sm">
@@ -157,7 +157,7 @@ export function DatabasesPage() {
         </div>
         <Button 
           onClick={handleOpenAdd}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-11 px-5 shadow-lg shadow-indigo-500/20 shrink-0 self-start sm:self-center text-xs font-semibold"
+          className="rounded-xl h-11 px-5 shadow-sm shrink-0 self-start sm:self-center text-xs font-semibold"
         >
           <Plus className="size-4 mr-2" />
           Nueva Conexión
@@ -685,7 +685,7 @@ export function DatabasesPage() {
             </div>
 
             <DialogFooter className="pt-2 flex flex-row items-center justify-end gap-2">
-              <Button type="submit" className="rounded-xl h-10 bg-indigo-600 hover:bg-indigo-700 text-xs">
+              <Button type="submit" className="rounded-xl h-10 text-xs">
                 {editingCred ? "Guardar cambios" : "Crear Conexión"}
               </Button>
               <Button type="button" variant="outline" className="rounded-xl h-10 text-xs" onClick={() => setIsOpen(false)}>
