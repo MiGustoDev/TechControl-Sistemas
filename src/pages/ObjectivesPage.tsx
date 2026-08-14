@@ -325,14 +325,14 @@ export function ObjectivesPage() {
       {/* Header Panel */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
             Objetivos
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Gestión, seguimiento y control de objetivos y metas del equipo de Sistemas IT.
           </p>
         </div>
-        <Button onClick={handleOpenCreate} className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium w-fit shrink-0 shadow-md">
+        <Button onClick={handleOpenCreate} className="w-fit shrink-0 shadow-md">
           <Plus className="mr-2 size-4" /> Nuevo objetivo
         </Button>
       </div>
@@ -751,7 +751,7 @@ export function ObjectivesPage() {
             </div>
 
             <DialogFooter className="pt-2 border-t border-border mt-4 flex flex-row items-center justify-end gap-2">
-              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow">
+              <Button type="submit">
                 {editingObjective ? "Guardar Cambios" : "Guardar"}
               </Button>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
