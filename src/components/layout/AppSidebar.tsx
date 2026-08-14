@@ -198,38 +198,31 @@ export function AppSidebar() {
                 )}
               </SidebarMenuItem>
 
-              {/* Stock Collapsible */}
-              <Collapsible open={isStockOpen} onOpenChange={setIsStockOpen} className="w-full">
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
+              {/* Stock Collapsible (Expanded) / Icon Items (Collapsed) */}
+              {isCollapsed ? (
+                <>
+                  <SidebarMenuItem>
                     <SidebarMenuButton 
                       tooltip="Stock" 
                       isActive={["notebooks", "printers", "monitors"].includes(currentPage)}
+                      onClick={() => setIsStockOpen((prev) => !prev)}
                     >
                       <Package className="size-4 shrink-0" />
                       <span>Stock</span>
-                      {!isCollapsed && (
-                        <ChevronRight className={`ml-auto size-3.5 transition-transform duration-200 ${isStockOpen ? "rotate-90" : ""}`} />
-                      )}
                     </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pl-4 mt-0.5 space-y-0.5 border-l border-muted/50 ml-4.5">
-                    <SidebarMenu>
+                  </SidebarMenuItem>
+
+                  {isStockOpen && (
+                    <>
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           isActive={currentPage === "notebooks"}
                           onClick={() => handlePageChange("notebooks")}
                           tooltip="Equipos"
-                          className="h-8 text-xs"
                         >
-                          <Laptop className="size-3.5" />
+                          <Laptop className="size-4" />
                           <span>Equipos</span>
                         </SidebarMenuButton>
-                        {!isCollapsed && totalNotebooks > 0 && (
-                          <SidebarMenuBadge className="bg-muted-foreground/10 text-[10px] font-bold text-foreground py-0 h-4">
-                            {totalNotebooks}
-                          </SidebarMenuBadge>
-                        )}
                       </SidebarMenuItem>
 
                       <SidebarMenuItem>
@@ -237,16 +230,10 @@ export function AppSidebar() {
                           isActive={currentPage === "printers"}
                           onClick={() => handlePageChange("printers")}
                           tooltip="Impresoras"
-                          className="h-8 text-xs"
                         >
-                          <Printer className="size-3.5" />
+                          <Printer className="size-4" />
                           <span>Impresoras</span>
                         </SidebarMenuButton>
-                        {!isCollapsed && totalPrinters > 0 && (
-                          <SidebarMenuBadge className="bg-muted-foreground/10 text-[10px] font-bold text-foreground py-0 h-4">
-                            {totalPrinters}
-                          </SidebarMenuBadge>
-                        )}
                       </SidebarMenuItem>
 
                       <SidebarMenuItem>
@@ -254,21 +241,84 @@ export function AppSidebar() {
                           isActive={currentPage === "monitors"}
                           onClick={() => handlePageChange("monitors")}
                           tooltip="Monitores"
-                          className="h-8 text-xs"
                         >
-                          <Monitor className="size-3.5" />
+                          <Monitor className="size-4" />
                           <span>Monitores</span>
                         </SidebarMenuButton>
-                        {!isCollapsed && totalMonitors > 0 && (
-                          <SidebarMenuBadge className="bg-muted-foreground/10 text-[10px] font-bold text-foreground py-0 h-4">
-                            {totalMonitors}
-                          </SidebarMenuBadge>
-                        )}
                       </SidebarMenuItem>
-                    </SidebarMenu>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
+                    </>
+                  )}
+                </>
+              ) : (
+                <Collapsible open={isStockOpen} onOpenChange={setIsStockOpen} className="w-full">
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton 
+                        tooltip="Stock" 
+                        isActive={["notebooks", "printers", "monitors"].includes(currentPage)}
+                      >
+                        <Package className="size-4 shrink-0" />
+                        <span>Stock</span>
+                        <ChevronRight className={`ml-auto size-3.5 transition-transform duration-200 ${isStockOpen ? "rotate-90" : ""}`} />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pl-4 mt-0.5 space-y-0.5 border-l border-muted/50 ml-4.5">
+                      <SidebarMenu>
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            isActive={currentPage === "notebooks"}
+                            onClick={() => handlePageChange("notebooks")}
+                            tooltip="Equipos"
+                            className="h-8 text-xs"
+                          >
+                            <Laptop className="size-3.5" />
+                            <span>Equipos</span>
+                          </SidebarMenuButton>
+                          {totalNotebooks > 0 && (
+                            <SidebarMenuBadge className="bg-muted-foreground/10 text-[10px] font-bold text-foreground py-0 h-4">
+                              {totalNotebooks}
+                            </SidebarMenuBadge>
+                          )}
+                        </SidebarMenuItem>
+
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            isActive={currentPage === "printers"}
+                            onClick={() => handlePageChange("printers")}
+                            tooltip="Impresoras"
+                            className="h-8 text-xs"
+                          >
+                            <Printer className="size-3.5" />
+                            <span>Impresoras</span>
+                          </SidebarMenuButton>
+                          {totalPrinters > 0 && (
+                            <SidebarMenuBadge className="bg-muted-foreground/10 text-[10px] font-bold text-foreground py-0 h-4">
+                              {totalPrinters}
+                            </SidebarMenuBadge>
+                          )}
+                        </SidebarMenuItem>
+
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            isActive={currentPage === "monitors"}
+                            onClick={() => handlePageChange("monitors")}
+                            tooltip="Monitores"
+                            className="h-8 text-xs"
+                          >
+                            <Monitor className="size-3.5" />
+                            <span>Monitores</span>
+                          </SidebarMenuButton>
+                          {totalMonitors > 0 && (
+                            <SidebarMenuBadge className="bg-muted-foreground/10 text-[10px] font-bold text-foreground py-0 h-4">
+                              {totalMonitors}
+                            </SidebarMenuBadge>
+                          )}
+                        </SidebarMenuItem>
+                      </SidebarMenu>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              )}
 
               {/* DataliveTV */}
               <SidebarMenuItem>
