@@ -107,14 +107,7 @@ export function OfficeTicketsPage() {
   }, [users]);
 
   // Form states
-  const [selectedUser, setSelectedUser] = useState(() => {
-    const savedUserId = localStorage.getItem("techcontrol_last_ticket_user");
-    if (savedUserId) {
-      const found = systemsUsers.find(u => u.id === savedUserId);
-      if (found) return found;
-    }
-    return systemsUsers[0] || { id: "facundo", fullName: "Facundo Carrizo" };
-  });
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
 
   // Edit states
   const [editingTicket, setEditingTicket] = useState<any | null>(null);
@@ -170,10 +163,10 @@ export function OfficeTicketsPage() {
     }
   };
 
-  const [category, setCategory] = useState<any>("soporte");
+  const [category, setCategory] = useState<string | null>(null);
   const [customCategory, setCustomCategory] = useState("");
   const [title, setTitle] = useState("");
-  const [duration, setDuration] = useState(15);
+  const [duration, setDuration] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   
   const date = useMemo(() => {
@@ -211,8 +204,20 @@ export function OfficeTicketsPage() {
   // Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedUser) {
+      toast.error("Por favor, seleccioná quién realizó la tarea");
+      return;
+    }
+    if (!category) {
+      toast.error("Por favor, seleccioná una categoría");
+      return;
+    }
     if (!title.trim()) {
       toast.error("Por favor, ingresá un título de la tarea");
+      return;
+    }
+    if (!duration) {
+      toast.error("Por favor, seleccioná la duración de la tarea");
       return;
     }
     if (category === "otro" && !customCategory.trim()) {
@@ -232,9 +237,12 @@ export function OfficeTicketsPage() {
         durationMinutes: duration
       });
       toast.success("Tarea registrada correctamente");
-      // Reset title and keep focus
+      // Reset form states and keep focus
       setTitle("");
       setCustomCategory("");
+      setSelectedUser(null);
+      setCategory(null);
+      setDuration(null);
       setTimeout(() => {
         inputRef.current?.focus();
       }, 50);
@@ -305,7 +313,7 @@ export function OfficeTicketsPage() {
       {/* Header and Title */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
             Registro de Tareas de Oficina
           </h1>
           <p className="text-muted-foreground text-sm">
@@ -385,7 +393,7 @@ export function OfficeTicketsPage() {
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">¿Quién realizó la tarea?</label>
                   <div className="flex flex-wrap gap-2">
                     {systemsUsers.map((u) => {
-                      const isSelected = selectedUser.id === u.id;
+                      const isSelected = selectedUser?.id === u.id;
                       return (
                         <Button
                           key={u.id}
@@ -393,8 +401,8 @@ export function OfficeTicketsPage() {
                           variant={isSelected ? "default" : "outline"}
                           className={`flex items-center gap-2 rounded-xl transition-all ${
                             isSelected 
-                              ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md font-bold" 
-                              : "hover:bg-muted"
+                              ? "bg-primary text-primary-foreground shadow-md font-bold" 
+                              : "hover:bg-muted text-muted-foreground hover:text-foreground"
                           }`}
                           onClick={() => handleSelectUser(u as any)}
                         >
@@ -420,7 +428,7 @@ export function OfficeTicketsPage() {
                           variant={isSelected ? "default" : "outline"}
                           className={`flex items-center justify-start gap-2 h-10 px-3 rounded-xl border border-border/80 transition-all ${
                             isSelected 
-                              ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md font-bold" 
+                              ? "bg-primary text-primary-foreground shadow-md font-bold" 
                               : "hover:bg-muted text-muted-foreground hover:text-foreground"
                           }`}
                           onClick={() => setCategory(cat.id)}
@@ -498,12 +506,12 @@ export function OfficeTicketsPage() {
                           <Button
                             key={dur}
                             type="button"
-                            variant={isSelected ? "secondary" : "outline"}
+                            variant={isSelected ? "default" : "outline"}
                             size="sm"
                             className={`h-8 px-2.5 rounded-lg text-xs font-medium border-border/80 ${
                               isSelected 
-                                ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200" 
-                                : "hover:bg-muted"
+                                ? "bg-primary text-primary-foreground font-bold shadow-xs" 
+                                : "hover:bg-muted text-muted-foreground hover:text-foreground"
                             }`}
                             onClick={() => setDuration(dur)}
                           >
@@ -515,7 +523,7 @@ export function OfficeTicketsPage() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-fit px-6 h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl shadow-md font-bold transition-all gap-2 mt-2">
+                <Button type="submit" className="w-fit px-6 h-11 rounded-xl shadow-md font-bold transition-all gap-2 mt-2">
                   <Plus className="size-4" />
                   Registrar Tarea de Oficina
                 </Button>
