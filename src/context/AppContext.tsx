@@ -217,18 +217,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [hasDbHolidayAssignments, setHasDbHolidayAssignments] = useState(true);
   const [hasDbTurnOverrides, setHasDbTurnOverrides] = useState(true);
 
-  const syncGuardiasFromSupabase = useCallback(async (sourceUsers: User[] = users) => {
+  const syncGuardiasFromSupabase = useCallback(async () => {
     try {
       const { data: gds, error: gdsError } = await supabase.from("guardias").select("*");
-      const allowedUserNames = new Set(["Facundo Carrizo", "Ramiro Lacci", "Gustavo Gonzalez"]);
-      const fallbackGuardias = initialGuardias.filter((g) => allowedUserNames.has(g.userName));
-      const validUserIds = new Set(sourceUsers.map((u) => u.id));
 
-      const sourceGuardias = gds && !gdsError
-        ? gds.map((g) => guardiaFromDb(g as Record<string, unknown>)).filter((g) => validUserIds.has(g.userId))
-        : fallbackGuardias;
+      let sourceGuardias: Guardia[] = [];
+      if (gds && !gdsError && gds.length > 0) {
+        sourceGuardias = gds.map((g) => guardiaFromDb(g as Record<string, unknown>));
+      } else {
+        const saved = localStorage.getItem("techcontrol_guardias");
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              sourceGuardias = parsed;
+            }
+          } catch (e) {}
+        }
+        if (sourceGuardias.length === 0) {
+          sourceGuardias = initialGuardias;
+        }
+      }
 
-      const mappedGuardias = dedupeGuardias(sourceGuardias.filter((g) => validUserIds.has(g.userId)));
+      const mappedGuardias = dedupeGuardias(sourceGuardias);
       setGuardias(mappedGuardias);
       localStorage.setItem("techcontrol_guardias", JSON.stringify(mappedGuardias));
 
@@ -238,9 +249,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return mappedGuardias;
     } catch (err) {
       console.warn("Could not load guardias from Supabase:", err);
-      return null;
+      const saved = localStorage.getItem("techcontrol_guardias");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setGuardias(parsed);
+            return parsed;
+          }
+        } catch (e) {}
+      }
+      setGuardias(initialGuardias);
+      return initialGuardias;
     }
-  }, [users]);
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -353,10 +375,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updatedAt: m.updated_at
       })));
 
-      const allowedUserNames = new Set(["Facundo Carrizo", "Ramiro Lacci", "Gustavo Gonzalez"]);
-      const fallbackUsers = initialUsers.filter((u) => allowedUserNames.has(u.fullName));
+      let localSavedUsers: User[] = [];
+      const savedUsersRaw = localStorage.getItem("techcontrol_users");
+      if (savedUsersRaw) {
+        try {
+          const parsed = JSON.parse(savedUsersRaw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            localSavedUsers = parsed;
+          }
+        } catch (e) {
+          console.error("Error parsing local users", e);
+        }
+      }
 
-      if (usr) {
+      if (usr && usr.length > 0) {
         dbUsers = usr
           .filter((u) => Boolean(u?.id))
           .map((u) => {
@@ -384,14 +416,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               updatedAt: u.updated_at ?? new Date().toISOString(),
             };
           });
-
-        const effectiveUsers = dbUsers.length > 0
-          ? dbUsers.filter((u) => allowedUserNames.has(u.fullName))
-          : fallbackUsers;
-        setUsers(effectiveUsers);
-      } else {
-        setUsers(fallbackUsers);
       }
+
+      // Merge initialUsers, localSavedUsers, and dbUsers without filtering out any members!
+      const userMap = new Map<string, User>();
+      initialUsers.forEach(u => userMap.set(u.id, u));
+      localSavedUsers.forEach(u => userMap.set(u.id, u));
+      dbUsers.forEach(u => {
+        const existingKey = Array.from(userMap.entries()).find(
+          ([_, existing]) => existing.id === u.id || existing.fullName.toLowerCase() === u.fullName.toLowerCase()
+        )?.[0] || u.id;
+        userMap.set(existingKey, { ...userMap.get(existingKey), ...u });
+      });
+
+      const effectiveUsers = Array.from(userMap.values());
+      setUsers(effectiveUsers);
+      localStorage.setItem("techcontrol_users", JSON.stringify(effectiveUsers));
 
       if (ords) setOrders(ords.map(o => ({
         ...o,
@@ -632,7 +672,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
 
       // Fetch guardias separately to handle missing table gracefully
-      await syncGuardiasFromSupabase(dbUsers.length > 0 ? dbUsers : fallbackUsers);
+      await syncGuardiasFromSupabase();
 
       // Fetch holiday assignments
       let dbHolidayAssignments: Record<string, string> = {};
@@ -803,11 +843,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
-      syncGuardiasFromSupabase(users);
+      syncGuardiasFromSupabase();
     }, 10000);
 
     return () => window.clearInterval(intervalId);
-  }, [syncGuardiasFromSupabase, users]);
+  }, [syncGuardiasFromSupabase]);
 
   const migrateAllData = async () => {
     setLoading(true);
@@ -1356,63 +1396,80 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const createdAt = now();
       const newUser: User = { ...u, id, createdAt, updatedAt: createdAt };
 
-      setUsers((prev) => [...prev, newUser]);
-
-      const { error } = await supabase.from("users").insert({
-        id: newUser.id,
-        username: newUser.username,
-        full_name: newUser.fullName,
-        email: newUser.email,
-        phone: newUser.phone,
-        location: newUser.location,
-        active: newUser.active,
-        role: newUser.role,
-        avatar_url: newUser.avatarUrl,
-        created_at: newUser.createdAt,
-        updated_at: newUser.updatedAt
+      setUsers((prev) => {
+        const next = [...prev, newUser];
+        localStorage.setItem("techcontrol_users", JSON.stringify(next));
+        return next;
       });
 
-      if (error) {
-        console.error("Error creating user in Supabase:", error);
-        toast.error(`Error al guardar usuario: ${error.message}`);
-        fetchData();
+      try {
+        const { error } = await supabase.from("users").upsert({
+          id: newUser.id,
+          username: newUser.username,
+          full_name: newUser.fullName,
+          email: newUser.email,
+          phone: newUser.phone,
+          location: newUser.location,
+          active: newUser.active,
+          role: newUser.role,
+          avatar_url: newUser.avatarUrl,
+          created_at: newUser.createdAt,
+          updated_at: newUser.updatedAt
+        });
+
+        if (error) {
+          console.warn("Supabase user insert warning:", error.message);
+        }
+      } catch (err) {
+        console.warn("Supabase user insert exception:", err);
       }
     },
-    [fetchData]
+    []
   );
 
   const updateUser = useCallback(async (id: string, data: Partial<User>) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, ...data, updatedAt: now() } : u))
-    );
+    setUsers((prev) => {
+      const next = prev.map((u) => (u.id === id ? { ...u, ...data, updatedAt: now() } : u));
+      localStorage.setItem("techcontrol_users", JSON.stringify(next));
+      return next;
+    });
 
-    // Build a clean snake_case payload — never spread camelCase keys into Supabase
-    const updateData: Record<string, unknown> = { updated_at: now() };
-    if (data.fullName    !== undefined) updateData.full_name  = data.fullName;
-    if (data.username    !== undefined) updateData.username   = data.username;
-    if (data.email       !== undefined) updateData.email      = data.email;
-    if (data.phone       !== undefined) updateData.phone      = data.phone;
-    if (data.location    !== undefined) updateData.location   = data.location;
-    if (data.active      !== undefined) updateData.active     = data.active;
-    if (data.role        !== undefined) updateData.role       = data.role;
-    if (data.avatarUrl   !== undefined) updateData.avatar_url = data.avatarUrl;
+    try {
+      const updateData: Record<string, unknown> = { updated_at: now() };
+      if (data.fullName    !== undefined) updateData.full_name  = data.fullName;
+      if (data.username    !== undefined) updateData.username   = data.username;
+      if (data.email       !== undefined) updateData.email      = data.email;
+      if (data.phone       !== undefined) updateData.phone      = data.phone;
+      if (data.location    !== undefined) updateData.location   = data.location;
+      if (data.active      !== undefined) updateData.active     = data.active;
+      if (data.role        !== undefined) updateData.role       = data.role;
+      if (data.avatarUrl   !== undefined) updateData.avatar_url = data.avatarUrl;
 
-    const { error } = await supabase.from("users").update(updateData).eq("id", id);
-    if (error) {
-      console.error("Error updating user in Supabase:", error);
-      toast.error(`Error al actualizar usuario: ${error.message}`);
-      fetchData();
+      const { error } = await supabase.from("users").update(updateData).eq("id", id);
+      if (error) {
+        console.warn("Supabase user update warning:", error.message);
+      }
+    } catch (err) {
+      console.warn("Supabase user update exception:", err);
     }
-  }, [fetchData]);
+  }, []);
 
   const deleteUser = useCallback(async (id: string) => {
-    setUsers((prev) => prev.filter((u) => u.id !== id));
-    const { error } = await supabase.from("users").delete().eq("id", id);
-    if (error) {
-      toast.error("Error al eliminar usuario");
-      fetchData();
+    setUsers((prev) => {
+      const next = prev.filter((u) => u.id !== id);
+      localStorage.setItem("techcontrol_users", JSON.stringify(next));
+      return next;
+    });
+
+    try {
+      const { error } = await supabase.from("users").delete().eq("id", id);
+      if (error) {
+        console.warn("Supabase user delete warning:", error.message);
+      }
+    } catch (err) {
+      console.warn("Supabase user delete exception:", err);
     }
-  }, [fetchData]);
+  }, []);
 
   // Orders
   const addOrder = useCallback(
@@ -1647,11 +1704,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.warn("Error inserting guardia into Supabase:", error);
         toast.info("Guardia guardada localmente");
       } else {
-        await syncGuardiasFromSupabase(users);
+        await syncGuardiasFromSupabase();
         toast.success("Guardia registrada con éxito");
       }
     },
-    [syncGuardiasFromSupabase, users]
+    [syncGuardiasFromSupabase]
   );
 
   const updateGuardia = useCallback(
@@ -1694,11 +1751,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.warn("Error updating guardia in Supabase:", error);
       } else {
-        await syncGuardiasFromSupabase(users);
+        await syncGuardiasFromSupabase();
         toast.success("Guardia actualizada");
       }
     },
-    [guardias, syncGuardiasFromSupabase, users]
+    [guardias, syncGuardiasFromSupabase]
   );
 
   const deleteGuardia = useCallback(
@@ -1713,11 +1770,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.warn("Error deleting guardia from Supabase:", error);
       } else {
-        await syncGuardiasFromSupabase(users);
+        await syncGuardiasFromSupabase();
         toast.success("Guardia eliminada");
       }
     },
-    [syncGuardiasFromSupabase, users]
+    [syncGuardiasFromSupabase]
   );
 
   const setHolidayAssignment = useCallback(async (date: string, userId: string) => {
