@@ -135,11 +135,11 @@ export function AppSidebar() {
                   onClick={() => handlePageChange("special-tasks")}
                   tooltip="Campañas y Eventos"
                 >
-                  <Sparkles className="size-4 text-orange-500" />
+                  <Sparkles className="size-4" />
                   <span>Campañas y Eventos</span>
                 </SidebarMenuButton>
                 {!isCollapsed && totalSpecialTasks > 0 && (
-                  <SidebarMenuBadge className="bg-orange-500/15 font-bold text-orange-700 dark:text-orange-400">
+                  <SidebarMenuBadge className="bg-muted-foreground/10 font-bold text-foreground">
                     {totalSpecialTasks}
                   </SidebarMenuBadge>
                 )}
@@ -157,7 +157,7 @@ export function AppSidebar() {
                     <span>Objetivos</span>
                   </SidebarMenuButton>
                   {!isCollapsed && totalActiveObjectives > 0 && (
-                    <SidebarMenuBadge className="bg-emerald-500/15 font-bold text-emerald-700 dark:text-emerald-400">
+                    <SidebarMenuBadge className="bg-muted-foreground/10 font-bold text-foreground">
                       {totalActiveObjectives}
                     </SidebarMenuBadge>
                   )}
@@ -175,7 +175,7 @@ export function AppSidebar() {
                   <span>Guardias IT</span>
                 </SidebarMenuButton>
                 {!isCollapsed && totalGuardias > 0 && (
-                  <SidebarMenuBadge className="bg-amber-500/15 font-bold text-amber-700 dark:text-amber-400">
+                  <SidebarMenuBadge className="bg-muted-foreground/10 font-bold text-foreground">
                     {totalGuardias}
                   </SidebarMenuBadge>
                 )}
@@ -192,7 +192,7 @@ export function AppSidebar() {
                   <span>Tareas Oficina</span>
                 </SidebarMenuButton>
                 {!isCollapsed && totalOfficeTickets > 0 && (
-                  <SidebarMenuBadge className="bg-indigo-500/10 font-bold text-indigo-600 dark:text-indigo-400">
+                  <SidebarMenuBadge className="bg-muted-foreground/10 font-bold text-foreground">
                     {totalOfficeTickets}
                   </SidebarMenuBadge>
                 )}

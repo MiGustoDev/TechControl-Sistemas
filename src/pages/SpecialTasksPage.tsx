@@ -643,14 +643,14 @@ export function SpecialTasksPage() {
       {/* Header Panel */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-orange-500 to-amber-600 bg-clip-text text-transparent flex items-center gap-2">
-            <Sparkles className="size-7 text-orange-500" /> Campañas y Eventos
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
+            <Sparkles className="size-7 text-foreground" /> Campañas y Eventos
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Gestión, seguimiento y control de promociones, eventos, campañas y objetivos de corto plazo del equipo de Sistemas IT.
           </p>
         </div>
-        <Button onClick={handleOpenCreate} className="bg-orange-600 hover:bg-orange-700 text-white font-medium w-fit shrink-0 shadow-md">
+        <Button onClick={handleOpenCreate} className="w-fit shrink-0 shadow-md">
           <Plus className="mr-2 size-4" /> Nueva campaña / evento
         </Button>
       </div>
@@ -947,7 +947,7 @@ export function SpecialTasksPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
           <DialogHeader>
-            <DialogTitle>{editingTask ? "Editar Tarea Promocional" : "Nueva Tarea Promocional"}</DialogTitle>
+            <DialogTitle>{editingTask ? "Editar campaña o evento" : "Nueva campaña o evento"}</DialogTitle>
             <DialogDescription>
               Completá los detalles de la tarea, campaña, promoción o evento de Sistemas.
             </DialogDescription>
@@ -1166,8 +1166,8 @@ export function SpecialTasksPage() {
             </div>
 
             <DialogFooter className="pt-2 justify-end gap-2">
-              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white font-medium">
-                {editingTask ? "Guardar Cambios" : "Crear Tarea Promocional"}
+              <Button type="submit">
+                {editingTask ? "Guardar Cambios" : "Crear campaña/ evento"}
               </Button>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
