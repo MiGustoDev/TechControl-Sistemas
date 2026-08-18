@@ -1084,24 +1084,6 @@ export function SpecialTasksPage() {
                   {getStatusLabel(task.status)}
                 </Badge>
 
-                {task.bannerUrl && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7 rounded-full text-white/90 hover:text-white hover:bg-black/50 backdrop-blur-md"
-                    onClick={() => setViewerModalState({
-                      isOpen: true,
-                      taskId: task.id,
-                      imageUrl: task.bannerUrl!,
-                      title: `Banner: ${task.title}`,
-                      subtitle: "Último comprobante subido"
-                    })}
-                    title="Ver Banner a tamaño completo"
-                  >
-                    <ImageIcon className="size-3.5" />
-                  </Button>
-                )}
-
                 {task.isCalendarEvent && (
                   <Badge variant="outline" className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20 text-[9.5px] backdrop-blur-md">
                     📅 Calendario
