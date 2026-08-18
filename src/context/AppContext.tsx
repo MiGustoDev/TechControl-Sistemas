@@ -187,6 +187,38 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+const pathMap: Record<string, string> = {
+  "printers": "/impresoras",
+  "notebooks": "/equipos",
+  "monitors": "/monitores",
+  "catalog": "/catalogo",
+  "orders": "/pedidos",
+  "movements": "/movimientos",
+  "personal": "/personal",
+  "reports": "/reportes",
+  "datalive": "/datalive",
+  "notes": "/notas",
+  "databases": "/bases",
+  "office-tickets": "/tareas-oficina",
+  "objectives": "/objetivos",
+  "special-tasks": "/campanias",
+  "guardias": "/guardias"
+};
+
+const getPageFromPath = (pathname: string): string => {
+  const cleanPath = pathname.replace(/\/$/, "");
+  for (const [page, path] of Object.entries(pathMap)) {
+    if (cleanPath.endsWith(path)) {
+      return page;
+    }
+  }
+  return "guardias";
+};
+
+const getPathFromPage = (page: string): string => {
+  return pathMap[page] || "/guardias";
+};
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [stockItems, setStockItems] = useState<StockItem[]>(initialItems);
   const [printers, setPrinters] = useState<Printer[]>(initialPrinters);
@@ -206,7 +238,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem("techcontrol_special_events");
     return saved ? JSON.parse(saved) : [];
   });
-  const [currentPage, setCurrentPage] = useState("guardias");
+  const [currentPage, setCurrentPage] = useState(() => {
+    return getPageFromPath(window.location.pathname);
+  });
+
+  useEffect(() => {
+    const targetPath = getPathFromPage(currentPage);
+    const currentPath = window.location.pathname;
+    
+    if (!currentPath.endsWith(targetPath)) {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const newPath = base + targetPath + window.location.search + window.location.hash;
+      window.history.pushState(null, '', newPath);
+    }
+  }, [currentPage]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const pageFromPath = getPageFromPath(window.location.pathname);
+      if (pageFromPath !== currentPage) {
+        setCurrentPage(pageFromPath);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [currentPage]);
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [guardiasViewMode, setGuardiasViewMode] = useState<"list" | "calendar">("list");

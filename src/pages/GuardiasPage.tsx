@@ -304,7 +304,6 @@ export function GuardiasPage() {
     setGuardiasViewMode,
     specialEvents,
     specialTasks,
-    addSpecialTask,
     saveSpecialEvent,
     deleteSpecialEvent,
     syncSpecialEventsFromSupabase

@@ -17,8 +17,9 @@ import { formatDate } from "@/lib/utils-app";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarUI } from "@/components/ui/calendar";
 import { es } from "date-fns/locale";
+import type { OfficeTicketCategory } from "@/types";
 
-const CATEGORIES = [
+const CATEGORIES: { id: OfficeTicketCategory; label: string; icon: any; color: string }[] = [
   { id: "soporte", label: "Soporte", icon: Wrench, color: "bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20" },
   { id: "redes", label: "Redes", icon: Network, color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20" },
   { id: "servidores", label: "Servidores", icon: Database, color: "bg-purple-500/10 text-purple-500 border-purple-500/20 hover:bg-purple-500/20" },
@@ -163,7 +164,7 @@ export function OfficeTicketsPage() {
     }
   };
 
-  const [category, setCategory] = useState<string | null>(null);
+  const [category, setCategory] = useState<OfficeTicketCategory | null>(null);
   const [customCategory, setCustomCategory] = useState("");
   const [title, setTitle] = useState("");
   const [duration, setDuration] = useState<number | null>(null);

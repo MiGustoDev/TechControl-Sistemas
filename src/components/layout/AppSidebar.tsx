@@ -142,11 +142,11 @@ export function AppSidebar() {
                   onClick={() => handlePageChange("special-tasks")}
                   tooltip="Campañas y Eventos"
                 >
-                  <Sparkles className="size-4" />
+                  <Sparkles className="size-4 text-orange-500" />
                   <span>Campañas y Eventos</span>
                 </SidebarMenuButton>
                 {!isCollapsed && totalSpecialTasks > 0 && (
-                  <SidebarMenuBadge className="bg-muted-foreground/10 font-bold text-foreground">
+                  <SidebarMenuBadge className="bg-orange-500/10 text-orange-500 font-bold border border-orange-500/20">
                     {totalSpecialTasks}
                   </SidebarMenuBadge>
                 )}

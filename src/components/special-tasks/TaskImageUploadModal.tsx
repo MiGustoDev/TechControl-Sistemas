@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from "react";
-import { UploadCloud, Image as ImageIcon, X, CheckCircle2, AlertCircle, FileCheck } from "lucide-react";
+import { UploadCloud, X, CheckCircle2, FileCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

@@ -1,8 +1,13 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { 
   Plus, Search, Calendar, User, CheckSquare, ListTodo, Edit2, Trash2, 
-  ChevronDown, CheckSquare2, Square, Sparkles, Megaphone, PartyPopper, CalendarHeart, HelpCircle, Check, Flag, Image as ImageIcon, Eye
+  ChevronDown, CheckSquare2, Square, Sparkles, Megaphone, PartyPopper, CalendarHeart, HelpCircle, Check, Flag, Image as ImageIcon,
+  Timer, AlertTriangle, Flame, CalendarDays, CheckCircle2, Hourglass, ChevronLeft, ChevronRight, Edit
 } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { getHolidayInfo } from "@/data/holidays";
+import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -179,7 +184,10 @@ export function SpecialTasksPage() {
     users,
     specialEvents,
     saveSpecialEvent,
-    deleteSpecialEvent
+    deleteSpecialEvent,
+    setCurrentPage,
+    setGuardiasViewMode,
+    holidayAssignments
   } = useApp();
 
   const calendarEvents = specialEvents;
@@ -231,6 +239,208 @@ export function SpecialTasksPage() {
   const [formTasks, setFormTasks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
 
+  // Calendar View states
+  const [viewMode, setViewMode] = useState<"grid" | "calendar">("grid");
+  const [currentCalMonth, setCurrentCalMonth] = useState(new Date().getMonth());
+  const [currentCalYear, setCurrentCalYear] = useState(new Date().getFullYear());
+  const [showEventos, setShowEventos] = useState(true);
+  const [showFeriados, setShowFeriados] = useState(true);
+
+  // States for simple calendar events (same as GuardiasPage)
+  const [eventDialogOpen, setEventDialogOpen] = useState(false);
+  const [eventForm, setEventForm] = useState<{
+    id?: string;
+    date: string;
+    name: string;
+    type: string;
+    tasks: { id: string; name: string; completed: boolean; imageUrl?: string; completedAt?: string }[];
+  }>({ date: "", name: "", type: "custom", tasks: [] });
+
+  const [showManageTypes, setShowManageTypes] = useState(false);
+  const [editingTypeColorId, setEditingTypeColorId] = useState<string | null>(null);
+  const [newTypeName, setNewTypeName] = useState("");
+  const [newTypeColor, setNewTypeColor] = useState<string>("gray");
+
+  const [renamingTaskId, setRenamingTaskId] = useState<string | null>(null);
+  const [renamingTaskName, setRenamingTaskName] = useState<string>("");
+
+  const [eventTypes, setEventTypes] = useState<{ id: string; name: string; color: string }[]>(() => {
+    const saved = localStorage.getItem("techcontrol_calendar_event_types");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return [
+      { id: "break", name: "MG Break", color: "amber" },
+      { id: "onfire", name: "OnFire", color: "rose" },
+      { id: "promo", name: "Promoción", color: "orange" },
+      { id: "custom", name: "Personalizado", color: "violet" }
+    ];
+  });
+
+  const toDisplayDate = (isoDate: string): string => {
+    if (!isoDate) return "";
+    const parts = isoDate.split("-");
+    if (parts.length !== 3) return isoDate;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  };
+
+  const toIsoDate = (displayDate: string): string => {
+    if (!displayDate) return "";
+    const parts = displayDate.split("/");
+    if (parts.length !== 3) return displayDate;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  };
+
+  const openCreateEvent = (prefilledDate?: string) => {
+    setEventForm({
+      date: toDisplayDate(prefilledDate || new Date().toISOString().split("T")[0]),
+      name: "",
+      type: "custom",
+      tasks: []
+    });
+    setEventDialogOpen(true);
+  };
+
+  const openEditEvent = (evt: { id: string; date: string; name: string; type: string; tasks: any[] }) => {
+    setEventForm({
+      id: evt.id,
+      date: toDisplayDate(evt.date),
+      name: evt.name,
+      type: evt.type,
+      tasks: evt.tasks.map(t => ({
+        id: t.id,
+        name: t.title || t.name,
+        completed: t.completed,
+        imageUrl: t.imageUrl,
+        completedAt: t.completedAt
+      }))
+    });
+    setEventDialogOpen(true);
+  };
+
+  const handleSaveEvent = async () => {
+    if (!eventForm.date || !eventForm.name) {
+      toast.error("Completá los campos obligatorios (*)");
+      return;
+    }
+
+    const isoDate = toIsoDate(eventForm.date);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate) || isNaN(new Date(isoDate + "T12:00:00").getTime())) {
+      toast.error("La fecha debe estar en formato DD/MM/AAAA (ej: 09/06/2026)");
+      return;
+    }
+
+    const payload: SpecialEvent = {
+      id: eventForm.id || `event-${Date.now()}`,
+      date: isoDate,
+      name: eventForm.name,
+      type: eventForm.type,
+      tasks: eventForm.tasks.map(t => ({
+        id: t.id,
+        title: t.name,
+        name: t.name,
+        completed: t.completed,
+        imageUrl: t.imageUrl,
+        completedAt: t.completedAt
+      })),
+      createdAt: eventForm.id ? undefined : new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const success = await saveSpecialEvent(payload);
+    if (success) {
+      toast.success(eventForm.id ? "Evento actualizado correctamente" : "Evento creado correctamente");
+      setEventDialogOpen(false);
+    } else {
+      toast.error("Error al guardar el evento");
+    }
+  };
+
+  // Calendar Helpers & Navigation
+  const MONTH_NAMES = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+  const WEEK_DAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+
+  const handlePrevMonth = () => {
+    if (currentCalMonth === 0) {
+      setCurrentCalMonth(11);
+      setCurrentCalYear(prev => prev - 1);
+    } else {
+      setCurrentCalMonth(prev => prev - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (currentCalMonth === 11) {
+      setCurrentCalMonth(0);
+      setCurrentCalYear(prev => prev + 1);
+    } else {
+      setCurrentCalMonth(prev => prev + 1);
+    }
+  };
+
+  const handleGoToday = () => {
+    const today = new Date();
+    setCurrentCalMonth(today.getMonth());
+    setCurrentCalYear(today.getFullYear());
+  };
+
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const firstDayIndex = new Date(currentCalYear, currentCalMonth, 1).getDay();
+  const startOffset = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+  const daysInMonth = new Date(currentCalYear, currentCalMonth + 1, 0).getDate();
+  const daysInPrevMonth = new Date(currentCalYear, currentCalMonth, 0).getDate();
+
+  const cells = useMemo(() => {
+    const gridCells: { day: number; dateStr: string; isCurrentMonth: boolean }[] = [];
+
+    for (let i = startOffset - 1; i >= 0; i--) {
+      const prevDay = daysInPrevMonth - i;
+      const prevMonth = currentCalMonth === 0 ? 11 : currentCalMonth - 1;
+      const prevYear = currentCalMonth === 0 ? currentCalYear - 1 : currentCalYear;
+      gridCells.push({
+        day: prevDay,
+        dateStr: `${prevYear}-${pad(prevMonth + 1)}-${pad(prevDay)}`,
+        isCurrentMonth: false
+      });
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      gridCells.push({
+        day,
+        dateStr: `${currentCalYear}-${pad(currentCalMonth + 1)}-${pad(day)}`,
+        isCurrentMonth: true
+      });
+    }
+
+    const total = gridCells.length;
+    const remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
+    for (let day = 1; day <= remaining; day++) {
+      const nextMonth = currentCalMonth === 11 ? 0 : currentCalMonth + 1;
+      const nextYear = currentCalMonth === 11 ? currentCalYear + 1 : currentCalYear;
+      gridCells.push({
+        day,
+        dateStr: `${nextYear}-${pad(nextMonth + 1)}-${pad(day)}`,
+        isCurrentMonth: false
+      });
+    }
+
+    return gridCells;
+  }, [currentCalMonth, currentCalYear, startOffset, daysInMonth, daysInPrevMonth]);
+
+  const getSpecialEventsForDate = (dateStr: string) => {
+    return filteredTasks.filter(task => {
+      if (task.isCalendarEvent) {
+        return task.startDate === dateStr;
+      }
+      return task.startDate === dateStr || (task.endDate && dateStr >= task.startDate && dateStr <= task.endDate);
+    });
+  };
+
   const systemsUsers = useMemo(() => {
     const allowed = ["Facundo Carrizo", "Ramiro Lacci", "Gustavo Gonzalez"];
     const filtered = users.filter(u => allowed.includes(u.fullName));
@@ -242,14 +452,14 @@ export function SpecialTasksPage() {
   }, [users]);
 
   // Open modal for creating new task
-  const handleOpenCreate = () => {
+  const handleOpenCreate = (prefilledDate?: string) => {
     setEditingTask(null);
     setTitle("");
     setDescription("");
     setCategory("campaign");
     setStatus("pending");
     setPriority("medium");
-    setStartDate(new Date().toISOString().split("T")[0]);
+    setStartDate(prefilledDate || new Date().toISOString().split("T")[0]);
     setEndDate("");
     setNoEndDate(false);
     setAssignedTo([]);
@@ -605,7 +815,7 @@ export function SpecialTasksPage() {
 
     const combined = Array.from(combinedMap.values());
 
-    return combined.filter(t => {
+    const filtered = combined.filter(t => {
       const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase()) || 
         (t.description || "").toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === "all" || t.status === statusFilter;
@@ -613,29 +823,353 @@ export function SpecialTasksPage() {
       const matchesCategory = categoryFilter === "all" || t.category === categoryFilter;
       return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
     });
+
+    // Completed tasks always placed last
+    return filtered.sort((a, b) => {
+      const aCompleted = a.status === "completed";
+      const bCompleted = b.status === "completed";
+      if (aCompleted && !bCompleted) return 1;
+      if (!aCompleted && bCompleted) return -1;
+      return 0;
+    });
   }, [specialTasks, calendarEvents, search, statusFilter, priorityFilter, categoryFilter]);
 
-  // Compute days remaining. Returns urgent=true when < 7 days
-  const getDaysRemainingLabel = (endDateStr?: string, status?: string) => {
-    if (status === "completed") return { text: "Completado", color: "text-emerald-500", urgent: false };
-    if (!endDateStr) return { text: "Sin fecha límite", color: "text-muted-foreground", urgent: false };
-    
+  const activeTasks = useMemo(() => {
+    return filteredTasks.filter(t => t.status !== "completed");
+  }, [filteredTasks]);
+
+  const completedTasks = useMemo(() => {
+    return filteredTasks.filter(t => t.status === "completed");
+  }, [filteredTasks]);
+
+  // Compute days remaining info with rich visual styling details
+  const getDaysRemainingInfo = (endDateStr?: string, startDateStr?: string, status?: string) => {
+    if (status === "completed") {
+      return {
+        statusType: "completed" as const,
+        diffDays: null,
+        headline: "Completado",
+        shortBadge: "Completado",
+        subtext: endDateStr ? `Finalizado (${formatDate(endDateStr)})` : "Tarea finalizada",
+        badgeClass: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+        boxClass: "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300",
+        Icon: CheckCircle2,
+        urgent: false
+      };
+    }
+
+    if (!endDateStr) {
+      return {
+        statusType: "no-date" as const,
+        diffDays: null,
+        headline: "Sin fecha de finalización",
+        shortBadge: "Sin fecha fin",
+        subtext: startDateStr ? `Inicio: ${formatDate(startDateStr)}` : "Sin fecha límite programada",
+        badgeClass: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20",
+        boxClass: "bg-muted/40 border-border/50 text-muted-foreground",
+        Icon: CalendarDays,
+        urgent: false
+      };
+    }
+
     const end = new Date(endDateStr + "T12:00:00");
     const today = new Date();
-    today.setHours(12,0,0,0);
-    
+    today.setHours(12, 0, 0, 0);
+
     const diffTime = end.getTime() - today.getTime();
     const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays < 0) {
-      return { text: `Vencido por ${Math.abs(diffDays)} d.`, color: "text-rose-500 font-bold", urgent: true };
+      const daysAgo = Math.abs(diffDays);
+      return {
+        statusType: "overdue" as const,
+        diffDays,
+        headline: `VENCIDO HACE ${daysAgo} DÍA${daysAgo === 1 ? "" : "S"}`,
+        shortBadge: `⚠️ Vencido (-${daysAgo}d)`,
+        subtext: `Venció el ${formatDate(endDateStr)}`,
+        badgeClass: "bg-rose-600 text-white font-extrabold border-rose-700 shadow-xs animate-pulse",
+        boxClass: "bg-rose-500/15 border-2 border-rose-500/40 text-rose-700 dark:text-rose-300 font-bold",
+        Icon: AlertTriangle,
+        urgent: true
+      };
     } else if (diffDays === 0) {
-      return { text: "Vence hoy", color: "text-amber-500 font-bold", urgent: true };
+      return {
+        statusType: "today" as const,
+        diffDays: 0,
+        headline: "¡VENCE HOY!",
+        shortBadge: "🔥 ¡Vence Hoy!",
+        subtext: `Fecha límite: ${formatDate(endDateStr)}`,
+        badgeClass: "bg-amber-500 text-slate-950 font-extrabold border-amber-600 shadow-xs animate-bounce",
+        boxClass: "bg-amber-500/20 border-2 border-amber-500/50 text-amber-800 dark:text-amber-200 font-extrabold",
+        Icon: Flame,
+        urgent: true
+      };
     } else if (diffDays <= 7) {
-      return { text: `${diffDays} día${diffDays === 1 ? "" : "s"} restante${diffDays === 1 ? "" : "s"}`, color: "text-amber-500 font-semibold", urgent: true };
+      return {
+        statusType: "urgent" as const,
+        diffDays,
+        headline: `${diffDays} DÍA${diffDays === 1 ? "" : "S"} RESTANTES`,
+        shortBadge: `⏳ ${diffDays}d rest.`,
+        subtext: `Fecha límite: ${formatDate(endDateStr)}`,
+        badgeClass: "bg-amber-500/25 text-amber-800 dark:text-amber-300 border-amber-500/50 font-extrabold shadow-2xs",
+        boxClass: "bg-amber-500/15 border-2 border-amber-500/40 text-amber-800 dark:text-amber-200 font-bold",
+        Icon: Hourglass,
+        urgent: true
+      };
     } else {
-      return { text: `${diffDays} días restantes`, color: "text-muted-foreground", urgent: false };
+      return {
+        statusType: "normal" as const,
+        diffDays,
+        headline: `${diffDays} DÍAS RESTANTES`,
+        shortBadge: `⏳ ${diffDays} días rest.`,
+        subtext: `Fecha límite: ${formatDate(endDateStr)}`,
+        badgeClass: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30 font-bold",
+        boxClass: "bg-sky-500/10 border border-sky-500/25 text-sky-800 dark:text-sky-200 font-semibold",
+        Icon: Timer,
+        urgent: false
+      };
     }
+  };
+
+  const renderTaskCard = (task: SpecialTask) => {
+    const isExpanded = expandedCards[task.id] || false;
+    const daysInfo = getDaysRemainingInfo(task.endDate, task.startDate, task.status);
+    const isCompleted = task.status === "completed";
+
+    return (
+      <Card 
+        key={task.id} 
+        className={`flex flex-col h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-l-4 rounded-xl py-0 pt-0 gap-0 ${getPriorityBorderColor(task.priority)} ${
+          isCompleted 
+            ? "opacity-50 saturate-50 hover:opacity-100 hover:saturate-100 bg-muted/20 border-dashed" 
+            : ""
+        }`}
+      >
+        {/* Red Box Region: Card Banner Header (Badges + Title + Description) */}
+        <div className="relative overflow-hidden rounded-t-xl transition-all duration-300 border-b border-border/40 shrink-0">
+          {task.bannerUrl && (
+            <div className="absolute inset-0 z-0 overflow-hidden rounded-t-xl">
+              <img
+                src={task.bannerUrl}
+                alt={`Banner ${task.title}`}
+                className="w-full h-full object-cover filter brightness-[0.8] hover:brightness-[0.95] transition-all duration-300 scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-black/30" />
+            </div>
+          )}
+
+          <CardHeader className="pt-4 px-5 pb-2 relative z-10">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-wrap gap-1.5 items-center">
+                <Badge variant="outline" className={`${getCategoryBadge(task.category)} flex items-center text-[11px] backdrop-blur-md`}>
+                  {getCategoryIcon(task.category)}
+                  {getCategoryLabel(task.category)}
+                </Badge>
+                <Badge variant="outline" className={`${getPriorityBadge(task.priority)} backdrop-blur-md`}>
+                  {getPriorityLabel(task.priority)}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1">
+                <Badge variant="outline" className={`${getStatusBadge(task.status)} text-[10px] px-2 py-0.5 backdrop-blur-md`}>
+                  {getStatusLabel(task.status)}
+                </Badge>
+
+                {task.bannerUrl && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 rounded-full text-white/90 hover:text-white hover:bg-black/50 backdrop-blur-md"
+                    onClick={() => setViewerModalState({
+                      isOpen: true,
+                      taskId: task.id,
+                      imageUrl: task.bannerUrl!,
+                      title: `Banner: ${task.title}`,
+                      subtitle: "Último comprobante subido"
+                    })}
+                    title="Ver Banner a tamaño completo"
+                  >
+                    <ImageIcon className="size-3.5" />
+                  </Button>
+                )}
+
+                {task.isCalendarEvent && (
+                  <Badge variant="outline" className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20 text-[9.5px] backdrop-blur-md">
+                    📅 Calendario
+                  </Badge>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 rounded-full text-muted-foreground hover:text-foreground backdrop-blur-md"
+                  onClick={() => handleOpenEdit(task)}
+                  title="Editar"
+                >
+                  <Edit2 className="size-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 rounded-full text-muted-foreground hover:text-rose-500 backdrop-blur-md"
+                  onClick={() => handleDeleteTrigger(task.id)}
+                  title="Eliminar"
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
+            </div>
+            <CardTitle className="line-clamp-2 text-lg font-bold text-foreground drop-shadow-sm">
+              {task.title}
+            </CardTitle>
+          </CardHeader>
+
+          {task.description && (
+            <div className="px-5 pb-4 relative z-10">
+              <p className="text-sm text-muted-foreground line-clamp-3 drop-shadow-xs">
+                {task.description}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <CardContent className="flex-1 flex flex-col p-5 pt-4 pb-4">
+          {/* Progress Section */}
+          <div className="space-y-2 mb-4">
+            <div className="flex justify-between text-xs font-semibold">
+              <span>Progreso</span>
+              <span className={`${
+                task.progress >= 100 ? "text-emerald-500" :
+                task.progress >= 76  ? "text-teal-500" :
+                task.progress >= 41  ? "text-blue-500" :
+                "text-amber-500"
+              }`}>{task.progress}%</span>
+            </div>
+            <Progress value={task.progress} className={`h-2 bg-muted-foreground/10 ${getProgressBarColor(task.progress)}`} />
+          </div>
+
+          {/* Tasks List */}
+          {task.tasks && task.tasks.length > 0 && (
+            <div className="mb-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full flex items-center justify-between text-xs px-2 h-8 hover:bg-muted/50 font-medium"
+                onClick={() => toggleExpand(task.id)}
+              >
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <CheckSquare className="size-3.5 text-emerald-500" />
+                  Checklist ({task.tasks.filter(t => t.completed).length}/{task.tasks.length})
+                </span>
+                <ChevronDown
+                  className="size-3 transition-transform duration-280 ease-out"
+                  style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                />
+              </Button>
+              
+              <div className={`accordion-grid${isExpanded ? " accordion-open" : ""}`}>
+                <div className="mt-2 space-y-1.5 pl-2 pr-1 max-h-48 overflow-y-auto no-scrollbar">
+                  {task.tasks.map((subTask) => (
+                    <div 
+                      key={subTask.id}
+                      className="flex items-center justify-between gap-2 text-xs p-1.5 rounded hover:bg-muted/30 transition-colors group"
+                    >
+                      <div
+                        className="flex items-start gap-2 flex-1 cursor-pointer min-w-0"
+                        onClick={() => handleToggleCardTask(task.id, subTask.id)}
+                      >
+                        <span className="shrink-0 mt-0.5">
+                          {subTask.completed ? (
+                            <CheckSquare2 className="size-4 text-emerald-600 dark:text-emerald-500" />
+                          ) : (
+                            <Square className="size-4 text-muted-foreground/60" />
+                          )}
+                        </span>
+                        <span className={`leading-normal truncate ${subTask.completed ? "line-through text-muted-foreground" : "text-foreground font-medium"}`}>
+                          {subTask.title}
+                          {!subTask.completed && (
+                            <span className="ml-1 text-amber-500 font-bold text-[11px]" title="Requiere comprobante de imagen">!</span>
+                          )}
+                        </span>
+                      </div>
+
+                      {subTask.imageUrl && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-6 text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 rounded-full shrink-0"
+                          title="Ver comprobante de imagen"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewerModalState({
+                              isOpen: true,
+                              taskId: task.id,
+                              imageUrl: subTask.imageUrl!,
+                              title: `Comprobante: ${subTask.title}`,
+                              subtitle: `Evento: ${task.title}`
+                            });
+                          }}
+                        >
+                          <ImageIcon className="size-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <Separator className="my-3" />
+
+          {/* Dates & Assigned info */}
+          <div className="grid grid-cols-2 gap-2 text-[11px] text-muted-foreground mt-auto">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="size-3.5 shrink-0" />
+              <div className="truncate">
+                <span>{formatDate(task.startDate)}</span>
+                {task.endDate && (
+                  <span className="block text-[10px] opacity-75">al {formatDate(task.endDate)}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 justify-end">
+              <User className="size-3.5 shrink-0" />
+              <span className="truncate max-w-[120px]" title={task.assignedTo?.join(", ")}>
+                {task.assignedTo && task.assignedTo.length > 0 
+                  ? task.assignedTo.join(", ") 
+                  : "Sin asignar"}
+              </span>
+            </div>
+          </div>
+
+          {/* Highly Noticeable Days Remaining Banner / Callout Box */}
+          <div className={`mt-3 p-3 rounded-lg flex items-center justify-between gap-3 shadow-xs transition-all ${daysInfo.boxClass}`}>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="p-2 rounded-full bg-background/70 backdrop-blur-xs shrink-0 shadow-2xs">
+                <daysInfo.Icon className="size-4.5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-black uppercase tracking-wide truncate">
+                    {daysInfo.headline}
+                  </span>
+                  {daysInfo.urgent && (
+                    <span className="relative flex size-2 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full size-2 bg-rose-500"></span>
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] opacity-90 truncate">
+                  {daysInfo.subtext}
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
@@ -644,15 +1178,25 @@ export function SpecialTasksPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
-            <Sparkles className="size-7 text-foreground" /> Campañas y Eventos
+            <Sparkles className="size-7 text-orange-500" /> Campañas y Eventos
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Gestión, seguimiento y control de promociones, eventos, campañas y objetivos de corto plazo del equipo de Sistemas IT.
           </p>
         </div>
-        <Button onClick={handleOpenCreate} className="w-fit shrink-0 shadow-md">
-          <Plus className="mr-2 size-4" /> Nueva campaña / evento
-        </Button>
+        <div className="flex items-center gap-3 w-fit shrink-0">
+          <Button
+            onClick={() => setViewMode(prev => prev === "grid" ? "calendar" : "grid")}
+            variant="outline"
+            className="shadow-sm font-semibold border-orange-500/20 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+          >
+            <Calendar className="mr-2 size-4" /> 
+            {viewMode === "grid" ? "Ver Calendario" : "Ver Tarjetas"}
+          </Button>
+          <Button onClick={handleOpenCreate} className="shadow-md bg-orange-600 hover:bg-orange-700 text-white font-semibold">
+            <Plus className="mr-2 size-4" /> Nueva campaña / evento
+          </Button>
+        </div>
       </div>
 
       <Separator />
@@ -706,8 +1250,185 @@ export function SpecialTasksPage() {
         </div>
       </div>
 
-      {/* Tasks Cards Grid */}
-      {filteredTasks.length === 0 ? (
+      {/* Tasks Cards Grid / Calendar View */}
+      {viewMode === "calendar" ? (
+        <TooltipProvider>
+          <Card className="border-muted-foreground/10 bg-card/45 backdrop-blur-xs print:border-none print:shadow-none overflow-hidden">
+            <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 print:hidden border-b border-muted-foreground/5 mb-4">
+              <CardTitle className="text-base font-bold flex items-center gap-2 shrink-0">
+                <Calendar className="size-4 text-primary" />
+                Calendario de Campañas y Eventos
+              </CardTitle>
+              
+              {/* Month Navigation */}
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" className="size-7" onClick={handlePrevMonth} title="Mes anterior">
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <span className="text-sm font-semibold min-w-[110px] text-center capitalize">
+                  {MONTH_NAMES[currentCalMonth]} {currentCalYear}
+                </span>
+                <Button variant="outline" size="icon" className="size-7" onClick={handleNextMonth} title="Mes siguiente">
+                  <ChevronRight className="size-4" />
+                </Button>
+                <Button variant="ghost" size="xs" onClick={handleGoToday} className="text-xs font-semibold h-7">
+                  Hoy
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Filtros de Visualización */}
+              <div className="flex flex-wrap items-center gap-2 mb-4 text-xs font-semibold print:hidden border-b border-muted-foreground/5 pb-3">
+                <span className="text-muted-foreground w-full sm:w-auto">Mostrar en Calendario:</span>
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    variant={showEventos ? "default" : "outline"} 
+                    size="xs" 
+                    className="h-7 text-xs gap-1"
+                    onClick={() => setShowEventos(!showEventos)}
+                  >
+                    🔥 Eventos y Campañas
+                  </Button>
+                  <Button 
+                    variant={showFeriados ? "default" : "outline"} 
+                    size="xs" 
+                    className="h-7 text-xs gap-1"
+                    onClick={() => setShowFeriados(!showFeriados)}
+                  >
+                    🎉 Feriados
+                  </Button>
+                </div>
+              </div>
+
+              {/* Calendar Grid Header */}
+              <div className="grid grid-cols-7 gap-0.5 sm:gap-1 text-center font-bold text-[10px] sm:text-xs text-muted-foreground mb-2 border-b border-muted-foreground/5 pb-1">
+                 {WEEK_DAYS.map(d => (
+                  <div key={d} className="py-1 truncate px-0.5">{d}</div>
+                ))}
+              </div>
+              
+              {/* Calendar Grid Cells */}
+              <div className="grid grid-cols-7 gap-0.5 sm:gap-1.5 auto-rows-[85px] sm:auto-rows-[110px]">
+                {cells.map((cell, idx) => {
+                  const isToday = cell.dateStr === new Date().toISOString().split("T")[0];
+                  const holidayName = getHolidayInfo(cell.dateStr);
+                  const assignedUserId = holidayAssignments[cell.dateStr];
+                  const assignedUser = assignedUserId ? users.find(u => u.id === assignedUserId) : null;
+                  const dayEvents = getSpecialEventsForDate(cell.dateStr);
+
+                  const cellBgClass = (holidayName && showFeriados)
+                    ? cell.isCurrentMonth
+                      ? "bg-amber-500/10 border-amber-500/30 dark:bg-amber-950/20 dark:border-amber-900/40 hover:bg-amber-500/15"
+                      : "bg-amber-500/5 border-amber-500/20 dark:bg-amber-950/10 dark:border-amber-900/20 opacity-50 hover:opacity-80 hover:bg-amber-500/10"
+                    : cell.isCurrentMonth
+                      ? "bg-background/40 border-muted-foreground/10"
+                      : "bg-background/10 border-muted-foreground/5 opacity-40 hover:opacity-80";
+
+                  return (
+                    <Tooltip key={idx}>
+                      <TooltipTrigger asChild>
+                        <div
+                          onClick={() => openCreateEvent(cell.dateStr)}
+                          className={`group relative rounded border sm:rounded-lg p-1.5 flex flex-col justify-between gap-1 transition-all duration-200 overflow-hidden hover:scale-[1.02] hover:shadow-lg hover:border-orange-500/50 hover:ring-1 hover:ring-orange-500/20 active:scale-[0.98] ${cellBgClass} ${isToday ? "ring-1 sm:ring-2 ring-orange-500 ring-offset-1 sm:ring-offset-2 ring-offset-background" : ""}`}
+                        >
+                          {/* Day Number and Events */}
+                          <div className="flex justify-between items-center min-w-0 overflow-hidden shrink-0">
+                            <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                              isToday 
+                                ? "bg-orange-500 text-white font-black" 
+                                : "text-muted-foreground"
+                            }`}>
+                              {cell.day}
+                            </span>
+                          </div>
+
+                          {/* Content Area */}
+                          <div className="flex-1 flex flex-col gap-1 mt-1 justify-end min-h-0 overflow-y-auto no-scrollbar">
+                            {holidayName && showFeriados && (
+                              <div 
+                                className="rounded border border-amber-500/20 bg-amber-500/5 dark:bg-amber-950/20 p-1 select-none shrink-0" 
+                                title={`Feriado: ${holidayName}`}
+                              >
+                                <div className="text-[8.5px] font-extrabold text-amber-600 dark:text-amber-400 truncate">
+                                  🎉 {holidayName}
+                                </div>
+                                {assignedUser && (
+                                  <div className="text-[7.5px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                                    👤 {assignedUser.fullName.split(" ")[0]}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {showEventos && dayEvents.map((evt) => {
+                              const isAllCompleted = evt.tasks && evt.tasks.length > 0 && evt.tasks.every(t => t.completed);
+                              
+                              // Category styling
+                              let badgeClass = "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20";
+                              if (evt.category === "event") {
+                                badgeClass = "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20";
+                              } else if (evt.category === "special-day") {
+                                badgeClass = "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20";
+                              } else if (evt.category === "campaign") {
+                                badgeClass = "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20";
+                              } else if (evt.category === "promotion") {
+                                badgeClass = "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20";
+                              }
+
+                              return (
+                                <span 
+                                  key={evt.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (evt.isCalendarEvent) {
+                                      const originalEvent = {
+                                        id: evt.id,
+                                        date: evt.startDate,
+                                        name: evt.title,
+                                        type: evt.category === "special-day" ? "break" : evt.category === "campaign" ? "onfire" : evt.category === "promotion" ? "promotion" : "custom",
+                                        tasks: evt.tasks || [],
+                                        bannerUrl: evt.bannerUrl,
+                                        createdAt: evt.createdAt,
+                                        updatedAt: evt.updatedAt
+                                      };
+                                      openEditEvent(originalEvent);
+                                    } else {
+                                      handleOpenEdit(evt);
+                                    }
+                                  }}
+                                  className={`text-[8.5px] ${badgeClass} border px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wider shrink-0 truncate max-w-full cursor-pointer hover:scale-105 transition-transform`}
+                                  title={`${evt.title} (${evt.tasks ? evt.tasks.filter(t => t.completed).length : 0}/${evt.tasks ? evt.tasks.length : 0} tareas)`}
+                                >
+                                  {evt.title} {isAllCompleted && "✓"}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs max-w-xs p-2 bg-background border shadow-md">
+                        <p className="font-bold mb-1">Día {cell.day}</p>
+                        {holidayName && <p className="text-amber-600 dark:text-amber-400">🎉 Feriado: {holidayName}</p>}
+                        {assignedUser && <p className="text-emerald-600 dark:text-emerald-400">👤 Asiste: {assignedUser.fullName}</p>}
+                        {dayEvents.length > 0 && (
+                          <div className="mt-1 space-y-0.5">
+                            <p className="font-semibold text-[10px] text-muted-foreground">Campañas / Eventos:</p>
+                            {dayEvents.map(e => (
+                              <p key={e.id} className="text-[10.5px] truncate">
+                                • {e.title} ({e.progress}%)
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </TooltipProvider>
+      ) : filteredTasks.length === 0 ? (
         <EmptyState
           title="No se encontraron campañas o eventos"
           description={search || statusFilter !== "all" || priorityFilter !== "all" || categoryFilter !== "all"
@@ -716,230 +1437,30 @@ export function SpecialTasksPage() {
           icon={ListTodo}
         />
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredTasks.map((task) => {
-            const isExpanded = expandedCards[task.id] || false;
-            const daysInfo = getDaysRemainingLabel(task.endDate, task.status);
-            
-            return (
-              <Card key={task.id} className={`flex flex-col h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-l-4 rounded-xl py-0 pt-0 gap-0 ${getPriorityBorderColor(task.priority)}`}>
-                {/* Red Box Region: Card Banner Header (Badges + Title + Description) */}
-                <div className="relative overflow-hidden rounded-t-xl transition-all duration-300 border-b border-border/40 shrink-0">
-                  {task.bannerUrl && (
-                    <div className="absolute inset-0 z-0 overflow-hidden rounded-t-xl">
-                      <img
-                        src={task.bannerUrl}
-                        alt={`Banner ${task.title}`}
-                        className="w-full h-full object-cover filter brightness-[0.8] hover:brightness-[0.95] transition-all duration-300 scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-black/30" />
-                    </div>
-                  )}
+        <div className="space-y-8">
+          {/* Active Tasks Grid */}
+          {activeTasks.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
+                <Flame className="size-5.5 text-orange-500" /> Activas
+              </h2>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {activeTasks.map((task) => renderTaskCard(task))}
+              </div>
+            </div>
+          )}
 
-                  <CardHeader className="pt-4 px-5 pb-2 relative z-10">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex flex-wrap gap-1.5 items-center">
-                        <Badge variant="outline" className={`${getCategoryBadge(task.category)} flex items-center text-[11px] backdrop-blur-md`}>
-                          {getCategoryIcon(task.category)}
-                          {getCategoryLabel(task.category)}
-                        </Badge>
-                        <Badge variant="outline" className={`${getPriorityBadge(task.priority)} backdrop-blur-md`}>
-                          {getPriorityLabel(task.priority)}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Badge variant="outline" className={`${getStatusBadge(task.status)} text-[10px] px-2 py-0.5 backdrop-blur-md`}>
-                          {getStatusLabel(task.status)}
-                        </Badge>
-
-                        {task.bannerUrl && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-7 rounded-full text-white/90 hover:text-white hover:bg-black/50 backdrop-blur-md"
-                            onClick={() => setViewerModalState({
-                              isOpen: true,
-                              taskId: task.id,
-                              imageUrl: task.bannerUrl!,
-                              title: `Banner: ${task.title}`,
-                              subtitle: "Último comprobante subido"
-                            })}
-                            title="Ver Banner a tamaño completo"
-                          >
-                            <ImageIcon className="size-3.5" />
-                          </Button>
-                        )}
-
-                        {task.isCalendarEvent && (
-                          <Badge variant="outline" className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20 text-[9.5px] backdrop-blur-md">
-                            📅 Calendario
-                          </Badge>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7 rounded-full text-muted-foreground hover:text-foreground backdrop-blur-md"
-                          onClick={() => handleOpenEdit(task)}
-                          title="Editar"
-                        >
-                          <Edit2 className="size-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7 rounded-full text-muted-foreground hover:text-rose-500 backdrop-blur-md"
-                          onClick={() => handleDeleteTrigger(task.id)}
-                          title="Eliminar"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                    <CardTitle className="line-clamp-2 text-lg font-bold text-foreground drop-shadow-sm">
-                      {task.title}
-                    </CardTitle>
-                  </CardHeader>
-
-                  {task.description && (
-                    <div className="px-5 pb-4 relative z-10">
-                      <p className="text-sm text-muted-foreground line-clamp-3 drop-shadow-xs">
-                        {task.description}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <CardContent className="flex-1 flex flex-col p-5 pt-4 pb-4">
-                  {/* Progress Section */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span>Progreso</span>
-                      <span className={`${
-                        task.progress >= 100 ? "text-emerald-500" :
-                        task.progress >= 76  ? "text-teal-500" :
-                        task.progress >= 41  ? "text-blue-500" :
-                        "text-amber-500"
-                      }`}>{task.progress}%</span>
-                    </div>
-                    <Progress value={task.progress} className={`h-2 bg-muted-foreground/10 ${getProgressBarColor(task.progress)}`} />
-                  </div>
-
-                  {/* Tasks List */}
-                  {task.tasks && task.tasks.length > 0 && (
-                    <div className="mb-4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full flex items-center justify-between text-xs px-2 h-8 hover:bg-muted/50 font-medium"
-                        onClick={() => toggleExpand(task.id)}
-                      >
-                        <span className="flex items-center gap-1.5 text-muted-foreground">
-                          <CheckSquare className="size-3.5 text-emerald-500" />
-                          Checklist ({task.tasks.filter(t => t.completed).length}/{task.tasks.length})
-                        </span>
-                        <ChevronDown
-                          className="size-3 transition-transform duration-280 ease-out"
-                          style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
-                        />
-                      </Button>
-                      
-                      <div className={`accordion-grid${isExpanded ? " accordion-open" : ""}`}>
-                        <div className="mt-2 space-y-1.5 pl-2 pr-1 max-h-48 overflow-y-auto no-scrollbar">
-                          {task.tasks.map((subTask) => (
-                            <div 
-                              key={subTask.id}
-                              className="flex items-center justify-between gap-2 text-xs p-1.5 rounded hover:bg-muted/30 transition-colors group"
-                            >
-                              <div
-                                className="flex items-start gap-2 flex-1 cursor-pointer min-w-0"
-                                onClick={() => handleToggleCardTask(task.id, subTask.id)}
-                              >
-                                <span className="shrink-0 mt-0.5">
-                                  {subTask.completed ? (
-                                    <CheckSquare2 className="size-4 text-emerald-600 dark:text-emerald-500" />
-                                  ) : (
-                                    <Square className="size-4 text-muted-foreground/60" />
-                                  )}
-                                </span>
-                                <span className={`leading-normal truncate ${subTask.completed ? "line-through text-muted-foreground" : "text-foreground font-medium"}`}>
-                                  {subTask.title}
-                                  {!subTask.completed && (
-                                    <span className="ml-1 text-amber-500 font-bold text-[11px]" title="Requiere comprobante de imagen">!</span>
-                                  )}
-                                </span>
-                              </div>
-
-                              {subTask.imageUrl && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="size-6 text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 rounded-full shrink-0"
-                                  title="Ver comprobante de imagen"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setViewerModalState({
-                                      isOpen: true,
-                                      taskId: task.id,
-                                      imageUrl: subTask.imageUrl!,
-                                      title: `Comprobante: ${subTask.title}`,
-                                      subtitle: `Evento: ${task.title}`
-                                    });
-                                  }}
-                                >
-                                  <ImageIcon className="size-3.5" />
-                                </Button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <Separator className="my-3" />
-
-                  {/* Dates & Assigned info */}
-                  <div className="grid grid-cols-2 gap-2 text-[11px] text-muted-foreground mt-auto">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="size-3.5 shrink-0" />
-                      <div className="truncate">
-                        <span>{formatDate(task.startDate)}</span>
-                        {task.endDate && (
-                          <span className="block text-[10px] opacity-75">al {formatDate(task.endDate)}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 justify-end">
-                      <User className="size-3.5 shrink-0" />
-                      <span className="truncate max-w-[120px]" title={task.assignedTo?.join(", ")}>
-                        {task.assignedTo && task.assignedTo.length > 0 
-                          ? task.assignedTo.join(", ") 
-                          : "Sin asignar"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Deadline Remaining Badge with pulse effect if urgent */}
-                  {task.status !== "completed" && (
-                    <div className="mt-3 flex items-center justify-between text-[11px]">
-                      <span className="text-muted-foreground">Plazo:</span>
-                      <span className={`flex items-center gap-1 ${daysInfo.color}`}>
-                        {daysInfo.urgent && (
-                          <span className="relative flex size-2 mr-1">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full size-2 bg-rose-500"></span>
-                          </span>
-                        )}
-                        {daysInfo.text}
-                      </span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+          {/* Completed Tasks Grid */}
+          {completedTasks.length > 0 && (
+            <div className="space-y-4 pt-6 border-t border-border/40">
+              <h2 className="text-xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
+                <CheckCircle2 className="size-5.5 text-emerald-500" /> Finalizadas
+              </h2>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {completedTasks.map((task) => renderTaskCard(task))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1174,6 +1695,382 @@ export function SpecialTasksPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Registrar/Editar Evento Especial (Simple) */}
+      <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
+        <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{eventForm.id ? "Editar Evento Especial" : "Agregar Evento Especial"}</DialogTitle>
+            <DialogDescription>
+              {eventForm.id 
+                ? "Modificá el evento especial y gestioná sus tareas." 
+                : "Agregá un evento especial en el calendario y definí sus tareas."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-2 pr-1 space-y-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="grid gap-2">
+              <Label htmlFor="eventDate">Fecha <span className="text-red-500">*</span></Label>
+              <Input
+                id="eventDate"
+                type="text"
+                placeholder="DD/MM/AAAA"
+                value={eventForm.date}
+                onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="eventName">Nombre del Evento <span className="text-red-500">*</span></Label>
+              <Input
+                id="eventName"
+                type="text"
+                placeholder="Ej: ☕ MG Break Amistoso"
+                value={eventForm.name}
+                onChange={(e) => setEventForm({ ...eventForm, name: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="eventType" className="font-semibold text-xs text-muted-foreground uppercase">Tipo de Evento</Label>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-xs text-primary px-2 hover:bg-muted/50"
+                  onClick={() => setShowManageTypes(!showManageTypes)}
+                >
+                  {showManageTypes ? "✕ Cerrar" : "⚙️ Administrar Tipos"}
+                </Button>
+              </div>
+
+              {showManageTypes ? (
+                <div className="border border-border bg-muted/15 rounded-lg p-3 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Tipos de Eventos</span>
+                  </div>
+                  <div className="space-y-1 max-h-[110px] overflow-y-auto pr-1">
+                    {eventTypes.map((t) => {
+                      const bgMap: Record<string, string> = {
+                        sky: "bg-sky-500", blue: "bg-blue-500", indigo: "bg-indigo-500", violet: "bg-violet-500",
+                        purple: "bg-purple-500", fuchsia: "bg-fuchsia-500", pink: "bg-pink-500", rose: "bg-rose-500",
+                        red: "bg-red-500", orange: "bg-orange-500", amber: "bg-amber-500", yellow: "bg-yellow-500",
+                        lime: "bg-lime-500", emerald: "bg-emerald-500", teal: "bg-teal-500", cyan: "bg-cyan-500", gray: "bg-slate-500"
+                      };
+                      const isEditingColor = editingTypeColorId === t.id;
+                      return (
+                        <div key={t.id} className="flex flex-col gap-1.5 p-1.5 rounded-md border bg-card text-xs">
+                          <div className="flex items-center justify-between">
+                            <div 
+                              className="flex items-center gap-2 cursor-pointer hover:opacity-80 group/dot"
+                              onClick={() => setEditingTypeColorId(isEditingColor ? null : t.id)}
+                              title="Click en el color para cambiarlo"
+                            >
+                              <span className={`w-2.5 h-2.5 rounded-full inline-block cursor-pointer hover:scale-120 transition-transform ${bgMap[t.color] || "bg-slate-500"}`} />
+                              <span className="font-semibold">{t.name}</span>
+                              <span className="text-[9px] text-muted-foreground opacity-0 group-hover/dot:opacity-100 transition-opacity">(Click color para cambiar)</span>
+                            </div>
+                            {t.id !== "break" && t.id !== "onfire" && t.id !== "promo" && t.id !== "custom" && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded"
+                                onClick={() => {
+                                  const next = eventTypes.filter(x => x.id !== t.id);
+                                  setEventTypes(next);
+                                  localStorage.setItem("techcontrol_calendar_event_types", JSON.stringify(next));
+                                  if (eventForm.type === t.id) {
+                                    setEventForm(prev => ({ ...prev, type: "custom" }));
+                                  }
+                                }}
+                              >
+                                <Trash2 className="size-3" />
+                              </Button>
+                            )}
+                          </div>
+
+                          {isEditingColor && (
+                            <div className="grid grid-cols-6 sm:grid-cols-8 gap-1.5 p-1.5 bg-muted/40 rounded border border-border mt-1">
+                              {(["sky", "blue", "indigo", "violet", "purple", "fuchsia", "pink", "rose", "red", "orange", "amber", "yellow", "lime", "emerald", "teal", "cyan", "gray"] as const).map((colorName) => {
+                                const isSelected = t.color === colorName;
+                                return (
+                                  <button
+                                    key={colorName}
+                                    type="button"
+                                    className={`w-4 h-4 rounded-full ${bgMap[colorName]} border transition-transform cursor-pointer hover:scale-115 ${isSelected ? "border-foreground scale-110 shadow-xs" : "border-transparent"}`}
+                                    onClick={() => {
+                                      const next = eventTypes.map(x => x.id === t.id ? { ...x, color: colorName } : x);
+                                      setEventTypes(next);
+                                      localStorage.setItem("techcontrol_calendar_event_types", JSON.stringify(next));
+                                      toast.success(`Color de "${t.name}" actualizado`);
+                                      setEditingTypeColorId(null);
+                                    }}
+                                    title={colorName}
+                                  />
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase block">Agregar Nuevo Tipo</span>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Nombre (ej: Lanzamiento)"
+                        value={newTypeName}
+                        onChange={(e) => setNewTypeName(e.target.value)}
+                        className="h-8 text-xs flex-1"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3"
+                        onClick={() => {
+                          if (!newTypeName.trim()) return;
+                          const newId = `type-${Date.now()}`;
+                          const next = [...eventTypes, { id: newId, name: newTypeName.trim(), color: newTypeColor }];
+                          setEventTypes(next);
+                          localStorage.setItem("techcontrol_calendar_event_types", JSON.stringify(next));
+                          setEventForm(prev => ({ ...prev, type: newId }));
+                          setNewTypeName("");
+                          setShowManageTypes(false);
+                          toast.success("Tipo de evento agregado");
+                        }}
+                      >
+                        Crear
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 p-2 bg-background rounded-lg border border-input">
+                      {(["sky", "blue", "indigo", "violet", "purple", "fuchsia", "pink", "rose", "red", "orange", "amber", "yellow", "lime", "emerald", "teal", "cyan", "gray"] as const).map((colorName) => {
+                        const isSelected = newTypeColor === colorName;
+                        const bgMap = {
+                          sky: "bg-sky-500", blue: "bg-blue-500", indigo: "bg-indigo-500", violet: "bg-violet-500",
+                          purple: "bg-purple-500", fuchsia: "bg-fuchsia-500", pink: "bg-pink-500", rose: "bg-rose-500",
+                          red: "bg-red-500", orange: "bg-orange-500", amber: "bg-amber-500", yellow: "bg-yellow-500",
+                          lime: "bg-lime-500", emerald: "bg-emerald-500", teal: "bg-teal-500", cyan: "bg-cyan-500", gray: "bg-slate-500"
+                        };
+                        return (
+                          <button
+                            key={colorName}
+                            type="button"
+                            className={`w-5.5 h-5.5 rounded-full ${bgMap[colorName]} border-2 transition-transform cursor-pointer hover:scale-110 flex items-center justify-center ${isSelected ? "border-foreground scale-110 shadow-xs" : "border-transparent"}`}
+                            onClick={() => setNewTypeColor(colorName)}
+                            title={colorName}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <Select
+                  value={eventForm.type}
+                  onValueChange={(val: any) => setEventForm({ ...eventForm, type: val })}
+                >
+                  <SelectTrigger id="eventType">
+                    <SelectValue placeholder="Seleccionar tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventTypes.map((t) => {
+                      const bgMap: Record<string, string> = {
+                        sky: "bg-sky-500", blue: "bg-blue-500", indigo: "bg-indigo-500", violet: "bg-violet-500",
+                        purple: "bg-purple-500", fuchsia: "bg-fuchsia-500", pink: "bg-pink-500", rose: "bg-rose-500",
+                        red: "bg-red-500", orange: "bg-orange-500", amber: "bg-amber-500", yellow: "bg-yellow-500",
+                        lime: "bg-lime-500", emerald: "bg-emerald-500", teal: "bg-teal-500", cyan: "bg-cyan-500", gray: "bg-slate-500"
+                      };
+                      return (
+                        <SelectItem key={t.id} value={t.id}>
+                          <span className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full inline-block ${bgMap[t.color] || "bg-slate-500"}`} />
+                            {t.name}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {/* Tareas List */}
+            <div className="space-y-3 border-t pt-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-muted-foreground uppercase">Tareas del Evento</span>
+                  <span className="font-bold text-primary">
+                    {eventForm.tasks.filter(t => t.completed).length}/{eventForm.tasks.length} ({eventForm.tasks.length > 0 ? Math.round((eventForm.tasks.filter(t => t.completed).length / eventForm.tasks.length) * 100) : 0}%)
+                  </span>
+                </div>
+                {eventForm.tasks.length > 0 && (
+                  <Progress 
+                    value={eventForm.tasks.length > 0 ? (eventForm.tasks.filter(t => t.completed).length / eventForm.tasks.length) * 100 : 0} 
+                    className="h-1.5 bg-muted-foreground/10" 
+                  />
+                )}
+              </div>
+              
+              {/* Add Task Input */}
+              <div className="flex gap-2">
+                <Input
+                  id="newTaskInput"
+                  placeholder="Escribí una tarea y apretá Enter..."
+                  className="h-9 text-xs flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const val = e.currentTarget.value.trim();
+                      if (val) {
+                        setEventForm(prev => ({
+                          ...prev,
+                          tasks: [...prev.tasks, { id: `${Date.now()}-${Math.random()}`, name: val, completed: false }]
+                        }));
+                        e.currentTarget.value = "";
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-9 px-3 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shrink-0"
+                  onClick={() => {
+                    const el = document.getElementById("newTaskInput") as HTMLInputElement;
+                    const val = el?.value.trim();
+                    if (val) {
+                      setEventForm(prev => ({
+                        ...prev,
+                        tasks: [...prev.tasks, { id: `${Date.now()}-${Math.random()}`, name: val, completed: false }]
+                      }));
+                      el.value = "";
+                    }
+                  }}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </div>
+
+              {/* List of current Tasks */}
+              <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1">
+                {eventForm.tasks.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic py-3 text-center bg-muted/10 rounded-md border border-dashed">
+                    No hay tareas cargadas para este evento.
+                  </p>
+                ) : (
+                  eventForm.tasks.map((task) => (
+                    <div 
+                      key={task.id} 
+                      className="flex items-center justify-between p-2 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors shadow-xs group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <input
+                          type="checkbox"
+                          checked={task.completed}
+                          onChange={(e) => {
+                            setEventForm(prev => ({
+                              ...prev,
+                              tasks: prev.tasks.map(t => t.id === task.id ? { ...t, completed: e.target.checked } : t)
+                            }));
+                          }}
+                          className="h-4 w-4 rounded border-input text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
+                        />
+                        {renamingTaskId === task.id ? (
+                          <Input
+                            value={renamingTaskName}
+                            onChange={(e) => setRenamingTaskName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                if (renamingTaskName.trim()) {
+                                  setEventForm(prev => ({
+                                    ...prev,
+                                    tasks: prev.tasks.map(t => t.id === task.id ? { ...t, name: renamingTaskName.trim() } : t)
+                                  }));
+                                }
+                                setRenamingTaskId(null);
+                              } else if (e.key === "Escape") {
+                                setRenamingTaskId(null);
+                              }
+                            }}
+                            onBlur={() => {
+                              if (renamingTaskName.trim()) {
+                                setEventForm(prev => ({
+                                  ...prev,
+                                  tasks: prev.tasks.map(t => t.id === task.id ? { ...t, name: renamingTaskName.trim() } : t)
+                                }));
+                              }
+                              setRenamingTaskId(null);
+                            }}
+                            className="h-7 py-0 px-1.5 text-xs flex-1 font-medium"
+                            autoFocus
+                          />
+                        ) : (
+                          <span 
+                            className={`text-xs truncate cursor-pointer select-none flex-1 py-0.5 ${task.completed ? "line-through text-muted-foreground font-normal" : "text-foreground font-semibold"}`}
+                            onDoubleClick={() => {
+                              setRenamingTaskId(task.id);
+                              setRenamingTaskName(task.name);
+                            }}
+                            title="Doble click para renombrar"
+                          >
+                            {task.name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0 ml-2">
+                        {renamingTaskId !== task.id && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => {
+                              setRenamingTaskId(task.id);
+                              setRenamingTaskName(task.name);
+                            }}
+                            title="Renombrar"
+                          >
+                            <Edit className="size-3" />
+                          </Button>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded"
+                          onClick={() => {
+                            setEventForm(prev => ({
+                              ...prev,
+                              tasks: prev.tasks.filter(t => t.id !== task.id)
+                            }));
+                          }}
+                        >
+                          <Trash2 className="size-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="border-t pt-3 flex flex-row items-center justify-end gap-2 shrink-0">
+            <Button onClick={handleSaveEvent}>
+              {eventForm.id ? "Guardar Cambios" : "Guardar Evento"}
+            </Button>
+            <Button variant="outline" onClick={() => setEventDialogOpen(false)}>
+              Cancelar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

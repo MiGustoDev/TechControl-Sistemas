@@ -230,11 +230,13 @@ export interface SystemNote {
   updatedAt: string;
 }
 
+export type OfficeTicketCategory = "soporte" | "redes" | "mantenimiento" | "servidores" | "desarrollo" | "otro";
+
 export interface OfficeTicket {
   id: string;
   title: string;
   description?: string;
-  category: "soporte" | "redes" | "mantenimiento" | "servidores" | "desarrollo" | "otro";
+  category: OfficeTicketCategory;
   customCategory?: string;
   userId: string;
   userName: string;
