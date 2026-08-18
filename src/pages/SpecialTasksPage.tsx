@@ -1177,8 +1177,8 @@ export function SpecialTasksPage() {
       {/* Header Panel */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
-            <Sparkles className="size-7 text-orange-500" /> Campañas y Eventos
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+            Campañas y Eventos
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Gestión, seguimiento y control de promociones, eventos, campañas y objetivos de corto plazo del equipo de Sistemas IT.
@@ -1188,12 +1188,12 @@ export function SpecialTasksPage() {
           <Button
             onClick={() => setViewMode(prev => prev === "grid" ? "calendar" : "grid")}
             variant="outline"
-            className="shadow-sm font-semibold border-orange-500/20 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+            className="shadow-sm font-semibold text-white border-input hover:bg-accent"
           >
-            <Calendar className="mr-2 size-4" /> 
+            <Calendar className="mr-2 size-4 text-white" /> 
             {viewMode === "grid" ? "Ver Calendario" : "Ver Tarjetas"}
           </Button>
-          <Button onClick={() => handleOpenCreate()} className="shadow-md bg-orange-600 hover:bg-orange-700 text-white font-semibold">
+          <Button onClick={() => handleOpenCreate()} className="shadow-md font-semibold">
             <Plus className="mr-2 size-4" /> Nueva campaña / evento
           </Button>
         </div>
