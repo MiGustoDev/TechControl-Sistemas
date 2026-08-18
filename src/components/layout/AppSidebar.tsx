@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { 
   Printer, Laptop, ShoppingCart, TriangleAlert as AlertTriangle, 
   Monitor, Tv, ChevronRight, Package, Clock, Users, Calendar, Database,
-  Ticket, Info, Target, Sparkles
+  Ticket, Info, Target, Sparkles, DollarSign
 } from "lucide-react";
 import {
   Sidebar,
@@ -42,7 +42,8 @@ export function AppSidebar() {
     objectives,
     specialTasks,
     specialEvents,
-    users
+    users,
+    userRole
   } = useApp();
   const { state, isMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -96,23 +97,27 @@ export function AppSidebar() {
       <SidebarHeader>
         <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between gap-1"} w-full`}>
           <div 
-            onClick={() => handlePageChange("guardias")}
-            className={`flex items-center cursor-pointer hover:bg-muted/50 p-1.5 rounded-lg transition-colors flex-1 min-w-0 ${
+            onClick={() => userRole !== "marketing" && handlePageChange("guardias")}
+            className={`flex items-center ${userRole !== "marketing" ? "cursor-pointer hover:bg-muted/50" : ""} p-1.5 rounded-lg transition-colors flex-1 min-w-0 ${
               isCollapsed ? "justify-center px-0" : "gap-2.5 px-2"
             } py-2`}
-            title="Ir a Guardias IT"
+            title={userRole !== "marketing" ? "Ir a Guardias IT" : undefined}
           >
             <div className={`flex ${isCollapsed ? "size-8" : "size-9"} shrink-0 items-center justify-center rounded-lg overflow-hidden bg-white border border-border transition-all`}>
               <img src={`${import.meta.env.BASE_URL}LOGOcircular.png`} alt="Logo" className="size-full object-contain p-0.5" />
             </div>
             {!isCollapsed && (
               <div className="grid leading-tight text-left min-w-0">
-                <span className="truncate text-sm font-bold text-foreground">Sistemas IT</span>
-                <span className="truncate text-xs text-muted-foreground">Centro de Operaciones</span>
+                <span className="truncate text-sm font-bold text-foreground">
+                  {userRole === "marketing" ? "Marketing" : "MG TechOps"}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {userRole === "marketing" ? "Panel Mi Gusto" : "Operaciones de Sistemas"}
+                </span>
               </div>
             )}
           </div>
-          {!isCollapsed && (
+          {!isCollapsed && userRole !== "marketing" && (
             <Button
               variant="ghost"
               size="icon"
@@ -152,7 +157,21 @@ export function AppSidebar() {
                 )}
               </SidebarMenuItem>
 
-              {/* Objetivos del equipo */}
+              {userRole !== "marketing" && (
+                <>
+                  {/* Precios */}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={currentPage === "prices"}
+                      onClick={() => handlePageChange("prices")}
+                      tooltip="Lista de Precios"
+                    >
+                      <DollarSign className="size-4" />
+                      <span>Precios</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  {/* Objetivos del equipo */}
               {SHOW_OBJECTIVES && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
@@ -415,6 +434,8 @@ export function AppSidebar() {
                   </SidebarMenuBadge>
                 )}
               </SidebarMenuItem>
+            </>
+          )}
 
             </SidebarMenu>
           </SidebarGroupContent>
@@ -423,7 +444,7 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <div className="px-2 py-2">
-          {criticalStock > 0 && (
+          {criticalStock > 0 && userRole !== "marketing" && (
             <div className={`mb-2 flex items-center gap-2 rounded-md border border-amber-400 bg-amber-100/80 ${isCollapsed ? "justify-center p-2" : "px-2.5 py-2"} text-[11px] font-bold text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400 shadow-sm`}>
               <AlertTriangle className="size-3.5 shrink-0" />
               {!isCollapsed && <span>{criticalStock} ítems con stock bajo</span>}
@@ -431,7 +452,7 @@ export function AppSidebar() {
           )}
           {!isCollapsed && (
             <div className="text-xs text-muted-foreground text-center font-medium">
-              Sistemas IT Center v2.0
+              MG TechOps v2.0
             </div>
           )}
         </div>

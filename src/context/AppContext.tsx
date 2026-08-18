@@ -17,6 +17,8 @@ import type {
   Objective,
   SpecialTask,
   SpecialEvent,
+  ProductPrice,
+  ProductPriceCategory,
 } from "../types";
 import {
   stockItems as initialItems,
@@ -183,6 +185,18 @@ interface AppContextValue {
   migrateAllData: () => Promise<void>;
   guardiasViewMode: "list" | "calendar";
   setGuardiasViewMode: (mode: "list" | "calendar") => void;
+
+  // Session & Auth state
+  session: any;
+  userRole: "sistemas" | "marketing" | null;
+  loadingSession: boolean;
+  logout: () => Promise<void>;
+
+  // Product Prices state
+  productPrices: ProductPrice[];
+  addProductPrice: (item: Omit<ProductPrice, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  updateProductPrice: (id: string, data: Partial<ProductPrice>) => Promise<void>;
+  deleteProductPrice: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -238,9 +252,80 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem("techcontrol_special_events");
     return saved ? JSON.parse(saved) : [];
   });
+  const [productPrices, setProductPrices] = useState<ProductPrice[]>([]);
   const [currentPage, setCurrentPage] = useState(() => {
     return getPageFromPath(window.location.pathname);
   });
+
+  const [session, setSession] = useState<any>(null);
+  const [userRole, setUserRole] = useState<"sistemas" | "marketing" | null>(null);
+  const [loadingSession, setLoadingSession] = useState(true);
+
+  const getRoleFromEmail = (email?: string): "sistemas" | "marketing" | null => {
+    if (!email) return null;
+    const systemsEmails = [
+      "facundocarrizo@migusto.com.ar",
+      "ramirolacci@migusto.com.ar",
+      "gustavo.gonzalez@migusto.com.ar",
+      "facundocarrizo@migusto.com.ar", // Duplicate clean check
+    ].map(e => e.toLowerCase().trim());
+    
+    const marketingEmails = [
+      "sharonmoner@migusto.com.ar",
+      "camilaferro@migusto.com.ar",
+      "camiladiaz@migusto.com.ar",
+      "rodrigoricobene@migusto.com.ar"
+    ].map(e => e.toLowerCase().trim());
+
+    const cleanEmail = email.toLowerCase().trim();
+    if (systemsEmails.includes(cleanEmail)) return "sistemas";
+    if (marketingEmails.includes(cleanEmail)) return "marketing";
+    return null;
+  };
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      const role = getRoleFromEmail(session?.user?.email);
+      setUserRole(role);
+      if (role === "marketing") {
+        setCurrentPage("special-tasks");
+      }
+      setLoadingSession(false);
+    });
+
+    // Listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      const role = getRoleFromEmail(session?.user?.email);
+      setUserRole(role);
+      if (role === "marketing") {
+        setCurrentPage("special-tasks");
+      }
+      setLoadingSession(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const logout = async () => {
+    setLoadingSession(true);
+    await supabase.auth.signOut();
+    setSession(null);
+    setUserRole(null);
+    setLoadingSession(false);
+  };
+
+  const handleSetCurrentPage = useCallback((page: string) => {
+    if (userRole === "marketing") {
+      setCurrentPage("special-tasks");
+    } else {
+      setCurrentPage(page);
+    }
+  }, [userRole]);
 
   useEffect(() => {
     const targetPath = getPathFromPage(currentPage);
@@ -257,7 +342,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const handlePopState = () => {
       const pageFromPath = getPageFromPath(window.location.pathname);
       if (pageFromPath !== currentPage) {
-        setCurrentPage(pageFromPath);
+        if (userRole === "marketing") {
+          setCurrentPage("special-tasks");
+        } else {
+          setCurrentPage(pageFromPath);
+        }
       }
     };
     window.addEventListener("popstate", handlePopState);
@@ -893,10 +982,145 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, []);
 
+  const getMockPrices = (): ProductPrice[] => [
+    { id: 'm1', name: 'Empanada de Carne Suave', category: 'empanadas', price: 1200.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'm2', name: 'Empanada de Jamón y Queso', category: 'empanadas', price: 1200.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'm3', name: 'Empanada de Humita', category: 'empanadas', price: 1200.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'm4', name: 'Pizza Muzzarella', category: 'pizzas', price: 7500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'm5', name: 'Pizza Especial (J&Q)', category: 'pizzas', price: 9200.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'm6', name: 'Pizza Fugazzeta', category: 'pizzas', price: 8500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'm7', name: 'Pizza INDIV. Muzzarella', category: 'pizzas_indi', price: 2800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'm8', name: 'Pizza INDIV. Napolitana', category: 'pizzas_indi', price: 3200.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'm9', name: 'Promo 12 Empanadas + Bebida', category: 'promos', price: 13500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'm10', name: 'Promo 2 Pizzas Muzzarella', category: 'promos', price: 14000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'm11', name: 'Pack Familiar (Pizza + 6 Empanadas)', category: 'packs', price: 13000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'm12', name: 'Mega Pack Amigos (2 Pizzas + 12 Empanadas)', category: 'packs', price: 25000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  ];
+
+  const loadLocalPricesFallback = useCallback(() => {
+    const saved = localStorage.getItem("techcontrol_product_prices");
+    if (saved) {
+      try {
+        setProductPrices(JSON.parse(saved));
+      } catch (e) {
+        setProductPrices(getMockPrices());
+      }
+    } else {
+      setProductPrices(getMockPrices());
+    }
+  }, []);
+
+  const syncProductPricesFromSupabase = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from("product_prices").select("*").order("name", { ascending: true });
+      if (error) {
+        if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+          console.warn("La tabla product_prices aún no existe en Supabase.");
+        } else {
+          console.warn("Error al cargar precios de Supabase:", error);
+        }
+        loadLocalPricesFallback();
+        return;
+      }
+      if (data && data.length > 0) {
+        const mapped = data.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          category: p.category as ProductPriceCategory,
+          price: Number(p.price),
+          createdAt: p.created_at,
+          updatedAt: p.updated_at
+        }));
+        setProductPrices(mapped);
+        localStorage.setItem("techcontrol_product_prices", JSON.stringify(mapped));
+      } else {
+        // Seed initial data if empty
+        const initial = getMockPrices();
+        setProductPrices(initial);
+        localStorage.setItem("techcontrol_product_prices", JSON.stringify(initial));
+        // Try inserting to db
+        await supabase.from("product_prices").insert(initial.map(p => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          price: p.price,
+          created_at: p.createdAt,
+          updated_at: p.updatedAt
+        })));
+      }
+    } catch (err) {
+      console.warn("Error al sincronizar precios:", err);
+      loadLocalPricesFallback();
+    }
+  }, [loadLocalPricesFallback]);
+
+  const addProductPrice = useCallback(async (item: Omit<ProductPrice, "id" | "createdAt" | "updatedAt">) => {
+    const newPrice: ProductPrice = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      name: item.name.trim(),
+      category: item.category,
+      price: item.price,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    setProductPrices(prev => {
+      const next = [...prev, newPrice].sort((a, b) => a.name.localeCompare(b.name));
+      localStorage.setItem("techcontrol_product_prices", JSON.stringify(next));
+      return next;
+    });
+
+    try {
+      const { error } = await supabase.from("product_prices").insert({
+        id: newPrice.id,
+        name: newPrice.name,
+        category: newPrice.category,
+        price: newPrice.price,
+        created_at: newPrice.createdAt,
+        updated_at: newPrice.updatedAt
+      });
+      if (error) console.warn("Error inserting product price to Supabase:", error);
+    } catch (e) {}
+  }, []);
+
+  const updateProductPrice = useCallback(async (id: string, data: Partial<ProductPrice>) => {
+    setProductPrices(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, ...data, updatedAt: new Date().toISOString() } : p)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      localStorage.setItem("techcontrol_product_prices", JSON.stringify(next));
+      return next;
+    });
+
+    try {
+      const dbPayload: any = {};
+      if (data.name !== undefined) dbPayload.name = data.name.trim();
+      if (data.category !== undefined) dbPayload.category = data.category;
+      if (data.price !== undefined) dbPayload.price = data.price;
+      dbPayload.updated_at = new Date().toISOString();
+
+      const { error } = await supabase.from("product_prices").update(dbPayload).eq("id", id);
+      if (error) console.warn("Error updating product price in Supabase:", error);
+    } catch (e) {}
+  }, []);
+
+  const deleteProductPrice = useCallback(async (id: string) => {
+    setProductPrices(prev => {
+      const next = prev.filter(p => p.id !== id);
+      localStorage.setItem("techcontrol_product_prices", JSON.stringify(next));
+      return next;
+    });
+
+    try {
+      const { error } = await supabase.from("product_prices").delete().eq("id", id);
+      if (error) console.warn("Error deleting product price from Supabase:", error);
+    } catch (e) {}
+  }, []);
+
   useEffect(() => {
     fetchData();
     void syncSpecialEventsFromSupabase();
-  }, [fetchData, syncSpecialEventsFromSupabase]);
+    void syncProductPricesFromSupabase();
+  }, [fetchData, syncSpecialEventsFromSupabase, syncProductPricesFromSupabase]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -2421,13 +2645,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setTurnOverride,
         clearTurnOverride,
         currentPage,
-        setCurrentPage,
+        setCurrentPage: handleSetCurrentPage,
         selectedId,
         setSelectedId,
         loading,
         migrateAllData,
         guardiasViewMode,
         setGuardiasViewMode,
+        session,
+        userRole,
+        loadingSession,
+        logout,
+        productPrices,
+        addProductPrice,
+        updateProductPrice,
+        deleteProductPrice,
       }}
     >
       {children}

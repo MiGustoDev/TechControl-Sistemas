@@ -17,12 +17,34 @@ import { NotesPage } from "@/pages/NotesPage";
 import { OfficeTicketsPage } from "@/pages/OfficeTicketsPage";
 import { DatabasesPage } from "@/pages/DatabasesPage";
 import { ObjectivesPage } from "@/pages/ObjectivesPage";
+import { PricesPage } from "@/pages/PricesPage";
 import { SpecialTasksPage } from "@/pages/SpecialTasksPage";
+import { LoginPage } from "@/components/layout/LoginPage";
 
 function AppContent() {
-  const { currentPage } = useApp();
+  const { currentPage, session, loadingSession, userRole } = useApp();
+
+  if (loadingSession) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950">
+        <div className="flex flex-col items-center gap-3">
+          <span className="animate-spin rounded-full h-8 w-8 border-4 border-orange-500 border-t-transparent" />
+          <span className="text-sm font-semibold text-muted-foreground">Verificando sesión...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session || !userRole) {
+    return <LoginPage />;
+  }
 
   const renderPage = () => {
+    // Marketing can only see campaigns & events
+    if (userRole === "marketing") {
+      return <SpecialTasksPage />;
+    }
+
     switch (currentPage) {
       case "printers": return <PrintersPage />;
       case "notebooks": return <NotebooksPage />;
@@ -38,6 +60,7 @@ function AppContent() {
       case "office-tickets": return <OfficeTicketsPage />;
       case "objectives": return <ObjectivesPage />;
       case "special-tasks": return <SpecialTasksPage />;
+      case "prices": return <PricesPage />;
       case "guardias":
       default:
         return <GuardiasPage />;
@@ -49,7 +72,7 @@ function AppContent() {
       <AppSidebar />
       <SidebarInset>
         <TopBar />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto bg-background/50">
           {renderPage()}
         </main>
       </SidebarInset>

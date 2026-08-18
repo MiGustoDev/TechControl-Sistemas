@@ -274,10 +274,6 @@ export function SpecialTasksPage() {
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
 
-  // Currency input states
-  const [priceInput, setPriceInput] = useState("$ ");
-  const [rendicionInput, setRendicionInput] = useState("$ ");
-
   // Helper to resolve active user automatically without requiring a form input
   const getActiveUser = useCallback((currentAssigned?: string[]): string => {
     const savedUserId = localStorage.getItem("techcontrol_last_ticket_user");
@@ -294,32 +290,6 @@ export function SpecialTasksPage() {
     return "Ramiro Lacci";
   }, [users, assignedTo]);
 
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPriceInput(formatCurrencyInputString(e.target.value));
-  };
-
-  const handlePriceBlur = () => {
-    const num = parseCurrencyValue(priceInput);
-    if (num !== undefined) {
-      setPriceInput(formatCurrencyDisplay(num));
-    } else {
-      setPriceInput("$ ");
-    }
-  };
-
-  const handleRendicionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setRendicionInput(formatCurrencyInputString(e.target.value));
-  };
-
-  const handleRendicionBlur = () => {
-    const num = parseCurrencyValue(rendicionInput);
-    if (num !== undefined) {
-      setRendicionInput(formatCurrencyDisplay(num));
-    } else {
-      setRendicionInput("$ ");
-    }
-  };
-  
   // Dynamic checklist in form
   const [formTasks, setFormTasks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -551,10 +521,10 @@ export function SpecialTasksPage() {
     setStartDate(validDate || new Date().toISOString().split("T")[0]);
     setEndDate("");
     setNoEndDate(false);
-    setPriceInput("$ ");
-    setRendicionInput("$ ");
     setAssignedTo([]);
-    setFormTasks([]);
+    setFormTasks([
+      { id: `default-fecha-${Date.now()}`, title: "Fecha", completed: false }
+    ]);
     setNewTaskTitle("");
     setIsDialogOpen(true);
   };
@@ -570,8 +540,6 @@ export function SpecialTasksPage() {
     setStartDate(task.startDate || "");
     setEndDate(task.endDate || "");
     setNoEndDate(!task.endDate);
-    setPriceInput(task.price !== undefined && task.price !== null ? formatCurrencyDisplay(task.price) : "$ ");
-    setRendicionInput(task.rendicion !== undefined && task.rendicion !== null ? formatCurrencyDisplay(task.rendicion) : "$ ");
     setAssignedTo(task.assignedTo || []);
     setFormTasks(task.tasks || []);
     setNewTaskTitle("");
@@ -622,8 +590,8 @@ export function SpecialTasksPage() {
       calculatedProgress = 100;
     }
 
-    const priceNum = parseCurrencyValue(priceInput);
-    const rendicionNum = parseCurrencyValue(rendicionInput);
+    const priceNum = editingTask?.price;
+    const rendicionNum = editingTask?.rendicion;
     const currentUser = getActiveUser(assignedTo);
 
     const payload = {
@@ -753,13 +721,25 @@ export function SpecialTasksPage() {
   const handleUncheckTask = async (taskId: string, subTaskId: string) => {
     const calEvent = calendarEvents.find(e => e.id === taskId);
     if (calEvent) {
+      const subTasks = calEvent.tasks || [];
+      const subTask = subTasks.find((t: any) => t.id === subTaskId);
+      const originalTitle = subTask?.title || subTask?.name || "";
+      const baseTitle = originalTitle.split(":")[0].trim();
+
       const updatedTasks = (calEvent.tasks || []).map((t: any) => 
-        t.id === subTaskId ? { ...t, completed: false } : t
+        t.id === subTaskId ? { ...t, title: baseTitle, name: baseTitle, completed: false, imageUrl: undefined, completedAt: undefined } : t
       );
       
+      let price = calEvent.price;
+      let rendicion = calEvent.rendicion;
+      if (baseTitle.toLowerCase() === "precio") price = undefined;
+      if (baseTitle.toLowerCase() === "rendición" || baseTitle.toLowerCase() === "rendicion") rendicion = undefined;
+
       const updatedEvent = {
         ...calEvent,
         tasks: updatedTasks,
+        price,
+        rendicion,
         updatedAt: new Date().toISOString()
       };
 
@@ -775,33 +755,69 @@ export function SpecialTasksPage() {
     const task = specialTasks.find(t => t.id === taskId);
     if (!task || !task.tasks) return;
 
-    const updatedTasks = task.tasks.map(t => t.id === subTaskId ? { ...t, completed: false } : t);
+    const subTask = task.tasks.find(t => t.id === subTaskId);
+    const originalTitle = subTask?.title || "";
+    const baseTitle = originalTitle.split(":")[0].trim();
+
+    const updatedTasks = task.tasks.map(t => 
+      t.id === subTaskId ? { ...t, title: baseTitle, completed: false, imageUrl: undefined, completedAt: undefined } : t
+    );
     const completed = updatedTasks.filter(t => t.completed).length;
     const progress = Math.round((completed / updatedTasks.length) * 100);
     const autoStatus = progress === 100 ? "completed" : (task.status === "completed" ? "in-progress" : task.status);
 
-    await updateSpecialTask(taskId, {
+    const updatePayload: any = {
       tasks: updatedTasks,
       progress,
       status: autoStatus
-    });
+    };
+    if (baseTitle.toLowerCase() === "precio") updatePayload.price = null;
+    if (baseTitle.toLowerCase() === "rendición" || baseTitle.toLowerCase() === "rendicion") updatePayload.rendicion = null;
+
+    await updateSpecialTask(taskId, updatePayload);
     toast.success("Tarea desmarcada");
   };
 
-  const handleConfirmUploadImage = async (imageDataUrl: string) => {
+  const handleConfirmUploadImage = async (imageDataUrl: string, inputValue?: string) => {
     if (!uploadModalState) return;
     const { taskId, subTaskId } = uploadModalState;
 
     const calEvent = calendarEvents.find(e => e.id === taskId);
     if (calEvent) {
-      const updatedTasks = (calEvent.tasks || []).map((t: any) => 
-        t.id === subTaskId ? { ...t, completed: true, imageUrl: imageDataUrl, completedAt: new Date().toISOString() } : t
-      );
+      let price = calEvent.price;
+      let rendicion = calEvent.rendicion;
+
+      const updatedTasks = (calEvent.tasks || []).map((t: any) => {
+        if (t.id === subTaskId) {
+          const originalTitle = t.title || t.name || "";
+          const baseTitle = originalTitle.split(":")[0].trim();
+          const newTitle = inputValue ? `${baseTitle}: ${inputValue}` : originalTitle;
+
+          if (baseTitle.toLowerCase() === "precio" && inputValue) {
+            price = parseCurrencyValue(inputValue);
+          }
+          if ((baseTitle.toLowerCase() === "rendición" || baseTitle.toLowerCase() === "rendicion") && inputValue) {
+            rendicion = parseCurrencyValue(inputValue);
+          }
+
+          return {
+            ...t,
+            title: newTitle,
+            name: newTitle,
+            completed: true,
+            imageUrl: imageDataUrl,
+            completedAt: new Date().toISOString()
+          };
+        }
+        return t;
+      });
       
       const updatedEvent = {
         ...calEvent,
         tasks: updatedTasks,
         bannerUrl: imageDataUrl,
+        price,
+        rendicion,
         updatedAt: new Date().toISOString()
       };
 
@@ -817,9 +833,32 @@ export function SpecialTasksPage() {
     const task = specialTasks.find(t => t.id === taskId);
     if (!task || !task.tasks) return;
 
-    const updatedTasks = task.tasks.map(t => 
-      t.id === subTaskId ? { ...t, completed: true, imageUrl: imageDataUrl, completedAt: new Date().toISOString() } : t
-    );
+    let price = task.price;
+    let rendicion = task.rendicion;
+
+    const updatedTasks = task.tasks.map(t => {
+      if (t.id === subTaskId) {
+        const originalTitle = t.title || "";
+        const baseTitle = originalTitle.split(":")[0].trim();
+        const newTitle = inputValue ? `${baseTitle}: ${inputValue}` : originalTitle;
+
+        if (baseTitle.toLowerCase() === "precio" && inputValue) {
+          price = parseCurrencyValue(inputValue);
+        }
+        if ((baseTitle.toLowerCase() === "rendición" || baseTitle.toLowerCase() === "rendicion") && inputValue) {
+          rendicion = parseCurrencyValue(inputValue);
+        }
+
+        return {
+          ...t,
+          title: newTitle,
+          completed: true,
+          imageUrl: imageDataUrl,
+          completedAt: new Date().toISOString()
+        };
+      }
+      return t;
+    });
 
     const completed = updatedTasks.filter(t => t.completed).length;
     const progress = Math.round((completed / updatedTasks.length) * 100);
@@ -829,7 +868,9 @@ export function SpecialTasksPage() {
       tasks: updatedTasks,
       progress,
       status: autoStatus,
-      bannerUrl: imageDataUrl
+      bannerUrl: imageDataUrl,
+      price,
+      rendicion
     });
 
     toast.success("¡Comprobante guardado y tarea completada!");
@@ -1626,7 +1667,29 @@ export function SpecialTasksPage() {
                   <select
                     className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     value={category}
-                    onChange={(e) => setCategory(e.target.value as SpecialTaskCategory)}
+                    onChange={(e) => {
+                      const newCategory = e.target.value as SpecialTaskCategory;
+                      setCategory(newCategory);
+                      if (!editingTask) {
+                        const isDefaultFecha = formTasks.length === 1 && formTasks[0].title === "Fecha";
+                        const isDefaultPromo = formTasks.length === 2 && formTasks[0].title === "Precio" && (formTasks[1].title === "Rendicion" || formTasks[1].title === "Rendición");
+                        const isNone = formTasks.length === 0;
+                        if (isDefaultFecha || isDefaultPromo || isNone) {
+                          if (newCategory === "promotion") {
+                            setFormTasks([
+                              { id: `default-precio-${Date.now()}`, title: "Precio", completed: false },
+                              { id: `default-rendicion-${Date.now()}`, title: "Rendición", completed: false }
+                            ]);
+                          } else if (["event", "campaign", "special-day"].includes(newCategory)) {
+                            setFormTasks([
+                              { id: `default-fecha-${Date.now()}`, title: "Fecha", completed: false }
+                            ]);
+                          } else {
+                            setFormTasks([]);
+                          }
+                        }
+                      }
+                    }}
                     required
                   >
                     <option value="campaign">Campaña</option>
@@ -1702,29 +1765,6 @@ export function SpecialTasksPage() {
                 </div>
               </div>
 
-              {/* Price & Rendicion row */}
-              <div className="md:col-span-2 grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-foreground">Precio</label>
-                  <Input
-                    type="text"
-                    value={priceInput}
-                    onChange={handlePriceChange}
-                    onBlur={handlePriceBlur}
-                    placeholder="$ 0,00"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-foreground">Rendición</label>
-                  <Input
-                    type="text"
-                    value={rendicionInput}
-                    onChange={handleRendicionChange}
-                    onBlur={handleRendicionBlur}
-                    placeholder="$ 0,00"
-                  />
-                </div>
-              </div>
 
               {/* Assigned To — Objectives style pills */}
               <div className="space-y-1.5 md:col-span-2">

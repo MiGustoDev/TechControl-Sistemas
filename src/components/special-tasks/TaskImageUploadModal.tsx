@@ -8,7 +8,7 @@ import { toast } from "sonner";
 interface TaskImageUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (imageDataUrl: string) => void;
+  onConfirm: (imageDataUrl: string, inputValue?: string) => void;
   taskTitle: string;
   cardTitle: string;
 }
@@ -63,9 +63,15 @@ export function TaskImageUploadModal({
   cardTitle
 }: TaskImageUploadModalProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [valueInput, setValueInput] = useState("$ ");
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isPriceOrRendicion = 
+    taskTitle.toLowerCase().trim() === "precio" || 
+    taskTitle.toLowerCase().trim() === "rendición" || 
+    taskTitle.toLowerCase().trim() === "rendicion";
 
   const handleFileProcess = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -136,12 +142,17 @@ export function TaskImageUploadModal({
       toast.error("Debés cargar una imagen de comprobante para marcar la tarea");
       return;
     }
-    onConfirm(selectedImage);
+    if (isPriceOrRendicion && (!valueInput || valueInput === "$ ")) {
+      toast.error("Debés ingresar el valor correspondiente");
+      return;
+    }
+    onConfirm(selectedImage, isPriceOrRendicion ? valueInput : undefined);
     handleClose();
   };
 
   const handleClose = () => {
     setSelectedImage(null);
+    setValueInput("$ ");
     setIsDragging(false);
     setIsProcessing(false);
     onClose();
@@ -181,6 +192,48 @@ export function TaskImageUploadModal({
               </Badge>
             </div>
           </div>
+
+          {/* Conditional Value input for Price & Rendicion */}
+          {isPriceOrRendicion && (
+            <div className="space-y-1.5 p-3 rounded-lg border border-input bg-muted/20">
+              <label className="text-xs font-bold text-foreground">
+                Valor del requerimiento <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={valueInput}
+                onChange={(e) => {
+                  const clean = e.target.value.replace(/[^0-9,]/g, "");
+                  if (!clean) {
+                    setValueInput("$ ");
+                    return;
+                  }
+                  const commaIndex = clean.indexOf(",");
+                  let intPart = clean;
+                  let decPart: string | null = null;
+                  if (commaIndex !== -1) {
+                    intPart = clean.slice(0, commaIndex);
+                    decPart = clean.slice(commaIndex + 1).replace(/,/g, "").slice(0, 2);
+                  }
+                  let formattedInt = "";
+                  if (intPart) {
+                    const parsedInt = parseInt(intPart, 10);
+                    if (!isNaN(parsedInt)) {
+                      formattedInt = parsedInt.toLocaleString("es-AR");
+                    }
+                  }
+                  if (decPart !== null) {
+                    setValueInput(`$ ${formattedInt},${decPart}`);
+                  } else {
+                    setValueInput(`$ ${formattedInt}`);
+                  }
+                }}
+                placeholder="$ 0,00"
+                className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground font-semibold"
+                required
+              />
+            </div>
+          )}
 
           {/* Dropzone or Image Preview */}
           {!selectedImage ? (

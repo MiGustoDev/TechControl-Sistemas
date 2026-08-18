@@ -335,6 +335,17 @@ export interface SpecialEvent {
   updatedAt?: string;
 }
 
+export type ProductPriceCategory = "empanadas" | "pizzas" | "pizzas_indi" | "promos" | "packs";
+
+export interface ProductPrice {
+  id: string;
+  name: string;
+  category: ProductPriceCategory;
+  price: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 
 
 
