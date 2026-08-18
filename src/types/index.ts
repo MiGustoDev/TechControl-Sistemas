@@ -297,6 +297,8 @@ export interface SpecialTask {
   priority: "low" | "medium" | "high" | "critical";
   startDate?: string;
   endDate?: string;
+  price?: number;
+  rendicion?: number;
   progress: number;
   assignedTo?: string[];
   tasks?: ProjectTask[];
@@ -321,6 +323,8 @@ export interface SpecialEvent {
   name: string;
   date: string;
   type: string;
+  price?: number;
+  rendicion?: number;
   tasks?: SpecialEventTask[];
   bannerUrl?: string;
   createdAt?: string;

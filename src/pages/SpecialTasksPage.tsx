@@ -109,6 +109,47 @@ const formatDate = (dateStr?: string): string => {
   return `${parts[2]}-${parts[1]}-${parts[0]}`;
 };
 
+// Currency helpers for Argentina format ($ 10.900,00)
+const formatCurrencyDisplay = (num?: number | null): string => {
+  if (num === undefined || num === null || isNaN(num)) return "$ ";
+  return `$ ${num.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const formatCurrencyInputString = (inputVal: string): string => {
+  if (!inputVal) return "$ ";
+  
+  const clean = inputVal.replace(/[^0-9,]/g, "");
+  if (!clean) return "$ ";
+
+  const commaIndex = clean.indexOf(",");
+  let intPart = clean;
+  let decPart: string | null = null;
+  if (commaIndex !== -1) {
+    intPart = clean.slice(0, commaIndex);
+    decPart = clean.slice(commaIndex + 1).replace(/,/g, "").slice(0, 2);
+  }
+
+  let formattedInt = "";
+  if (intPart) {
+    const parsedInt = parseInt(intPart, 10);
+    if (!isNaN(parsedInt)) {
+      formattedInt = parsedInt.toLocaleString("es-AR");
+    }
+  }
+
+  if (decPart !== null) {
+    return `$ ${formattedInt},${decPart}`;
+  }
+  return `$ ${formattedInt}`;
+};
+
+const parseCurrencyValue = (valStr: string): number | undefined => {
+  if (!valStr || valStr === "$ ") return undefined;
+  const clean = valStr.replace(/\$/g, "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+  const num = parseFloat(clean);
+  return isNaN(num) ? undefined : num;
+};
+
 const getPriorityLabel = (priority: string) => {
   switch (priority) {
     case "critical": return "Crítica";
@@ -232,6 +273,36 @@ export function SpecialTasksPage() {
   const [noEndDate, setNoEndDate] = useState(false);
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
+
+  // Currency input states
+  const [priceInput, setPriceInput] = useState("$ ");
+  const [rendicionInput, setRendicionInput] = useState("$ ");
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPriceInput(formatCurrencyInputString(e.target.value));
+  };
+
+  const handlePriceBlur = () => {
+    const num = parseCurrencyValue(priceInput);
+    if (num !== undefined) {
+      setPriceInput(formatCurrencyDisplay(num));
+    } else {
+      setPriceInput("$ ");
+    }
+  };
+
+  const handleRendicionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRendicionInput(formatCurrencyInputString(e.target.value));
+  };
+
+  const handleRendicionBlur = () => {
+    const num = parseCurrencyValue(rendicionInput);
+    if (num !== undefined) {
+      setRendicionInput(formatCurrencyDisplay(num));
+    } else {
+      setRendicionInput("$ ");
+    }
+  };
   
   // Dynamic checklist in form
   const [formTasks, setFormTasks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
@@ -461,6 +532,8 @@ export function SpecialTasksPage() {
     setStartDate(validDate || new Date().toISOString().split("T")[0]);
     setEndDate("");
     setNoEndDate(false);
+    setPriceInput("$ ");
+    setRendicionInput("$ ");
     setAssignedTo([]);
     setNotes("");
     setFormTasks([]);
@@ -479,6 +552,8 @@ export function SpecialTasksPage() {
     setStartDate(task.startDate || "");
     setEndDate(task.endDate || "");
     setNoEndDate(!task.endDate);
+    setPriceInput(task.price !== undefined && task.price !== null ? formatCurrencyDisplay(task.price) : "$ ");
+    setRendicionInput(task.rendicion !== undefined && task.rendicion !== null ? formatCurrencyDisplay(task.rendicion) : "$ ");
     setAssignedTo(task.assignedTo || []);
     setNotes(task.notes || "");
     setFormTasks(task.tasks || []);
@@ -530,6 +605,9 @@ export function SpecialTasksPage() {
       calculatedProgress = 100;
     }
 
+    const priceNum = parseCurrencyValue(priceInput);
+    const rendicionNum = parseCurrencyValue(rendicionInput);
+
     const payload = {
       title: title.trim(),
       description: description.trim() || undefined,
@@ -538,6 +616,8 @@ export function SpecialTasksPage() {
       priority,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
+      price: priceNum,
+      rendicion: rendicionNum,
       progress: calculatedProgress,
       assignedTo,
       tasks: formTasks,
@@ -555,6 +635,8 @@ export function SpecialTasksPage() {
             name: title.trim(),
             date: startDate,
             type: category === "special-day" ? "break" : category === "campaign" ? "onfire" : category === "promotion" ? "promotion" : "event",
+            price: priceNum,
+            rendicion: rendicionNum,
             tasks: formTasks.map(t => ({
               id: t.id,
               name: t.title,
@@ -579,6 +661,8 @@ export function SpecialTasksPage() {
             name: title.trim(),
             date: startDate,
             type: category === "special-day" ? "break" : category === "campaign" ? "onfire" : category === "promotion" ? "promotion" : "event",
+            price: priceNum,
+            rendicion: rendicionNum,
             tasks: formTasks.map(t => ({
               id: t.id,
               name: t.title,
@@ -796,6 +880,8 @@ export function SpecialTasksPage() {
           completedAt: t.completedAt
         })),
         bannerUrl: evt.bannerUrl,
+        price: evt.price,
+        rendicion: evt.rendicion,
         assignedTo: ["Equipo IT"],
         isCalendarEvent: true,
         originalType: evt.type,
@@ -1120,6 +1206,20 @@ export function SpecialTasksPage() {
           )}
 
           <Separator className="my-3" />
+
+          {/* Price & Rendicion summary if defined */}
+          {(task.price !== undefined || task.rendicion !== undefined) && (
+            <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold my-2 pt-2 border-t border-border/40">
+              <div className="text-emerald-600 dark:text-emerald-400">
+                <span className="text-[10px] text-muted-foreground block font-normal">Precio:</span>
+                {task.price !== undefined ? formatCurrencyDisplay(task.price) : "-"}
+              </div>
+              <div className="text-blue-600 dark:text-blue-400 text-right">
+                <span className="text-[10px] text-muted-foreground block font-normal">Rendición:</span>
+                {task.rendicion !== undefined ? formatCurrencyDisplay(task.rendicion) : "-"}
+              </div>
+            </div>
+          )}
 
           {/* Dates & Assigned info */}
           <div className="grid grid-cols-2 gap-2 text-[11px] text-muted-foreground mt-auto">
@@ -1578,6 +1678,30 @@ export function SpecialTasksPage() {
                       Sin límite
                     </span>
                   </label>
+                </div>
+              </div>
+
+              {/* Price & Rendicion row */}
+              <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">Precio</label>
+                  <Input
+                    type="text"
+                    value={priceInput}
+                    onChange={handlePriceChange}
+                    onBlur={handlePriceBlur}
+                    placeholder="$ 0,00"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">Rendición</label>
+                  <Input
+                    type="text"
+                    value={rendicionInput}
+                    onChange={handleRendicionChange}
+                    onBlur={handleRendicionBlur}
+                    placeholder="$ 0,00"
+                  />
                 </div>
               </div>
 
