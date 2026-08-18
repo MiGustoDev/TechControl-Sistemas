@@ -185,8 +185,6 @@ export function SpecialTasksPage() {
     specialEvents,
     saveSpecialEvent,
     deleteSpecialEvent,
-    setCurrentPage,
-    setGuardiasViewMode,
     holidayAssignments
   } = useApp();
 
@@ -437,7 +435,7 @@ export function SpecialTasksPage() {
       if (task.isCalendarEvent) {
         return task.startDate === dateStr;
       }
-      return task.startDate === dateStr || (task.endDate && dateStr >= task.startDate && dateStr <= task.endDate);
+      return task.startDate === dateStr || (Boolean(task.startDate) && Boolean(task.endDate) && dateStr >= task.startDate! && dateStr <= task.endDate!);
     });
   };
 
@@ -453,13 +451,14 @@ export function SpecialTasksPage() {
 
   // Open modal for creating new task
   const handleOpenCreate = (prefilledDate?: string) => {
+    const validDate = typeof prefilledDate === "string" ? prefilledDate : undefined;
     setEditingTask(null);
     setTitle("");
     setDescription("");
     setCategory("campaign");
     setStatus("pending");
     setPriority("medium");
-    setStartDate(prefilledDate || new Date().toISOString().split("T")[0]);
+    setStartDate(validDate || new Date().toISOString().split("T")[0]);
     setEndDate("");
     setNoEndDate(false);
     setAssignedTo([]);
@@ -799,6 +798,7 @@ export function SpecialTasksPage() {
         bannerUrl: evt.bannerUrl,
         assignedTo: ["Equipo IT"],
         isCalendarEvent: true,
+        originalType: evt.type,
         createdAt: evt.createdAt || evt.date,
         updatedAt: evt.updatedAt || evt.date
       };
@@ -1193,7 +1193,7 @@ export function SpecialTasksPage() {
             <Calendar className="mr-2 size-4" /> 
             {viewMode === "grid" ? "Ver Calendario" : "Ver Tarjetas"}
           </Button>
-          <Button onClick={handleOpenCreate} className="shadow-md bg-orange-600 hover:bg-orange-700 text-white font-semibold">
+          <Button onClick={() => handleOpenCreate()} className="shadow-md bg-orange-600 hover:bg-orange-700 text-white font-semibold">
             <Plus className="mr-2 size-4" /> Nueva campaña / evento
           </Button>
         </div>
@@ -1383,9 +1383,9 @@ export function SpecialTasksPage() {
                                     if (evt.isCalendarEvent) {
                                       const originalEvent = {
                                         id: evt.id,
-                                        date: evt.startDate,
+                                        date: evt.startDate || "",
                                         name: evt.title,
-                                        type: evt.category === "special-day" ? "break" : evt.category === "campaign" ? "onfire" : evt.category === "promotion" ? "promotion" : "custom",
+                                        type: (evt as any).originalType || (evt.category === "special-day" ? "break" : evt.category === "campaign" ? "onfire" : evt.category === "promotion" ? "promo" : "custom"),
                                         tasks: evt.tasks || [],
                                         bannerUrl: evt.bannerUrl,
                                         createdAt: evt.createdAt,
