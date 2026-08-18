@@ -75,6 +75,32 @@ function formatDateLong(dateStr: string) {
   }
 }
 
+function formatTurnLabel(turnKey?: string, short = false): string {
+  if (!turnKey) return "";
+  if (turnKey === "both" || turnKey === "facundo,ramiro" || turnKey === "ramiro,facundo") {
+    return short ? "Facu + Rami" : "Facundo y Ramiro";
+  }
+  if (turnKey === "facundo") return short ? "Facu" : "Facundo";
+  if (turnKey === "ramiro") return short ? "Rami" : "Ramiro";
+  return turnKey;
+}
+
+function getTurnResponsibles(
+  dateStr: string,
+  turnOverrides: Record<string, string>,
+  getWeeklyTurn: (date: string) => "facundo" | "ramiro" | null
+): string[] {
+  const overridden = turnOverrides[dateStr];
+  if (overridden) {
+    if (overridden === "both" || overridden === "facundo,ramiro" || overridden === "ramiro,facundo") {
+      return ["facundo", "ramiro"];
+    }
+    return [overridden];
+  }
+  const original = getWeeklyTurn(dateStr);
+  return original ? [original] : [];
+}
+
 function CollaboratorAvatar({
   userName,
   avatarUrl,
@@ -2307,23 +2333,25 @@ export function GuardiasPage() {
                                 className={`text-[8px] font-bold py-0.5 px-1 rounded border text-center select-none shrink-0 flex items-center justify-center gap-0.5 ${
                                   weeklyTurn === "facundo"
                                     ? "bg-sky-500/5 dark:bg-sky-500/10 text-sky-600/80 dark:text-sky-400/80 border-sky-500/15"
-                                    : "bg-purple-500/5 dark:bg-purple-500/10 text-purple-600/80 dark:text-purple-400/80 border-purple-500/15"
+                                    : weeklyTurn === "ramiro"
+                                      ? "bg-purple-500/5 dark:bg-purple-500/10 text-purple-600/80 dark:text-purple-400/80 border-purple-500/15"
+                                      : "bg-teal-500/10 dark:bg-teal-500/20 text-teal-600 dark:text-teal-300 border-teal-500/30"
                                 }`}
                                 title={
                                   hasOverride
-                                    ? `Turno modificado. Original: ${originalTurn === "facundo" ? "Facundo" : "Ramiro"} ➡️ Nuevo: ${overriddenTurn === "facundo" ? "Facundo" : "Ramiro"}`
-                                    : `Esta semana es el turno de guardia de ${originalTurn === "facundo" ? "Facundo" : "Ramiro"}`
+                                    ? `Turno modificado. Original: ${formatTurnLabel(originalTurn)} ➡️ Nuevo: ${formatTurnLabel(overriddenTurn)}`
+                                    : `Esta semana es el turno de guardia de ${formatTurnLabel(originalTurn)}`
                                 }
                               >
                                 <span>Turno:</span>
                                 {hasOverride ? (
                                   <span className="flex items-center gap-0.5">
-                                    <span className="line-through opacity-50">{originalTurn === "facundo" ? "Facu" : "Rami"}</span>
+                                    <span className="line-through opacity-50">{formatTurnLabel(originalTurn, true)}</span>
                                     <span>➡️</span>
-                                    <span className="font-extrabold">{overriddenTurn === "facundo" ? "Facu" : "Rami"}</span>
+                                    <span className="font-extrabold">{formatTurnLabel(overriddenTurn, true)}</span>
                                   </span>
                                 ) : (
-                                  <span>{originalTurn === "facundo" ? "Facundo" : "Ramiro"}</span>
+                                  <span>{formatTurnLabel(originalTurn)}</span>
                                 )}
                               </div>
                             )}
@@ -2365,12 +2393,12 @@ export function GuardiasPage() {
                               <span>Turno semanal: </span>
                               {hasOverride ? (
                                 <span className="flex items-center gap-1">
-                                  <span className="line-through opacity-50">{originalTurn === "facundo" ? "Facundo" : "Ramiro"}</span>
+                                  <span className="line-through opacity-50">{formatTurnLabel(originalTurn)}</span>
                                   <span>➡️</span>
-                                  <strong className="text-foreground">{overriddenTurn === "facundo" ? "Facundo" : "Ramiro"}</strong>
+                                  <strong className="text-foreground">{formatTurnLabel(overriddenTurn)}</strong>
                                 </span>
                               ) : (
-                                <strong className="text-foreground">{originalTurn === "facundo" ? "Facundo" : "Ramiro"}</strong>
+                                <strong className="text-foreground">{formatTurnLabel(originalTurn)}</strong>
                               )}
                             </div>
                           )}
@@ -2951,71 +2979,101 @@ export function GuardiasPage() {
                     </h3>
                     <Card className="border border-muted-foreground/10 bg-card/30">
                       <CardContent className="p-3 flex items-center justify-between gap-4 flex-wrap">
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground font-medium">Asignación para esta jornada:</p>
-                          <div className="flex items-center gap-2">
-                            {hasOverride ? (
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="line-through text-xs text-muted-foreground font-semibold">
-                                  {originalTurn === "facundo" ? "Facundo" : "Ramiro"} (Original)
-                                </span>
-                                <span className="text-xs text-muted-foreground">➡️</span>
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                                  overriddenTurn === "facundo"
-                                    ? "bg-sky-500/10 text-sky-600 dark:text-sky-400"
-                                    : "bg-purple-500/10 text-purple-600 dark:text-purple-400"
-                                }`}>
-                                  {overriddenTurn === "facundo" ? "Facundo" : "Ramiro"} (Reasignado)
-                                </span>
-                              </div>
-                            ) : (
-                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                                originalTurn === "facundo"
-                                  ? "bg-sky-500/10 text-sky-600 dark:text-sky-400"
-                                  : "bg-purple-500/10 text-purple-600 dark:text-purple-400"
-                              }`}>
-                                {originalTurn === "facundo" ? "Facundo" : "Ramiro"}
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                        {(() => {
+                          const activeUsers = getTurnResponsibles(selectedCalDate, turnOverrides, getWeeklyTurn);
+                          const isFacundoSelected = activeUsers.includes("facundo");
+                          const isRamiroSelected = activeUsers.includes("ramiro");
 
-                        {/* Control buttons to override */}
-                        <div className="flex items-center gap-1.5">
-                          <Button
-                            variant={overriddenTurn === "facundo" ? "default" : "outline"}
-                            size="xs"
-                            className="h-8 font-semibold text-xs"
-                            onClick={async () => {
-                              await setTurnOverride(selectedCalDate!, "facundo");
-                            }}
-                          >
-                            Facundo
-                          </Button>
-                          <Button
-                            variant={overriddenTurn === "ramiro" ? "default" : "outline"}
-                            size="xs"
-                            className="h-8 font-semibold text-xs"
-                            onClick={async () => {
-                              await setTurnOverride(selectedCalDate!, "ramiro");
-                            }}
-                          >
-                            Ramiro
-                          </Button>
-                          {hasOverride && (
-                            <Button
-                              variant="ghost"
-                              size="xs"
-                              className="h-8 text-destructive hover:bg-destructive/10 text-xs"
-                              onClick={async () => {
-                                await clearTurnOverride(selectedCalDate!);
-                              }}
-                              title="Restaurar turno original"
-                            >
-                              Restaurar
-                            </Button>
-                          )}
-                        </div>
+                          const toggleUser = async (target: "facundo" | "ramiro") => {
+                            let nextFacu = isFacundoSelected;
+                            let nextRami = isRamiroSelected;
+                            if (target === "facundo") nextFacu = !isFacundoSelected;
+                            if (target === "ramiro") nextRami = !isRamiroSelected;
+
+                            if (nextFacu && nextRami) {
+                              await setTurnOverride(selectedCalDate, "both");
+                            } else if (nextFacu) {
+                              await setTurnOverride(selectedCalDate, "facundo");
+                            } else if (nextRami) {
+                              await setTurnOverride(selectedCalDate, "ramiro");
+                            } else {
+                              await clearTurnOverride(selectedCalDate);
+                            }
+                          };
+
+                          return (
+                            <>
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground font-medium">Asignación para esta jornada:</p>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {isFacundoSelected && (
+                                    <span className="text-xs font-bold px-2.5 py-0.5 rounded bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30 flex items-center gap-1">
+                                      <Check className="size-3" /> Facundo
+                                    </span>
+                                  )}
+                                  {isRamiroSelected && (
+                                    <span className="text-xs font-bold px-2.5 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30 flex items-center gap-1">
+                                      <Check className="size-3" /> Ramiro
+                                    </span>
+                                  )}
+                                  {!isFacundoSelected && !isRamiroSelected && (
+                                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                                      Sin asignar
+                                    </span>
+                                  )}
+                                  {hasOverride && (
+                                    <span className="text-[10px] text-muted-foreground opacity-80 italic ml-1">
+                                      (Modificado. Original: {formatTurnLabel(originalTurn || "")})
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Control buttons to override / multi-select */}
+                              <div className="flex items-center gap-1.5">
+                                <Button
+                                  variant={isFacundoSelected ? "default" : "outline"}
+                                  size="xs"
+                                  className={`h-8 font-semibold text-xs transition-all ${
+                                    isFacundoSelected
+                                      ? "bg-sky-600 hover:bg-sky-700 text-white border-sky-600 shadow-xs"
+                                      : "hover:bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20"
+                                  }`}
+                                  onClick={() => toggleUser("facundo")}
+                                >
+                                  {isFacundoSelected && <Check className="size-3.5 mr-1" />}
+                                  Facundo
+                                </Button>
+                                <Button
+                                  variant={isRamiroSelected ? "default" : "outline"}
+                                  size="xs"
+                                  className={`h-8 font-semibold text-xs transition-all ${
+                                    isRamiroSelected
+                                      ? "bg-purple-600 hover:bg-purple-700 text-white border-purple-600 shadow-xs"
+                                      : "hover:bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
+                                  }`}
+                                  onClick={() => toggleUser("ramiro")}
+                                >
+                                  {isRamiroSelected && <Check className="size-3.5 mr-1" />}
+                                  Ramiro
+                                </Button>
+                                {hasOverride && (
+                                  <Button
+                                    variant="ghost"
+                                    size="xs"
+                                    className="h-8 text-destructive hover:bg-destructive/10 text-xs ml-1"
+                                    onClick={async () => {
+                                      await clearTurnOverride(selectedCalDate);
+                                    }}
+                                    title="Restaurar turno original"
+                                  >
+                                    Restaurar
+                                  </Button>
+                                )}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </CardContent>
                     </Card>
                   </div>

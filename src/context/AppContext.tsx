@@ -169,9 +169,9 @@ interface AppContextValue {
 
   // Holiday and Turn Overrides
   holidayAssignments: Record<string, string>;
-  turnOverrides: Record<string, "facundo" | "ramiro">;
+  turnOverrides: Record<string, string>;
   setHolidayAssignment: (date: string, userId: string) => Promise<void>;
-  setTurnOverride: (date: string, user: "facundo" | "ramiro") => Promise<void>;
+  setTurnOverride: (date: string, user: string) => Promise<void>;
   clearTurnOverride: (date: string) => Promise<void>;
 
   // Navigation state
@@ -270,7 +270,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // New settings states
   const [holidayAssignments, setHolidayAssignments] = useState<Record<string, string>>({});
-  const [turnOverrides, setTurnOverrides] = useState<Record<string, "facundo" | "ramiro">>({});
+  const [turnOverrides, setTurnOverrides] = useState<Record<string, string>>({});
   const [hasDbHolidayAssignments, setHasDbHolidayAssignments] = useState(true);
   const [hasDbTurnOverrides, setHasDbTurnOverrides] = useState(true);
 
@@ -1857,7 +1857,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [hasDbHolidayAssignments]);
 
-  const setTurnOverride = useCallback(async (date: string, user: "facundo" | "ramiro") => {
+  const setTurnOverride = useCallback(async (date: string, user: string) => {
     setTurnOverrides(prev => {
       const next = { ...prev, [date]: user };
       localStorage.setItem("techcontrol_turn_overrides", JSON.stringify(next));
