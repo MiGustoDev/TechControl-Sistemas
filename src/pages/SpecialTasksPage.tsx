@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { 
   Plus, Search, Calendar, User, CheckSquare, ListTodo, Edit2, Trash2, 
   ChevronDown, CheckSquare2, Square, Sparkles, Megaphone, PartyPopper, CalendarHeart, HelpCircle, Check, Flag, Image as ImageIcon,
@@ -278,6 +278,22 @@ export function SpecialTasksPage() {
   const [priceInput, setPriceInput] = useState("$ ");
   const [rendicionInput, setRendicionInput] = useState("$ ");
 
+  // Helper to resolve active user automatically without requiring a form input
+  const getActiveUser = useCallback((currentAssigned?: string[]): string => {
+    const savedUserId = localStorage.getItem("techcontrol_last_ticket_user");
+    if (savedUserId) {
+      const found = users.find(u => u.id === savedUserId);
+      if (found) return found.fullName;
+    }
+    if (currentAssigned && currentAssigned.length > 0) {
+      return currentAssigned[0];
+    }
+    if (assignedTo && assignedTo.length > 0) {
+      return assignedTo[0];
+    }
+    return "Ramiro Lacci";
+  }, [users, assignedTo]);
+
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPriceInput(formatCurrencyInputString(e.target.value));
   };
@@ -372,13 +388,13 @@ export function SpecialTasksPage() {
     setEventDialogOpen(true);
   };
 
-  const openEditEvent = (evt: { id: string; date: string; name: string; type: string; tasks: any[] }) => {
+  const openEditEvent = (evt: { id: string; date: string; name: string; type: string; tasks: any[]; createdBy?: string; updatedBy?: string }) => {
     setEventForm({
       id: evt.id,
       date: toDisplayDate(evt.date),
       name: evt.name,
       type: evt.type,
-      tasks: evt.tasks.map(t => ({
+      tasks: (evt.tasks || []).map(t => ({
         id: t.id,
         name: t.title || t.name,
         completed: t.completed,
@@ -401,6 +417,7 @@ export function SpecialTasksPage() {
       return;
     }
 
+    const currentUser = getActiveUser();
     const payload: SpecialEvent = {
       id: eventForm.id || `event-${Date.now()}`,
       date: isoDate,
@@ -414,6 +431,8 @@ export function SpecialTasksPage() {
         imageUrl: t.imageUrl,
         completedAt: t.completedAt
       })),
+      createdBy: eventForm.id ? undefined : currentUser,
+      updatedBy: eventForm.id ? currentUser : undefined,
       createdAt: eventForm.id ? undefined : new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -535,7 +554,6 @@ export function SpecialTasksPage() {
     setPriceInput("$ ");
     setRendicionInput("$ ");
     setAssignedTo([]);
-    setNotes("");
     setFormTasks([]);
     setNewTaskTitle("");
     setIsDialogOpen(true);
@@ -555,7 +573,6 @@ export function SpecialTasksPage() {
     setPriceInput(task.price !== undefined && task.price !== null ? formatCurrencyDisplay(task.price) : "$ ");
     setRendicionInput(task.rendicion !== undefined && task.rendicion !== null ? formatCurrencyDisplay(task.rendicion) : "$ ");
     setAssignedTo(task.assignedTo || []);
-    setNotes(task.notes || "");
     setFormTasks(task.tasks || []);
     setNewTaskTitle("");
     setIsDialogOpen(true);
@@ -607,6 +624,7 @@ export function SpecialTasksPage() {
 
     const priceNum = parseCurrencyValue(priceInput);
     const rendicionNum = parseCurrencyValue(rendicionInput);
+    const currentUser = getActiveUser(assignedTo);
 
     const payload = {
       title: title.trim(),
@@ -621,7 +639,8 @@ export function SpecialTasksPage() {
       progress: calculatedProgress,
       assignedTo,
       tasks: formTasks,
-      notes: notes.trim() || undefined
+      createdBy: editingTask ? (editingTask.createdBy || currentUser) : currentUser,
+      updatedBy: editingTask ? currentUser : undefined
     };
 
     try {
@@ -644,6 +663,8 @@ export function SpecialTasksPage() {
               completed: t.completed
             })),
             bannerUrl: editingTask.bannerUrl,
+            createdBy: editingTask.createdBy || currentUser,
+            updatedBy: currentUser,
             updatedAt: new Date().toISOString()
           };
           await saveSpecialEvent(calEventPayload);
@@ -669,6 +690,7 @@ export function SpecialTasksPage() {
               title: t.title,
               completed: t.completed
             })),
+            createdBy: currentUser,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           };
@@ -885,6 +907,8 @@ export function SpecialTasksPage() {
         assignedTo: ["Equipo IT"],
         isCalendarEvent: true,
         originalType: evt.type,
+        createdBy: evt.createdBy,
+        updatedBy: evt.updatedBy,
         createdAt: evt.createdAt || evt.date,
         updatedAt: evt.updatedAt || evt.date
       };
@@ -1207,23 +1231,10 @@ export function SpecialTasksPage() {
 
           <Separator className="my-3" />
 
-          {/* Price & Rendicion summary if defined */}
-          {(task.price !== undefined || task.rendicion !== undefined) && (
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold my-2 pt-2 border-t border-border/40">
-              <div className="text-emerald-600 dark:text-emerald-400">
-                <span className="text-[10px] text-muted-foreground block font-normal">Precio:</span>
-                {task.price !== undefined ? formatCurrencyDisplay(task.price) : "-"}
-              </div>
-              <div className="text-blue-600 dark:text-blue-400 text-right">
-                <span className="text-[10px] text-muted-foreground block font-normal">Rendición:</span>
-                {task.rendicion !== undefined ? formatCurrencyDisplay(task.rendicion) : "-"}
-              </div>
-            </div>
-          )}
-
-          {/* Dates & Assigned info */}
-          <div className="grid grid-cols-2 gap-2 text-[11px] text-muted-foreground mt-auto">
-            <div className="flex items-center gap-1.5">
+          {/* Dates, Price/Rendicion & Assigned info in a single 3-column row */}
+          <div className="grid grid-cols-3 gap-2 text-[11px] text-muted-foreground mt-auto items-center">
+            {/* Left: Dates */}
+            <div className="flex items-center gap-1.5 min-w-0">
               <Calendar className="size-3.5 shrink-0" />
               <div className="truncate">
                 <span>{formatDate(task.startDate)}</span>
@@ -1233,13 +1244,41 @@ export function SpecialTasksPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 justify-end">
-              <User className="size-3.5 shrink-0" />
-              <span className="truncate max-w-[120px]" title={task.assignedTo?.join(", ")}>
-                {task.assignedTo && task.assignedTo.length > 0 
-                  ? task.assignedTo.join(", ") 
-                  : "Sin asignar"}
-              </span>
+            {/* Center: Price & Rendicion */}
+            <div className="flex flex-col items-center justify-center text-center min-w-0">
+              {task.price !== undefined && (
+                <div className="text-[10.5px] truncate max-w-full">
+                  <span className="opacity-75 font-normal">Precio: </span>
+                  <strong className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrencyDisplay(task.price)}</strong>
+                </div>
+              )}
+              {task.rendicion !== undefined && (
+                <div className="text-[10.5px] truncate max-w-full">
+                  <span className="opacity-75 font-normal">Rendición: </span>
+                  <strong className="font-bold text-blue-600 dark:text-blue-400">{formatCurrencyDisplay(task.rendicion)}</strong>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Assigned & Created/Edited info */}
+            <div className="flex flex-col items-end gap-0.5 justify-end min-w-0 text-right">
+              <div className="flex items-center gap-1.5 justify-end">
+                <User className="size-3.5 shrink-0" />
+                <span className="truncate max-w-[120px]" title={task.assignedTo?.join(", ")}>
+                  {task.assignedTo && task.assignedTo.length > 0 
+                    ? task.assignedTo.join(", ") 
+                    : "Sin asignar"}
+                </span>
+              </div>
+              {task.updatedBy ? (
+                <span className="text-[10px] text-muted-foreground/80 truncate max-w-[140px]" title={`Editado por: ${task.updatedBy}`}>
+                  Editado por: <strong className="font-semibold text-foreground/90">{task.updatedBy}</strong>
+                </span>
+              ) : task.createdBy ? (
+                <span className="text-[10px] text-muted-foreground/80 truncate max-w-[140px]" title={`Creado por: ${task.createdBy}`}>
+                  Creado por: <strong className="font-semibold text-foreground/90">{task.createdBy}</strong>
+                </span>
+              ) : null}
             </div>
           </div>
 
@@ -1796,18 +1835,6 @@ export function SpecialTasksPage() {
                   Agregar
                 </Button>
               </div>
-            </div>
-
-            <Separator className="my-2" />
-
-            {/* Internal Notes */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-foreground">Notas internas</label>
-              <AutoGrowTextarea
-                placeholder="Observaciones extra sobre la tarea o enlaces a recursos útiles..."
-                value={notes}
-                onChange={setNotes}
-              />
             </div>
 
             <DialogFooter className="pt-2 justify-end gap-2">

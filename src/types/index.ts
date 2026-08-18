@@ -304,6 +304,8 @@ export interface SpecialTask {
   tasks?: ProjectTask[];
   notes?: string;
   bannerUrl?: string;
+  createdBy?: string;
+  updatedBy?: string;
   createdAt: string;
   updatedAt: string;
   isCalendarEvent?: boolean;
@@ -327,6 +329,8 @@ export interface SpecialEvent {
   rendicion?: number;
   tasks?: SpecialEventTask[];
   bannerUrl?: string;
+  createdBy?: string;
+  updatedBy?: string;
   createdAt?: string;
   updatedAt?: string;
 }
