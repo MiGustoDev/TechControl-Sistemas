@@ -784,7 +784,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (dbSpecialTasks && !specialTasksError) {
-        const mappedSpecialTasks = dbSpecialTasks.map(o => ({
+        const mappedSpecialTasks: SpecialTask[] = dbSpecialTasks.map(o => ({
           id: o.id,
           title: o.title,
           description: o.description || "",
@@ -798,11 +798,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           tasks: Array.isArray(o.tasks) ? o.tasks : [],
           notes: o.notes || undefined,
           bannerUrl: o.banner_url || o.bannerUrl || undefined,
+          createdBy: o.created_by || o.createdBy || undefined,
+          updatedBy: o.updated_by || o.updatedBy || undefined,
+          price: o.price !== undefined && o.price !== null ? Number(o.price) : undefined,
+          rendicion: o.rendicion !== undefined && o.rendicion !== null ? Number(o.rendicion) : undefined,
           createdAt: o.created_at,
           updatedAt: o.updated_at
         }));
-        setSpecialTasks(mappedSpecialTasks);
-        localStorage.setItem("techcontrol_special_tasks", JSON.stringify(mappedSpecialTasks));
+
+        const saved = localStorage.getItem("techcontrol_special_tasks");
+        let localTasks: SpecialTask[] = [];
+        if (saved) {
+          try { localTasks = JSON.parse(saved); } catch (e) {}
+        }
+
+        const mergedSpecialTasks = mappedSpecialTasks.map(dbTask => {
+          const local = localTasks.find(l => l.id === dbTask.id);
+          if (!local) return dbTask;
+
+          const dbTime = new Date(dbTask.updatedAt || 0).getTime();
+          const localTime = new Date(local.updatedAt || 0).getTime();
+          const useLocal = localTime > dbTime;
+
+          return {
+            ...dbTask,
+            ...(useLocal ? local : {}),
+            createdBy: dbTask.createdBy || local.createdBy,
+            updatedBy: useLocal ? (local.updatedBy || dbTask.updatedBy) : (dbTask.updatedBy || local.updatedBy),
+            price: dbTask.price !== undefined ? dbTask.price : local.price,
+            rendicion: dbTask.rendicion !== undefined ? dbTask.rendicion : local.rendicion,
+            bannerUrl: dbTask.bannerUrl || local.bannerUrl
+          };
+        });
+
+        const dbIds = new Set(mappedSpecialTasks.map(t => t.id));
+        const localOnly = localTasks.filter(l => !dbIds.has(l.id));
+        const finalSpecialTasks = [...mergedSpecialTasks, ...localOnly];
+
+        setSpecialTasks(finalSpecialTasks);
+        localStorage.setItem("techcontrol_special_tasks", JSON.stringify(finalSpecialTasks));
       } else {
         const saved = localStorage.getItem("techcontrol_special_tasks");
         if (saved) {
@@ -2497,14 +2531,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       tasks: newSpecialTask.tasks || [],
       notes: newSpecialTask.notes || null,
       banner_url: newSpecialTask.bannerUrl || null,
+      created_by: newSpecialTask.createdBy || null,
+      updated_by: newSpecialTask.updatedBy || null,
+      price: newSpecialTask.price ?? null,
+      rendicion: newSpecialTask.rendicion ?? null,
       created_at: newSpecialTask.createdAt,
       updated_at: newSpecialTask.updatedAt
     };
 
     let { error } = await supabase.from("special_tasks").insert(dbPayload);
-    if (error && (error.message?.includes("banner_url") || error.message?.includes("schema cache") || error.code === "PGRST204")) {
-      delete dbPayload.banner_url;
-      const retry = await supabase.from("special_tasks").insert(dbPayload);
+    if (error && (error.message?.includes("banner_url") || error.message?.includes("created_by") || error.message?.includes("updated_by") || error.message?.includes("price") || error.message?.includes("rendicion") || error.message?.includes("schema cache") || error.code === "PGRST204")) {
+      const retryPayload = { ...dbPayload };
+      delete retryPayload.banner_url;
+      delete retryPayload.created_by;
+      delete retryPayload.updated_by;
+      delete retryPayload.price;
+      delete retryPayload.rendicion;
+      const retry = await supabase.from("special_tasks").insert(retryPayload);
       error = retry.error;
     }
 
@@ -2566,11 +2609,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (data.tasks !== undefined) dbPayload.tasks = data.tasks;
     if (data.notes !== undefined) dbPayload.notes = data.notes;
     if (data.bannerUrl !== undefined) dbPayload.banner_url = data.bannerUrl;
+    if (data.createdBy !== undefined) dbPayload.created_by = data.createdBy;
+    if (data.updatedBy !== undefined) dbPayload.updated_by = data.updatedBy;
+    if (data.price !== undefined) dbPayload.price = data.price;
+    if (data.rendicion !== undefined) dbPayload.rendicion = data.rendicion;
 
     let { error } = await supabase.from("special_tasks").upsert(dbPayload, { onConflict: "id" });
-    if (error && (error.message?.includes("banner_url") || error.message?.includes("schema cache") || error.code === "PGRST204")) {
-      delete dbPayload.banner_url;
-      const retry = await supabase.from("special_tasks").upsert(dbPayload, { onConflict: "id" });
+    if (error && (error.message?.includes("banner_url") || error.message?.includes("created_by") || error.message?.includes("updated_by") || error.message?.includes("price") || error.message?.includes("rendicion") || error.message?.includes("schema cache") || error.code === "PGRST204")) {
+      const retryPayload = { ...dbPayload };
+      delete retryPayload.banner_url;
+      delete retryPayload.created_by;
+      delete retryPayload.updated_by;
+      delete retryPayload.price;
+      delete retryPayload.rendicion;
+      const retry = await supabase.from("special_tasks").upsert(retryPayload, { onConflict: "id" });
       error = retry.error;
     }
 

@@ -13,10 +13,21 @@ CREATE TABLE IF NOT EXISTS public.special_tasks (
     progress INT DEFAULT 0,
     assigned_to JSONB DEFAULT '[]'::jsonb,
     tasks JSONB DEFAULT '[]'::jsonb,
-    notes TEXT,
+    banner_url TEXT,
+    created_by TEXT,
+    updated_by TEXT,
+    price NUMERIC,
+    rendicion NUMERIC,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Ensure all columns exist if table was previously created
+ALTER TABLE public.special_tasks ADD COLUMN IF NOT EXISTS banner_url TEXT;
+ALTER TABLE public.special_tasks ADD COLUMN IF NOT EXISTS created_by TEXT;
+ALTER TABLE public.special_tasks ADD COLUMN IF NOT EXISTS updated_by TEXT;
+ALTER TABLE public.special_tasks ADD COLUMN IF NOT EXISTS price NUMERIC;
+ALTER TABLE public.special_tasks ADD COLUMN IF NOT EXISTS rendicion NUMERIC;
 
 -- Enable RLS
 ALTER TABLE public.special_tasks ENABLE ROW LEVEL SECURITY;

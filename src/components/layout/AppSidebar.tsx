@@ -40,6 +40,7 @@ export function AppSidebar() {
     officeTickets,
     databaseCredentials,
     objectives,
+    productPrices,
     specialTasks,
     specialEvents,
     users,
@@ -169,6 +170,11 @@ export function AppSidebar() {
                       <DollarSign className="size-4" />
                       <span>Precios</span>
                     </SidebarMenuButton>
+                    {!isCollapsed && (productPrices?.length || 0) > 0 && (
+                      <SidebarMenuBadge className="bg-muted-foreground/10 font-bold text-foreground">
+                        {productPrices.length}
+                      </SidebarMenuBadge>
+                    )}
                   </SidebarMenuItem>
 
                   {/* Objetivos del equipo */}
