@@ -115,34 +115,6 @@ const formatCurrencyDisplay = (num?: number | null): string => {
   return `$ ${num.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-const formatCurrencyInputString = (inputVal: string): string => {
-  if (!inputVal) return "$ ";
-  
-  const clean = inputVal.replace(/[^0-9,]/g, "");
-  if (!clean) return "$ ";
-
-  const commaIndex = clean.indexOf(",");
-  let intPart = clean;
-  let decPart: string | null = null;
-  if (commaIndex !== -1) {
-    intPart = clean.slice(0, commaIndex);
-    decPart = clean.slice(commaIndex + 1).replace(/,/g, "").slice(0, 2);
-  }
-
-  let formattedInt = "";
-  if (intPart) {
-    const parsedInt = parseInt(intPart, 10);
-    if (!isNaN(parsedInt)) {
-      formattedInt = parsedInt.toLocaleString("es-AR");
-    }
-  }
-
-  if (decPart !== null) {
-    return `$ ${formattedInt},${decPart}`;
-  }
-  return `$ ${formattedInt}`;
-};
-
 const parseCurrencyValue = (valStr: string): number | undefined => {
   if (!valStr || valStr === "$ ") return undefined;
   const clean = valStr.replace(/\$/g, "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
@@ -272,7 +244,6 @@ export function SpecialTasksPage() {
   const [endDate, setEndDate] = useState("");
   const [noEndDate, setNoEndDate] = useState(false);
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
-  const [notes, setNotes] = useState("");
 
   // Helper to resolve active user automatically without requiring a form input
   const getActiveUser = useCallback((currentAssigned?: string[]): string => {
@@ -540,7 +511,12 @@ export function SpecialTasksPage() {
     setStartDate(task.startDate || "");
     setEndDate(task.endDate || "");
     setNoEndDate(!task.endDate);
-    setAssignedTo(task.assignedTo || []);
+
+    const validAssigned = (task.assignedTo && task.assignedTo.length > 0 && !task.assignedTo.includes("Equipo IT"))
+      ? task.assignedTo
+      : [getActiveUser(task.assignedTo)];
+    setAssignedTo(validAssigned);
+
     setFormTasks(task.tasks || []);
     setNewTaskTitle("");
     setIsDialogOpen(true);
@@ -570,10 +546,7 @@ export function SpecialTasksPage() {
       return;
     }
 
-    if (!assignedTo || assignedTo.length === 0) {
-      toast.error("Por favor, seleccioná al menos un responsable del equipo");
-      return;
-    }
+    const currentAssigned = (assignedTo && assignedTo.length > 0) ? assignedTo : [getActiveUser()];
 
     // Progress calculation based on checklist tasks
     let calculatedProgress = 0;
@@ -585,27 +558,30 @@ export function SpecialTasksPage() {
       calculatedProgress = status === "completed" ? 100 : (editingTask ? editingTask.progress : 0);
     }
 
-    // Force progress to 100 if status is completed
-    if (status === "completed") {
+    // Auto-set status to completed if progress is 100%, or force progress to 100% if status is completed
+    let finalStatus = status;
+    if (calculatedProgress === 100) {
+      finalStatus = "completed";
+    } else if (finalStatus === "completed") {
       calculatedProgress = 100;
     }
 
     const priceNum = editingTask?.price;
     const rendicionNum = editingTask?.rendicion;
-    const currentUser = getActiveUser(assignedTo);
+    const currentUser = getActiveUser(currentAssigned);
 
     const payload = {
       title: title.trim(),
       description: description.trim() || undefined,
       category,
-      status,
+      status: finalStatus,
       priority,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
       price: priceNum,
       rendicion: rendicionNum,
       progress: calculatedProgress,
-      assignedTo,
+      assignedTo: currentAssigned,
       tasks: formTasks,
       createdBy: editingTask ? (editingTask.createdBy || currentUser) : currentUser,
       updatedBy: editingTask ? currentUser : undefined

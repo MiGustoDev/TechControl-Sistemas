@@ -2522,12 +2522,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateSpecialTask = useCallback(async (id: string, data: Partial<SpecialTask>) => {
     const updatedAt = now();
     setSpecialTasks(prev => {
-      const next = prev.map(o => o.id === id ? { ...o, ...data, updatedAt } : o);
+      const exists = prev.some(o => o.id === id);
+      let next: SpecialTask[];
+      if (exists) {
+        next = prev.map(o => o.id === id ? { ...o, ...data, updatedAt } : o);
+      } else {
+        const newTask: SpecialTask = {
+          id,
+          title: data.title || "Sin título",
+          description: data.description,
+          category: data.category || "campaign",
+          status: data.status || "pending",
+          priority: data.priority || "medium",
+          startDate: data.startDate,
+          endDate: data.endDate,
+          progress: data.progress ?? 0,
+          assignedTo: data.assignedTo || ["Equipo IT"],
+          tasks: data.tasks || [],
+          createdBy: data.createdBy,
+          updatedBy: data.updatedBy,
+          createdAt: updatedAt,
+          updatedAt,
+          bannerUrl: data.bannerUrl,
+          price: data.price,
+          rendicion: data.rendicion
+        };
+        next = [newTask, ...prev];
+      }
       localStorage.setItem("techcontrol_special_tasks", JSON.stringify(next));
       return next;
     });
 
-    const dbPayload: Record<string, any> = { updated_at: updatedAt };
+    const dbPayload: Record<string, any> = { id, updated_at: updatedAt };
     if (data.title !== undefined) dbPayload.title = data.title;
     if (data.description !== undefined) dbPayload.description = data.description;
     if (data.category !== undefined) dbPayload.category = data.category;
@@ -2541,10 +2567,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (data.notes !== undefined) dbPayload.notes = data.notes;
     if (data.bannerUrl !== undefined) dbPayload.banner_url = data.bannerUrl;
 
-    let { error } = await supabase.from("special_tasks").update(dbPayload).eq("id", id);
+    let { error } = await supabase.from("special_tasks").upsert(dbPayload, { onConflict: "id" });
     if (error && (error.message?.includes("banner_url") || error.message?.includes("schema cache") || error.code === "PGRST204")) {
       delete dbPayload.banner_url;
-      const retry = await supabase.from("special_tasks").update(dbPayload).eq("id", id);
+      const retry = await supabase.from("special_tasks").upsert(dbPayload, { onConflict: "id" });
       error = retry.error;
     }
 
