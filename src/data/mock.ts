@@ -3042,16 +3042,6 @@ export const users: User[] = [
     "updatedAt": "2026-01-01T08:00:00Z"
   },
   {
-    "id": "usr-056",
-    "username": "mariano.garcia",
-    "fullName": "Mariano Garcia",
-    "email": null,
-    "location": "Oficinas",
-    "active": true,
-    "createdAt": "2026-01-01T08:00:00Z",
-    "updatedAt": "2026-01-01T08:00:00Z"
-  },
-  {
     "id": "usr-057",
     "username": "mariano.mancilla",
     "fullName": "Mariano Mancilla",
@@ -3380,22 +3370,6 @@ export const guardias: Guardia[] = [
     notes: "Se realizó la actualización con éxito. Pruebas de facturación ok.",
     createdAt: "2026-05-20T22:10:00Z",
     updatedAt: "2026-05-20T22:10:00Z"
-  },
-  {
-    id: "guardia-5",
-    date: "2026-05-24",
-    startTime: "08:00",
-    endTime: "14:00",
-    hours: 6,
-    userId: "usr-056",
-    userName: "Mariano Garcia",
-    type: "actualizacion",
-    description: "Migración de servidor principal de base de datos a nuevo hardware.",
-    branchesAffected: "Central / Servidores",
-    status: "pending_approval",
-    notes: "Se realizó backup completo y restauración en el nuevo server. Tiempos de respuesta reducidos a la mitad.",
-    createdAt: "2026-05-24T14:30:00Z",
-    updatedAt: "2026-05-24T14:30:00Z"
   }
 ];
 
