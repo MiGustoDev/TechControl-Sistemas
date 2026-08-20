@@ -1,5 +1,9 @@
 import React, { useState, useMemo } from "react";
+<<<<<<< HEAD
 import { Plus, Search, Edit2, Trash2, Tag, DollarSign, Sparkles, ArrowRightLeft } from "lucide-react";
+=======
+import { Plus, Search, Edit2, Trash2, Tag, Sparkles, ArrowRightLeft } from "lucide-react";
+>>>>>>> 5f1d2105fe406865326e8a47b15dd1ada1bc2759
 import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -150,8 +154,8 @@ export function PricesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
-            <DollarSign className="size-8 text-orange-500" /> Lista de Precios
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+            Lista de Precios
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Gestión y consulta de los precios oficiales de productos y combos de Mi Gusto.
@@ -166,7 +170,7 @@ export function PricesPage() {
           >
             <ArrowRightLeft className="size-4" /> Cambiador de precios ({selectedIds.length})
           </Button>
-          <Button onClick={handleOpenCreate} className="bg-orange-600 hover:bg-orange-700 text-white font-semibold flex items-center gap-1.5">
+          <Button onClick={handleOpenCreate} className="bg-white text-slate-900 hover:bg-slate-100 font-bold flex items-center gap-1.5 shadow-sm">
             <Plus className="size-4.5" /> Agregar Producto
           </Button>
         </div>
@@ -183,7 +187,7 @@ export function PricesPage() {
                 setActiveCategory("all");
                 setSelectedIds([]);
               }}
-              className={`text-xs px-3 h-8.5 rounded-lg ${activeCategory === "all" ? "bg-orange-600 hover:bg-orange-600 text-white" : ""}`}
+              className={`text-xs px-3 h-8.5 rounded-lg ${activeCategory === "all" ? "bg-white text-slate-900 hover:bg-slate-100 font-bold shadow-xs border-white" : ""}`}
             >
               Todos
             </Button>
@@ -195,7 +199,7 @@ export function PricesPage() {
                   setActiveCategory(key as ProductPriceCategory);
                   setSelectedIds([]);
                 }}
-                className={`text-xs px-3 h-8.5 rounded-lg ${activeCategory === key ? "bg-orange-600 hover:bg-orange-600 text-white" : ""}`}
+                className={`text-xs px-3 h-8.5 rounded-lg ${activeCategory === key ? "bg-white text-slate-900 hover:bg-slate-100 font-bold shadow-xs border-white" : ""}`}
               >
                 {value.label}
               </Button>
@@ -362,7 +366,7 @@ export function PricesPage() {
             </div>
 
             <DialogFooter className="pt-4 gap-2">
-              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white font-semibold">
+              <Button type="submit" className="bg-white text-slate-900 hover:bg-slate-100 font-bold shadow-sm">
                 {editingPrice ? "Guardar Cambios" : "Registrar Producto"}
               </Button>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -415,7 +419,7 @@ export function PricesPage() {
             </div>
 
             <DialogFooter className="pt-4 gap-2">
-              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white font-semibold">
+              <Button type="submit" className="bg-white text-slate-900 hover:bg-slate-100 font-bold shadow-sm">
                 Aplicar Precio Común
               </Button>
               <Button type="button" variant="outline" onClick={() => setIsBulkDialogOpen(false)}>

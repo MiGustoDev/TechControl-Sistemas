@@ -198,7 +198,8 @@ export function SpecialTasksPage() {
     specialEvents,
     saveSpecialEvent,
     deleteSpecialEvent,
-    holidayAssignments
+    holidayAssignments,
+    session
   } = useApp();
 
   const calendarEvents = specialEvents;
@@ -245,21 +246,51 @@ export function SpecialTasksPage() {
   const [noEndDate, setNoEndDate] = useState(false);
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
 
-  // Helper to resolve active user automatically without requiring a form input
+  // Helper to resolve active user automatically using the logged-in user session
   const getActiveUser = useCallback((currentAssigned?: string[]): string => {
+    // 1. Prioritize authenticated session user
+    if (session?.user) {
+      const metaName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.user_metadata?.fullName;
+      if (metaName) return metaName;
+
+      const email = session.user.email?.toLowerCase().trim();
+      if (email) {
+        const found = users.find(u => u.email?.toLowerCase().trim() === email);
+        if (found) return found.fullName;
+
+        if (email.includes("ramirolacci")) return "Ramiro Lacci";
+        if (email.includes("facundocarrizo")) return "Facundo Carrizo";
+        if (email.includes("gustavo")) return "Gustavo Gonzalez";
+        if (email.includes("sharonmoner")) return "Sharon Moner";
+        if (email.includes("camilaferro")) return "Camila Ferro";
+        if (email.includes("camiladiaz")) return "Camila Diaz";
+        if (email.includes("rodrigoricobene")) return "Rodrigo Ricobene";
+
+        const usernamePart = email.includes("@") ? email.split("@")[0] : email;
+        const parts: string[] = usernamePart ? usernamePart.split(".").filter(Boolean) : [];
+        if (parts.length >= 2) {
+          return parts.map((p: string) => (p && p.length > 0) ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : "").join(" ");
+        }
+        if (parts.length === 1 && parts[0]) {
+          return parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
+        }
+      }
+    }
+
+    // 2. Saved user ID in localStorage
     const savedUserId = localStorage.getItem("techcontrol_last_ticket_user");
     if (savedUserId) {
       const found = users.find(u => u.id === savedUserId);
       if (found) return found.fullName;
     }
-    if (currentAssigned && currentAssigned.length > 0) {
+
+    // 3. Current assigned fallback
+    if (currentAssigned && currentAssigned.length > 0 && !currentAssigned.includes("Equipo IT")) {
       return currentAssigned[0];
     }
-    if (assignedTo && assignedTo.length > 0) {
-      return assignedTo[0];
-    }
+
     return "Ramiro Lacci";
-  }, [users, assignedTo]);
+  }, [session, users]);
 
   // Dynamic checklist in form
   const [formTasks, setFormTasks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
@@ -511,7 +542,12 @@ export function SpecialTasksPage() {
     setStartDate(task.startDate || "");
     setEndDate(task.endDate || "");
     setNoEndDate(!task.endDate);
-    setAssignedTo(task.assignedTo || []);
+
+    const validAssigned = (task.assignedTo && task.assignedTo.length > 0 && !task.assignedTo.includes("Equipo IT"))
+      ? task.assignedTo
+      : [getActiveUser(task.assignedTo)];
+    setAssignedTo(validAssigned);
+
     setFormTasks(task.tasks || []);
     setNewTaskTitle("");
     setIsDialogOpen(true);
@@ -541,10 +577,7 @@ export function SpecialTasksPage() {
       return;
     }
 
-    if (!assignedTo || assignedTo.length === 0) {
-      toast.error("Por favor, seleccioná al menos un responsable del equipo");
-      return;
-    }
+    const currentAssigned = (assignedTo && assignedTo.length > 0) ? assignedTo : [getActiveUser()];
 
     // Progress calculation based on checklist tasks
     let calculatedProgress = 0;
@@ -556,27 +589,30 @@ export function SpecialTasksPage() {
       calculatedProgress = status === "completed" ? 100 : (editingTask ? editingTask.progress : 0);
     }
 
-    // Force progress to 100 if status is completed
-    if (status === "completed") {
+    // Auto-set status to completed if progress is 100%, or force progress to 100% if status is completed
+    let finalStatus = status;
+    if (calculatedProgress === 100) {
+      finalStatus = "completed";
+    } else if (finalStatus === "completed") {
       calculatedProgress = 100;
     }
 
     const priceNum = editingTask?.price;
     const rendicionNum = editingTask?.rendicion;
-    const currentUser = getActiveUser(assignedTo);
+    const currentUser = getActiveUser(currentAssigned);
 
     const payload = {
       title: title.trim(),
       description: description.trim() || undefined,
       category,
-      status,
+      status: finalStatus,
       priority,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
       price: priceNum,
       rendicion: rendicionNum,
       progress: calculatedProgress,
-      assignedTo,
+      assignedTo: currentAssigned,
       tasks: formTasks,
       createdBy: editingTask ? (editingTask.createdBy || currentUser) : currentUser,
       updatedBy: editingTask ? currentUser : undefined
@@ -1074,6 +1110,7 @@ export function SpecialTasksPage() {
               <img
                 src={task.bannerUrl}
                 alt={`Banner ${task.title}`}
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
                 className="w-full h-full object-cover filter brightness-[0.8] hover:brightness-[0.95] transition-all duration-300 scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-black/30" />

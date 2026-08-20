@@ -585,6 +585,9 @@ export function GuardiasPage() {
     const eligible = users.filter(
       (u) =>
         u.active &&
+        u.fullName !== "Mariano Garcia" &&
+        u.id !== "usr-056" &&
+        u.username !== "mariano.garcia" &&
         (u.location.toLowerCase().includes("sistemas") || guardiaUserIds.has(u.id))
     );
     return [...eligible].sort((a, b) =>
