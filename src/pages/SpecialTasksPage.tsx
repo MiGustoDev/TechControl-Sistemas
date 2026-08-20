@@ -115,34 +115,6 @@ const formatCurrencyDisplay = (num?: number | null): string => {
   return `$ ${num.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-const formatCurrencyInputString = (inputVal: string): string => {
-  if (!inputVal) return "$ ";
-  
-  const clean = inputVal.replace(/[^0-9,]/g, "");
-  if (!clean) return "$ ";
-
-  const commaIndex = clean.indexOf(",");
-  let intPart = clean;
-  let decPart: string | null = null;
-  if (commaIndex !== -1) {
-    intPart = clean.slice(0, commaIndex);
-    decPart = clean.slice(commaIndex + 1).replace(/,/g, "").slice(0, 2);
-  }
-
-  let formattedInt = "";
-  if (intPart) {
-    const parsedInt = parseInt(intPart, 10);
-    if (!isNaN(parsedInt)) {
-      formattedInt = parsedInt.toLocaleString("es-AR");
-    }
-  }
-
-  if (decPart !== null) {
-    return `$ ${formattedInt},${decPart}`;
-  }
-  return `$ ${formattedInt}`;
-};
-
 const parseCurrencyValue = (valStr: string): number | undefined => {
   if (!valStr || valStr === "$ ") return undefined;
   const clean = valStr.replace(/\$/g, "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
@@ -272,7 +244,6 @@ export function SpecialTasksPage() {
   const [endDate, setEndDate] = useState("");
   const [noEndDate, setNoEndDate] = useState(false);
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
-  const [notes, setNotes] = useState("");
 
   // Helper to resolve active user automatically without requiring a form input
   const getActiveUser = useCallback((currentAssigned?: string[]): string => {
