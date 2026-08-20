@@ -335,13 +335,14 @@ export interface SpecialEvent {
   updatedAt?: string;
 }
 
-export type ProductPriceCategory = "empanadas" | "pizzas" | "pizzas_indi" | "promos" | "packs";
+export type ProductPriceCategory = "empanadas" | "pizzas" | "pizzas_indi" | "promos" | "packs" | "cafeteria";
 
 export interface ProductPrice {
   id: string;
   name: string;
   category: ProductPriceCategory;
   price: number;
+  isPremium?: boolean;
   createdAt: string;
   updatedAt: string;
 }

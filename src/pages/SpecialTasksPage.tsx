@@ -982,23 +982,42 @@ export function SpecialTasksPage() {
       return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
     });
 
-    // Completed tasks always placed last
+    // Helper to check if task is expired
+    const isTaskExpired = (t: SpecialTask) => {
+      if (t.status === "completed") return false;
+      if (!t.endDate) return false;
+      const end = new Date(t.endDate + "T12:00:00");
+      const today = new Date();
+      today.setHours(12, 0, 0, 0);
+      return end.getTime() < today.getTime();
+    };
+
+    // Completed or expired tasks always placed last
     return filtered.sort((a, b) => {
-      const aCompleted = a.status === "completed";
-      const bCompleted = b.status === "completed";
-      if (aCompleted && !bCompleted) return 1;
-      if (!aCompleted && bCompleted) return -1;
+      const aDone = a.status === "completed" || isTaskExpired(a);
+      const bDone = b.status === "completed" || isTaskExpired(b);
+      if (aDone && !bDone) return 1;
+      if (!aDone && bDone) return -1;
       return 0;
     });
   }, [specialTasks, calendarEvents, search, statusFilter, priorityFilter, categoryFilter]);
 
+  const isTaskExpired = useCallback((t: SpecialTask): boolean => {
+    if (t.status === "completed") return false;
+    if (!t.endDate) return false;
+    const end = new Date(t.endDate + "T12:00:00");
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    return end.getTime() < today.getTime();
+  }, []);
+
   const activeTasks = useMemo(() => {
-    return filteredTasks.filter(t => t.status !== "completed");
-  }, [filteredTasks]);
+    return filteredTasks.filter(t => t.status !== "completed" && !isTaskExpired(t));
+  }, [filteredTasks, isTaskExpired]);
 
   const completedTasks = useMemo(() => {
-    return filteredTasks.filter(t => t.status === "completed");
-  }, [filteredTasks]);
+    return filteredTasks.filter(t => t.status === "completed" || isTaskExpired(t));
+  }, [filteredTasks, isTaskExpired]);
 
   // Compute days remaining info with rich visual styling details
   const getDaysRemainingInfo = (endDateStr?: string, startDateStr?: string, status?: string) => {
