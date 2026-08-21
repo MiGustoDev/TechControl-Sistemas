@@ -202,27 +202,30 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 const pathMap: Record<string, string> = {
-  "printers": "/impresoras",
-  "notebooks": "/equipos",
-  "monitors": "/monitores",
-  "catalog": "/catalogo",
-  "orders": "/pedidos",
-  "movements": "/movimientos",
-  "personal": "/personal",
-  "reports": "/reportes",
-  "datalive": "/datalive",
-  "notes": "/notas",
-  "databases": "/bases",
-  "office-tickets": "/tareas-oficina",
-  "objectives": "/objetivos",
-  "special-tasks": "/campanias",
-  "guardias": "/guardias"
+  "printers": "impresoras",
+  "notebooks": "equipos",
+  "monitors": "monitores",
+  "catalog": "catalogo",
+  "orders": "pedidos",
+  "movements": "movimientos",
+  "personal": "personal",
+  "reports": "reportes",
+  "datalive": "datalive",
+  "notes": "notas",
+  "databases": "bases",
+  "office-tickets": "tareas-oficina",
+  "objectives": "objetivos",
+  "special-tasks": "campanias",
+  "guardias": "guardias"
 };
 
-const getPageFromPath = (pathname: string): string => {
-  const cleanPath = pathname.replace(/\/$/, "");
-  for (const [page, path] of Object.entries(pathMap)) {
-    if (cleanPath.endsWith(path)) {
+const getPageFromPath = (): string => {
+  const hash = window.location.hash.replace(/^#\/?/, "").replace(/\/$/, "");
+  const pathname = window.location.pathname.replace(/\/$/, "");
+  const searchParam = new URLSearchParams(window.location.search).get("page");
+
+  for (const [page, route] of Object.entries(pathMap)) {
+    if (hash === route || searchParam === page || pathname.endsWith("/" + route)) {
       return page;
     }
   }
@@ -230,7 +233,7 @@ const getPageFromPath = (pathname: string): string => {
 };
 
 const getPathFromPage = (page: string): string => {
-  return pathMap[page] || "/guardias";
+  return pathMap[page] || "guardias";
 };
 
 // Helper to save data to localStorage safely without throwing QuotaExceededError when base64 images are stored
@@ -287,7 +290,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
   const [productPrices, setProductPrices] = useState<ProductPrice[]>([]);
   const [currentPage, setCurrentPage] = useState(() => {
-    return getPageFromPath(window.location.pathname);
+    return getPageFromPath();
   });
 
   const [session, setSession] = useState<any>(null);
@@ -361,19 +364,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [userRole]);
 
   useEffect(() => {
-    const targetPath = getPathFromPage(currentPage);
-    const currentPath = window.location.pathname;
-    
-    if (!currentPath.endsWith(targetPath)) {
+    const route = getPathFromPage(currentPage);
+    const currentHash = window.location.hash.replace(/^#\/?/, "").replace(/\/$/, "");
+    const currentPath = window.location.pathname.replace(/\/$/, "");
+
+    if (currentHash !== route && !currentPath.endsWith("/" + route)) {
       const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const newPath = base + targetPath + window.location.search + window.location.hash;
-      window.history.pushState(null, '', newPath);
+      const newUrl = `${base}/#/${route}`;
+      window.history.pushState(null, '', newUrl);
     }
   }, [currentPage]);
 
   useEffect(() => {
     const handlePopState = () => {
-      const pageFromPath = getPageFromPath(window.location.pathname);
+      const pageFromPath = getPageFromPath();
       if (pageFromPath !== currentPage) {
         if (userRole === "marketing") {
           setCurrentPage("special-tasks");
@@ -383,8 +387,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     };
     window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [currentPage]);
+    window.addEventListener("hashchange", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("hashchange", handlePopState);
+    };
+  }, [currentPage, userRole]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1030,25 +1038,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (event.price !== undefined) payload.price = event.price;
     if (event.rendicion !== undefined) payload.rendicion = event.rendicion;
 
-    let { error } = await supabase.from("special_events").upsert(payload, { onConflict: "id" });
+    let { error } = await supabase.from("special_events").upsert(payload);
     if (error) {
-      const retryPayload = {
-        id: event.id,
-        date: event.date,
-        name: event.name,
-        type: event.type,
-        tasks: (event.tasks || []).map((t: any) => ({
-          id: t.id,
-          name: t.name || t.title,
-          title: t.title || t.name,
-          completed: !!t.completed,
-          completedAt: t.completedAt
-        })),
-        created_at: event.createdAt ?? new Date().toISOString(),
-        updated_at: event.updatedAt ?? new Date().toISOString(),
-      };
-      const retry = await supabase.from("special_events").upsert(retryPayload, { onConflict: "id" });
-      error = retry.error;
+      const { error: insertErr } = await supabase.from("special_events").insert(payload);
+      if (insertErr) {
+        const { error: updateErr } = await supabase.from("special_events").update(payload).eq("id", event.id);
+        if (updateErr) {
+          const retryPayload = {
+            id: event.id,
+            date: event.date,
+            name: event.name,
+            type: event.type,
+            tasks: (event.tasks || []).map((t: any) => ({
+              id: t.id,
+              name: t.name || t.title,
+              title: t.title || t.name,
+              completed: !!t.completed,
+              completedAt: t.completedAt
+            })),
+            created_at: event.createdAt ?? new Date().toISOString(),
+            updated_at: event.updatedAt ?? new Date().toISOString(),
+          };
+          const { error: retryErr } = await supabase.from("special_events").update(retryPayload).eq("id", event.id);
+          error = retryErr;
+        } else {
+          error = null;
+        }
+      } else {
+        error = null;
+      }
     }
 
     if (error) {
@@ -2749,16 +2767,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (data.price !== undefined) dbPayload.price = data.price;
     if (data.rendicion !== undefined) dbPayload.rendicion = data.rendicion;
 
-    let { error } = await supabase.from("special_tasks").upsert(dbPayload, { onConflict: "id" });
+    let { error } = await supabase.from("special_tasks").upsert(dbPayload);
     if (error) {
-      const retryPayload = { ...dbPayload };
-      delete retryPayload.banner_url;
-      delete retryPayload.created_by;
-      delete retryPayload.updated_by;
-      delete retryPayload.price;
-      delete retryPayload.rendicion;
-      const retry = await supabase.from("special_tasks").upsert(retryPayload, { onConflict: "id" });
-      error = retry.error;
+      const { error: updateErr } = await supabase.from("special_tasks").update(dbPayload).eq("id", id);
+      if (updateErr) {
+        const retryPayload = { ...dbPayload };
+        delete retryPayload.banner_url;
+        delete retryPayload.created_by;
+        delete retryPayload.updated_by;
+        delete retryPayload.price;
+        delete retryPayload.rendicion;
+        const { error: retryErr } = await supabase.from("special_tasks").update(retryPayload).eq("id", id);
+        error = retryErr;
+      } else {
+        error = null;
+      }
     }
 
     if (error) {
