@@ -1224,7 +1224,7 @@ export function SpecialTasksPage() {
               </Button>
               
               <div className={`accordion-grid${isExpanded ? " accordion-open" : ""}`}>
-                <div className="mt-2 space-y-1.5 pl-2 pr-1 max-h-48 overflow-y-auto no-scrollbar">
+                <div className="mt-2 space-y-1.5 pl-2 pr-1 max-h-[178px] overflow-y-auto no-scrollbar">
                   {task.tasks.map((subTask) => (
                     <div 
                       key={subTask.id}

@@ -350,6 +350,10 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   overflow: hidden;
 }
 
+.accordion-grid.accordion-open > * {
+  overflow: auto;
+}
+
 /* ============================================================
    MOBILE DIALOG — Gentle slide-up animation (centered, not bottom sheet)
    Only overrides the animation, keeps Radix default centering intact.
