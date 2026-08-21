@@ -233,6 +233,39 @@ const getPathFromPage = (page: string): string => {
   return pathMap[page] || "/guardias";
 };
 
+// Helper to save data to localStorage safely without throwing QuotaExceededError when base64 images are stored
+const safeLocalStorageSetItem = (key: string, data: any) => {
+  try {
+    let payload = data;
+    if (typeof data === "object" && data !== null) {
+      if (Array.isArray(data)) {
+        payload = data.map((item: any) => {
+          if (typeof item !== "object" || item === null) return item;
+          const copy = { ...item };
+          if (copy.bannerUrl && typeof copy.bannerUrl === "string" && copy.bannerUrl.startsWith("data:")) {
+            delete copy.bannerUrl;
+          }
+          if (Array.isArray(copy.tasks)) {
+            copy.tasks = copy.tasks.map((t: any) => {
+              if (t.imageUrl && typeof t.imageUrl === "string" && t.imageUrl.startsWith("data:")) {
+                const tCopy = { ...t };
+                delete tCopy.imageUrl;
+                return tCopy;
+              }
+              return t;
+            });
+          }
+          return copy;
+        });
+      }
+      payload = JSON.stringify(payload);
+    }
+    localStorage.setItem(key, payload);
+  } catch (e) {
+    console.warn(`[localStorage] Exceeded quota for key '${key}'. Local cache update safely skipped.`, e);
+  }
+};
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [stockItems, setStockItems] = useState<StockItem[]>(initialItems);
   const [printers, setPrinters] = useState<Printer[]>(initialPrinters);
@@ -935,7 +968,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
           console.warn("La tabla special_events aún no existe en Supabase.");
         } else {
-          console.warn("No se pudieron cargar los eventos especiales desde Supabase:", error);
+          console.warn("Error al cargar eventos especiales desde Supabase:", error);
         }
         return;
       }
@@ -948,6 +981,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           type: row.type as string,
           tasks: Array.isArray(row.tasks) ? row.tasks : [],
           bannerUrl: row.banner_url || undefined,
+          price: row.price !== undefined && row.price !== null ? Number(row.price) : undefined,
+          rendicion: row.rendicion !== undefined && row.rendicion !== null ? Number(row.rendicion) : undefined,
           createdAt: row.created_at as string | undefined,
           updatedAt: row.updated_at as string | undefined,
         }));
@@ -957,7 +992,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           prev.forEach(e => map.set(e.id, e));
           mapped.forEach(e => map.set(e.id, e));
           const next = Array.from(map.values());
-          localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
+          safeLocalStorageSetItem("techcontrol_special_events", next);
           return next;
         });
       }
@@ -972,7 +1007,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const next = exists 
         ? prev.map(e => e.id === event.id ? event : e)
         : [...prev, event];
-      localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_special_events", next);
       return next;
     });
 
@@ -981,16 +1016,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       date: event.date,
       name: event.name,
       type: event.type,
-      tasks: event.tasks ?? [],
-      banner_url: event.bannerUrl ?? null,
+      tasks: (event.tasks || []).map((t: any) => ({
+        id: t.id,
+        name: t.name || t.title,
+        title: t.title || t.name,
+        completed: !!t.completed,
+        completedAt: t.completedAt
+      })),
       created_at: event.createdAt ?? new Date().toISOString(),
       updated_at: event.updatedAt ?? new Date().toISOString(),
     };
+    if (event.bannerUrl && !event.bannerUrl.startsWith("data:")) payload.banner_url = event.bannerUrl;
+    if (event.price !== undefined) payload.price = event.price;
+    if (event.rendicion !== undefined) payload.rendicion = event.rendicion;
 
     let { error } = await supabase.from("special_events").upsert(payload, { onConflict: "id" });
-    if (error && (error.message?.includes("banner_url") || error.message?.includes("schema cache") || error.code === "PGRST204")) {
-      delete payload.banner_url;
-      const retry = await supabase.from("special_events").upsert(payload, { onConflict: "id" });
+    if (error) {
+      const retryPayload = {
+        id: event.id,
+        date: event.date,
+        name: event.name,
+        type: event.type,
+        tasks: (event.tasks || []).map((t: any) => ({
+          id: t.id,
+          name: t.name || t.title,
+          title: t.title || t.name,
+          completed: !!t.completed,
+          completedAt: t.completedAt
+        })),
+        created_at: event.createdAt ?? new Date().toISOString(),
+        updated_at: event.updatedAt ?? new Date().toISOString(),
+      };
+      const retry = await supabase.from("special_events").upsert(retryPayload, { onConflict: "id" });
       error = retry.error;
     }
 
@@ -1004,7 +1061,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteSpecialEvent = useCallback(async (eventId: string) => {
     setSpecialEvents(prev => {
       const next = prev.filter(e => e.id !== eventId);
-      localStorage.setItem("techcontrol_special_events", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_special_events", next);
       return next;
     });
 
@@ -1132,11 +1189,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const initial = getMockPrices();
-      const hasOldData = data && data.some((p: any) => p.id === 'm1' || p.price === 1200 || p.id === 'piz-10' || p.name === 'Doble muzzarella');
-      const hasCafeteria = data && data.some((p: any) => p.id === 'caf-1');
-
-      if (data && data.length > 0 && !hasOldData && hasCafeteria) {
+      if (data && data.length > 0) {
         const mapped = data.map((p: any) => ({
           id: p.id,
           name: p.name,
@@ -1147,26 +1200,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           updatedAt: p.updated_at
         }));
         setProductPrices(mapped);
-        localStorage.setItem("techcontrol_product_prices", JSON.stringify(mapped));
+        safeLocalStorageSetItem("techcontrol_product_prices", mapped);
       } else {
-        // Force delete old rows and upsert updated list (20 empanadas + 9 pizzas + 5 pizzas INDI + 38 cafetería)
-        setProductPrices(initial);
-        localStorage.setItem("techcontrol_product_prices", JSON.stringify(initial));
-        
-        try {
-          if (data && data.length > 0) {
-            await supabase.from("product_prices").delete().neq("id", "none");
-          }
-          await supabase.from("product_prices").upsert(initial.map(p => ({
-            id: p.id,
-            name: p.name,
-            category: p.category,
-            price: p.price,
-            is_premium: p.isPremium,
-            created_at: p.createdAt,
-            updated_at: p.updatedAt
-          })));
-        } catch (e) {}
+        loadLocalPricesFallback();
       }
     } catch (err) {
       console.warn("Error al sincronizar precios:", err);
@@ -1186,7 +1222,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setProductPrices(prev => {
       const next = [...prev, newPrice].sort((a, b) => a.name.localeCompare(b.name));
-      localStorage.setItem("techcontrol_product_prices", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_product_prices", next);
       return next;
     });
 
@@ -1195,9 +1231,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         id: newPrice.id,
         name: newPrice.name,
         category: newPrice.category,
-        price: newPrice.price,
-        created_at: newPrice.createdAt,
-        updated_at: newPrice.updatedAt
+        price: newPrice.price
       });
       if (error) console.warn("Error inserting product price to Supabase:", error);
     } catch (e) {}
@@ -1207,7 +1241,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setProductPrices(prev => {
       const next = prev.map(p => p.id === id ? { ...p, ...data, updatedAt: new Date().toISOString() } : p)
         .sort((a, b) => a.name.localeCompare(b.name));
-      localStorage.setItem("techcontrol_product_prices", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_product_prices", next);
       return next;
     });
 
@@ -1216,7 +1250,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (data.name !== undefined) dbPayload.name = data.name.trim();
       if (data.category !== undefined) dbPayload.category = data.category;
       if (data.price !== undefined) dbPayload.price = data.price;
-      dbPayload.updated_at = new Date().toISOString();
 
       const { error } = await supabase.from("product_prices").update(dbPayload).eq("id", id);
       if (error) console.warn("Error updating product price in Supabase:", error);
@@ -2599,7 +2632,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setSpecialTasks(prev => {
       const next = [newSpecialTask, ...prev];
-      localStorage.setItem("techcontrol_special_tasks", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_special_tasks", next);
       return next;
     });
 
@@ -2614,9 +2647,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       end_date: newSpecialTask.endDate || null,
       progress: newSpecialTask.progress,
       assigned_to: newSpecialTask.assignedTo || [],
-      tasks: newSpecialTask.tasks || [],
+      tasks: (newSpecialTask.tasks || []).map((t: any) => {
+        const tCopy = { ...t };
+        if (tCopy.imageUrl && typeof tCopy.imageUrl === "string" && tCopy.imageUrl.startsWith("data:")) {
+          delete tCopy.imageUrl;
+        }
+        return tCopy;
+      }),
       notes: newSpecialTask.notes || null,
-      banner_url: newSpecialTask.bannerUrl || null,
       created_by: newSpecialTask.createdBy || null,
       updated_by: newSpecialTask.updatedBy || null,
       price: newSpecialTask.price ?? null,
@@ -2624,9 +2662,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       created_at: newSpecialTask.createdAt,
       updated_at: newSpecialTask.updatedAt
     };
+    if (newSpecialTask.bannerUrl && !newSpecialTask.bannerUrl.startsWith("data:")) {
+      dbPayload.banner_url = newSpecialTask.bannerUrl;
+    }
 
     let { error } = await supabase.from("special_tasks").insert(dbPayload);
-    if (error && (error.message?.includes("banner_url") || error.message?.includes("created_by") || error.message?.includes("updated_by") || error.message?.includes("price") || error.message?.includes("rendicion") || error.message?.includes("schema cache") || error.code === "PGRST204")) {
+    if (error) {
       const retryPayload = { ...dbPayload };
       delete retryPayload.banner_url;
       delete retryPayload.created_by;
@@ -2678,7 +2719,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         };
         next = [newTask, ...prev];
       }
-      localStorage.setItem("techcontrol_special_tasks", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_special_tasks", next);
       return next;
     });
 
@@ -2692,16 +2733,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (data.endDate !== undefined) dbPayload.end_date = data.endDate;
     if (data.progress !== undefined) dbPayload.progress = data.progress;
     if (data.assignedTo !== undefined) dbPayload.assigned_to = data.assignedTo;
-    if (data.tasks !== undefined) dbPayload.tasks = data.tasks;
+    if (data.tasks !== undefined) {
+      dbPayload.tasks = data.tasks.map((t: any) => {
+        const tCopy = { ...t };
+        if (tCopy.imageUrl && typeof tCopy.imageUrl === "string" && tCopy.imageUrl.startsWith("data:")) {
+          delete tCopy.imageUrl;
+        }
+        return tCopy;
+      });
+    }
     if (data.notes !== undefined) dbPayload.notes = data.notes;
-    if (data.bannerUrl !== undefined) dbPayload.banner_url = data.bannerUrl;
+    if (data.bannerUrl !== undefined && !data.bannerUrl.startsWith("data:")) dbPayload.banner_url = data.bannerUrl;
     if (data.createdBy !== undefined) dbPayload.created_by = data.createdBy;
     if (data.updatedBy !== undefined) dbPayload.updated_by = data.updatedBy;
     if (data.price !== undefined) dbPayload.price = data.price;
     if (data.rendicion !== undefined) dbPayload.rendicion = data.rendicion;
 
     let { error } = await supabase.from("special_tasks").upsert(dbPayload, { onConflict: "id" });
-    if (error && (error.message?.includes("banner_url") || error.message?.includes("created_by") || error.message?.includes("updated_by") || error.message?.includes("price") || error.message?.includes("rendicion") || error.message?.includes("schema cache") || error.code === "PGRST204")) {
+    if (error) {
       const retryPayload = { ...dbPayload };
       delete retryPayload.banner_url;
       delete retryPayload.created_by;
@@ -2724,7 +2773,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteSpecialTask = useCallback(async (id: string) => {
     setSpecialTasks(prev => {
       const next = prev.filter(o => o.id !== id);
-      localStorage.setItem("techcontrol_special_tasks", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_special_tasks", next);
       return next;
     });
 

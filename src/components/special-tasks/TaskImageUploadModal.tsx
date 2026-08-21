@@ -68,10 +68,11 @@ export function TaskImageUploadModal({
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const cleanTaskTitle = taskTitle.toLowerCase().replace(/!/g, "").split(":")[0].trim();
   const isPriceOrRendicion = 
-    taskTitle.toLowerCase().trim() === "precio" || 
-    taskTitle.toLowerCase().trim() === "rendición" || 
-    taskTitle.toLowerCase().trim() === "rendicion";
+    cleanTaskTitle === "precio" || 
+    cleanTaskTitle === "rendición" || 
+    cleanTaskTitle === "rendicion";
 
   const handleFileProcess = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) {

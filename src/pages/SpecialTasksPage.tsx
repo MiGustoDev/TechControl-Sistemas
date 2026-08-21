@@ -727,61 +727,69 @@ export function SpecialTasksPage() {
 
   const handleUncheckTask = async (taskId: string, subTaskId: string) => {
     const calEvent = calendarEvents.find(e => e.id === taskId);
-    if (calEvent) {
-      const subTasks = calEvent.tasks || [];
-      const subTask = subTasks.find((t: any) => t.id === subTaskId);
-      const originalTitle = subTask?.title || subTask?.name || "";
-      const baseTitle = originalTitle.split(":")[0].trim();
+    const task = specialTasks.find(t => t.id === taskId);
 
-      const updatedTasks = (calEvent.tasks || []).map((t: any) => 
-        t.id === subTaskId ? { ...t, title: baseTitle, name: baseTitle, completed: false, imageUrl: undefined, completedAt: undefined } : t
-      );
-      
-      let price = calEvent.price;
-      let rendicion = calEvent.rendicion;
-      if (baseTitle.toLowerCase() === "precio") price = undefined;
-      if (baseTitle.toLowerCase() === "rendición" || baseTitle.toLowerCase() === "rendicion") rendicion = undefined;
+    if (!calEvent && !task) return;
 
-      const updatedEvent = {
-        ...calEvent,
-        tasks: updatedTasks,
+    const currentSubTasks: any[] = (task?.tasks && task.tasks.length > 0) 
+      ? task.tasks 
+      : (calEvent?.tasks || []);
+    
+    const targetSubTask = currentSubTasks.find((t: any) => t.id === subTaskId);
+    const originalTitle = targetSubTask?.title || targetSubTask?.name || "";
+    const baseTitle = originalTitle.split(":")[0].trim();
+    const baseClean = baseTitle.replace(/!/g, "").trim().toLowerCase();
+
+    const updatedSubTasks = currentSubTasks.map((t: any) => 
+      t.id === subTaskId 
+        ? { ...t, title: baseTitle, name: baseTitle, completed: false, imageUrl: undefined, completedAt: undefined } 
+        : t
+    );
+
+    const completedCount = updatedSubTasks.filter((t: any) => t.completed).length;
+    const progress = updatedSubTasks.length > 0 ? Math.round((completedCount / updatedSubTasks.length) * 100) : 0;
+    const currentStatus = task?.status || (calEvent ? (progress === 100 ? "completed" : "in-progress") : "pending");
+    const autoStatus = progress === 100 ? "completed" : (progress > 0 ? "in-progress" : (currentStatus === "completed" ? "in-progress" : "pending"));
+
+    let price = task?.price ?? calEvent?.price;
+    let rendicion = task?.rendicion ?? calEvent?.rendicion;
+    if (baseClean === "precio") price = undefined;
+    if (baseClean === "rendición" || baseClean === "rendicion") rendicion = undefined;
+
+    if (task || specialTasks.some(t => t.id === taskId)) {
+      await updateSpecialTask(taskId, {
+        tasks: updatedSubTasks,
+        progress,
+        status: autoStatus,
+        price,
+        rendicion
+      });
+    }
+
+    if (calEvent || calendarEvents.some(e => e.id === taskId)) {
+      const baseCal = calEvent || {
+        id: taskId,
+        name: task?.title || "Campaña",
+        date: task?.startDate || new Date().toISOString().split("T")[0],
+        type: "event"
+      };
+      const updatedEvent: SpecialEvent = {
+        ...baseCal,
+        tasks: updatedSubTasks.map((t: any) => ({
+          id: t.id,
+          name: t.title || t.name,
+          title: t.title || t.name,
+          completed: t.completed,
+          imageUrl: t.imageUrl,
+          completedAt: t.completedAt
+        })),
         price,
         rendicion,
         updatedAt: new Date().toISOString()
       };
-
-      const success = await saveSpecialEvent(updatedEvent);
-      if (success) {
-        toast.success("Tarea desmarcada");
-      } else {
-        toast.error("Error al actualizar la tarea");
-      }
-      return;
+      await saveSpecialEvent(updatedEvent);
     }
 
-    const task = specialTasks.find(t => t.id === taskId);
-    if (!task || !task.tasks) return;
-
-    const subTask = task.tasks.find(t => t.id === subTaskId);
-    const originalTitle = subTask?.title || "";
-    const baseTitle = originalTitle.split(":")[0].trim();
-
-    const updatedTasks = task.tasks.map(t => 
-      t.id === subTaskId ? { ...t, title: baseTitle, completed: false, imageUrl: undefined, completedAt: undefined } : t
-    );
-    const completed = updatedTasks.filter(t => t.completed).length;
-    const progress = Math.round((completed / updatedTasks.length) * 100);
-    const autoStatus = progress === 100 ? "completed" : (task.status === "completed" ? "in-progress" : task.status);
-
-    const updatePayload: any = {
-      tasks: updatedTasks,
-      progress,
-      status: autoStatus
-    };
-    if (baseTitle.toLowerCase() === "precio") updatePayload.price = null;
-    if (baseTitle.toLowerCase() === "rendición" || baseTitle.toLowerCase() === "rendicion") updatePayload.rendicion = null;
-
-    await updateSpecialTask(taskId, updatePayload);
     toast.success("Tarea desmarcada");
   };
 
@@ -790,75 +798,35 @@ export function SpecialTasksPage() {
     const { taskId, subTaskId } = uploadModalState;
 
     const calEvent = calendarEvents.find(e => e.id === taskId);
-    if (calEvent) {
-      let price = calEvent.price;
-      let rendicion = calEvent.rendicion;
-
-      const updatedTasks = (calEvent.tasks || []).map((t: any) => {
-        if (t.id === subTaskId) {
-          const originalTitle = t.title || t.name || "";
-          const baseTitle = originalTitle.split(":")[0].trim();
-          const newTitle = inputValue ? `${baseTitle}: ${inputValue}` : originalTitle;
-
-          if (baseTitle.toLowerCase() === "precio" && inputValue) {
-            price = parseCurrencyValue(inputValue);
-          }
-          if ((baseTitle.toLowerCase() === "rendición" || baseTitle.toLowerCase() === "rendicion") && inputValue) {
-            rendicion = parseCurrencyValue(inputValue);
-          }
-
-          return {
-            ...t,
-            title: newTitle,
-            name: newTitle,
-            completed: true,
-            imageUrl: imageDataUrl,
-            completedAt: new Date().toISOString()
-          };
-        }
-        return t;
-      });
-      
-      const updatedEvent = {
-        ...calEvent,
-        tasks: updatedTasks,
-        bannerUrl: imageDataUrl,
-        price,
-        rendicion,
-        updatedAt: new Date().toISOString()
-      };
-
-      const success = await saveSpecialEvent(updatedEvent);
-      if (success) {
-        toast.success("¡Comprobante guardado y tarea completada!");
-      } else {
-        toast.error("Error al actualizar la tarea");
-      }
-      return;
-    }
-
     const task = specialTasks.find(t => t.id === taskId);
-    if (!task || !task.tasks) return;
 
-    let price = task.price;
-    let rendicion = task.rendicion;
+    if (!calEvent && !task) return;
 
-    const updatedTasks = task.tasks.map(t => {
+    const currentSubTasks: any[] = (task?.tasks && task.tasks.length > 0) 
+      ? task.tasks 
+      : (calEvent?.tasks || []);
+    
+    let price = task?.price ?? calEvent?.price;
+    let rendicion = task?.rendicion ?? calEvent?.rendicion;
+
+    const updatedSubTasks = currentSubTasks.map((t: any) => {
       if (t.id === subTaskId) {
-        const originalTitle = t.title || "";
+        const originalTitle = t.title || t.name || "";
         const baseTitle = originalTitle.split(":")[0].trim();
+        const baseClean = baseTitle.replace(/!/g, "").trim().toLowerCase();
         const newTitle = inputValue ? `${baseTitle}: ${inputValue}` : originalTitle;
 
-        if (baseTitle.toLowerCase() === "precio" && inputValue) {
+        if (baseClean === "precio" && inputValue) {
           price = parseCurrencyValue(inputValue);
         }
-        if ((baseTitle.toLowerCase() === "rendición" || baseTitle.toLowerCase() === "rendicion") && inputValue) {
+        if ((baseClean === "rendición" || baseClean === "rendicion") && inputValue) {
           rendicion = parseCurrencyValue(inputValue);
         }
 
         return {
           ...t,
           title: newTitle,
+          name: newTitle,
           completed: true,
           imageUrl: imageDataUrl,
           completedAt: new Date().toISOString()
@@ -867,45 +835,75 @@ export function SpecialTasksPage() {
       return t;
     });
 
-    const completed = updatedTasks.filter(t => t.completed).length;
-    const progress = Math.round((completed / updatedTasks.length) * 100);
-    const autoStatus = progress === 100 ? "completed" : (task.status === "completed" ? "in-progress" : task.status);
+    const completedCount = updatedSubTasks.filter((t: any) => t.completed).length;
+    const progress = updatedSubTasks.length > 0 ? Math.round((completedCount / updatedSubTasks.length) * 100) : 0;
+    const currentStatus = task?.status || "in-progress";
+    const autoStatus = progress === 100 ? "completed" : (progress > 0 ? "in-progress" : (currentStatus === "completed" ? "in-progress" : currentStatus));
 
-    await updateSpecialTask(taskId, {
-      tasks: updatedTasks,
-      progress,
-      status: autoStatus,
-      bannerUrl: imageDataUrl,
-      price,
-      rendicion
-    });
+    if (task || specialTasks.some(t => t.id === taskId)) {
+      await updateSpecialTask(taskId, {
+        tasks: updatedSubTasks,
+        progress,
+        status: autoStatus,
+        bannerUrl: imageDataUrl,
+        price,
+        rendicion
+      });
+    }
+
+    if (calEvent || calendarEvents.some(e => e.id === taskId)) {
+      const baseCal = calEvent || {
+        id: taskId,
+        name: task?.title || "Campaña",
+        date: task?.startDate || new Date().toISOString().split("T")[0],
+        type: "event"
+      };
+      const updatedEvent: SpecialEvent = {
+        ...baseCal,
+        tasks: updatedSubTasks.map((t: any) => ({
+          id: t.id,
+          name: t.title || t.name,
+          title: t.title || t.name,
+          completed: t.completed,
+          imageUrl: t.imageUrl,
+          completedAt: t.completedAt
+        })),
+        bannerUrl: imageDataUrl,
+        price,
+        rendicion,
+        updatedAt: new Date().toISOString()
+      };
+      await saveSpecialEvent(updatedEvent);
+    }
 
     toast.success("¡Comprobante guardado y tarea completada!");
   };
 
   const handleSetTaskBanner = async (taskId: string, imageUrl: string) => {
     const calEvent = calendarEvents.find(e => e.id === taskId);
-    if (calEvent) {
+    const task = specialTasks.find(t => t.id === taskId);
+
+    if (task || specialTasks.some(t => t.id === taskId)) {
+      await updateSpecialTask(taskId, {
+        bannerUrl: imageUrl
+      });
+    }
+
+    if (calEvent || calendarEvents.some(e => e.id === taskId)) {
+      const baseCal = calEvent || {
+        id: taskId,
+        name: task?.title || "Campaña",
+        date: task?.startDate || new Date().toISOString().split("T")[0],
+        type: "event"
+      };
       const updatedEvent = {
-        ...calEvent,
+        ...baseCal,
         bannerUrl: imageUrl,
         updatedAt: new Date().toISOString()
       };
-      const success = await saveSpecialEvent(updatedEvent);
-      if (success) {
-        toast.success("Imagen asignada como banner de la tarjeta");
-      } else {
-        toast.error("Error al asignar el banner");
-      }
-      return;
+      await saveSpecialEvent(updatedEvent);
     }
 
-    const task = specialTasks.find(t => t.id === taskId);
-    if (!task) return;
-
-    await updateSpecialTask(taskId, {
-      bannerUrl: imageUrl
-    });
     toast.success("Imagen asignada como banner de la tarjeta");
   };
 
