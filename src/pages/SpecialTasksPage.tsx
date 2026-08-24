@@ -122,6 +122,36 @@ const parseCurrencyValue = (valStr: string): number | undefined => {
   return isNaN(num) ? undefined : num;
 };
 
+const getEffectivePrice = (task: SpecialTask): number | undefined => {
+  if (task.price !== undefined && task.price !== null) return task.price;
+  if (!task.tasks || task.tasks.length === 0) return undefined;
+  const sub = task.tasks.find(t => {
+    const clean = (t.title || (t as any).name || "").toLowerCase().trim();
+    return clean.startsWith("precio:");
+  });
+  if (sub) {
+    const titleStr = sub.title || (sub as any).name || "";
+    const parts = titleStr.split(":");
+    if (parts.length > 1) return parseCurrencyValue(parts.slice(1).join(":").trim());
+  }
+  return undefined;
+};
+
+const getEffectiveRendicion = (task: SpecialTask): number | undefined => {
+  if (task.rendicion !== undefined && task.rendicion !== null) return task.rendicion;
+  if (!task.tasks || task.tasks.length === 0) return undefined;
+  const sub = task.tasks.find(t => {
+    const clean = (t.title || (t as any).name || "").toLowerCase().trim();
+    return clean.startsWith("rendición:") || clean.startsWith("rendicion:");
+  });
+  if (sub) {
+    const titleStr = sub.title || (sub as any).name || "";
+    const parts = titleStr.split(":");
+    if (parts.length > 1) return parseCurrencyValue(parts.slice(1).join(":").trim());
+  }
+  return undefined;
+};
+
 const getPriorityLabel = (priority: string) => {
   switch (priority) {
     case "critical": return "Crítica";
@@ -597,8 +627,19 @@ export function SpecialTasksPage() {
       calculatedProgress = 100;
     }
 
-    const priceNum = editingTask?.price;
-    const rendicionNum = editingTask?.rendicion;
+    let priceNum = editingTask?.price;
+    let rendicionNum = editingTask?.rendicion;
+    formTasks.forEach(t => {
+      const cleanTitle = (t.title || "").toLowerCase().trim();
+      if (cleanTitle.startsWith("precio:")) {
+        const parsed = parseCurrencyValue(cleanTitle.split(":").slice(1).join(":"));
+        if (parsed !== undefined) priceNum = parsed;
+      }
+      if (cleanTitle.startsWith("rendición:") || cleanTitle.startsWith("rendicion:")) {
+        const parsed = parseCurrencyValue(cleanTitle.split(":").slice(1).join(":"));
+        if (parsed !== undefined) rendicionNum = parsed;
+      }
+    });
     const currentUser = getActiveUser(currentAssigned);
 
     const payload = {
@@ -968,8 +1009,17 @@ export function SpecialTasksPage() {
     const combinedMap = new Map<string, SpecialTask>();
     (specialTasks || []).forEach(t => combinedMap.set(t.id, t));
     mappedCalEvents.forEach(evt => {
-      if (!combinedMap.has(evt.id)) {
+      const existing = combinedMap.get(evt.id);
+      if (!existing) {
         combinedMap.set(evt.id, evt);
+      } else {
+        combinedMap.set(evt.id, {
+          ...evt,
+          ...existing,
+          price: existing.price !== undefined ? existing.price : evt.price,
+          rendicion: existing.rendicion !== undefined ? existing.rendicion : evt.rendicion,
+          bannerUrl: existing.bannerUrl || evt.bannerUrl
+        });
       }
     });
 
@@ -1297,20 +1347,26 @@ export function SpecialTasksPage() {
             </div>
 
             {/* Center: Price & Rendicion */}
-            <div className="flex flex-col items-center justify-center text-center min-w-0">
-              {task.price !== undefined && (
-                <div className="text-[10.5px] truncate max-w-full">
-                  <span className="opacity-75 font-normal">Precio: </span>
-                  <strong className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrencyDisplay(task.price)}</strong>
+            {(() => {
+              const effPrice = getEffectivePrice(task);
+              const effRendicion = getEffectiveRendicion(task);
+              return (
+                <div className="flex flex-col items-center justify-center text-center min-w-0">
+                  {effPrice !== undefined && (
+                    <div className="text-[10.5px] truncate max-w-full">
+                      <span className="opacity-75 font-normal">Precio: </span>
+                      <strong className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrencyDisplay(effPrice)}</strong>
+                    </div>
+                  )}
+                  {effRendicion !== undefined && (
+                    <div className="text-[10.5px] truncate max-w-full">
+                      <span className="opacity-75 font-normal">Rendición: </span>
+                      <strong className="font-bold text-blue-600 dark:text-blue-400">{formatCurrencyDisplay(effRendicion)}</strong>
+                    </div>
+                  )}
                 </div>
-              )}
-              {task.rendicion !== undefined && (
-                <div className="text-[10.5px] truncate max-w-full">
-                  <span className="opacity-75 font-normal">Rendición: </span>
-                  <strong className="font-bold text-blue-600 dark:text-blue-400">{formatCurrencyDisplay(task.rendicion)}</strong>
-                </div>
-              )}
-            </div>
+              );
+            })()}
 
             {/* Right: Assigned & Created/Edited info */}
             <div className="flex flex-col items-end gap-0.5 justify-end min-w-0 text-right">
