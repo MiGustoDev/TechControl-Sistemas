@@ -241,26 +241,6 @@ const safeLocalStorageSetItem = (key: string, data: any) => {
   try {
     let payload = data;
     if (typeof data === "object" && data !== null) {
-      if (Array.isArray(data)) {
-        payload = data.map((item: any) => {
-          if (typeof item !== "object" || item === null) return item;
-          const copy = { ...item };
-          if (copy.bannerUrl && typeof copy.bannerUrl === "string" && copy.bannerUrl.startsWith("data:")) {
-            delete copy.bannerUrl;
-          }
-          if (Array.isArray(copy.tasks)) {
-            copy.tasks = copy.tasks.map((t: any) => {
-              if (t.imageUrl && typeof t.imageUrl === "string" && t.imageUrl.startsWith("data:")) {
-                const tCopy = { ...t };
-                delete tCopy.imageUrl;
-                return tCopy;
-              }
-              return t;
-            });
-          }
-          return copy;
-        });
-      }
       payload = JSON.stringify(payload);
     }
     localStorage.setItem(key, payload);
@@ -1029,12 +1009,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         name: t.name || t.title,
         title: t.title || t.name,
         completed: !!t.completed,
+        imageUrl: t.imageUrl,
         completedAt: t.completedAt
       })),
       created_at: event.createdAt ?? new Date().toISOString(),
       updated_at: event.updatedAt ?? new Date().toISOString(),
     };
-    if (event.bannerUrl && !event.bannerUrl.startsWith("data:")) payload.banner_url = event.bannerUrl;
+    if (event.bannerUrl) payload.banner_url = event.bannerUrl;
     if (event.price !== undefined) payload.price = event.price;
     if (event.rendicion !== undefined) payload.rendicion = event.rendicion;
 
@@ -1054,6 +1035,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               name: t.name || t.title,
               title: t.title || t.name,
               completed: !!t.completed,
+              imageUrl: t.imageUrl,
               completedAt: t.completedAt
             })),
             created_at: event.createdAt ?? new Date().toISOString(),
@@ -2665,13 +2647,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       end_date: newSpecialTask.endDate || null,
       progress: newSpecialTask.progress,
       assigned_to: newSpecialTask.assignedTo || [],
-      tasks: (newSpecialTask.tasks || []).map((t: any) => {
-        const tCopy = { ...t };
-        if (tCopy.imageUrl && typeof tCopy.imageUrl === "string" && tCopy.imageUrl.startsWith("data:")) {
-          delete tCopy.imageUrl;
-        }
-        return tCopy;
-      }),
+      tasks: newSpecialTask.tasks || [],
       notes: newSpecialTask.notes || null,
       created_by: newSpecialTask.createdBy || null,
       updated_by: newSpecialTask.updatedBy || null,
@@ -2680,7 +2656,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       created_at: newSpecialTask.createdAt,
       updated_at: newSpecialTask.updatedAt
     };
-    if (newSpecialTask.bannerUrl && !newSpecialTask.bannerUrl.startsWith("data:")) {
+    if (newSpecialTask.bannerUrl) {
       dbPayload.banner_url = newSpecialTask.bannerUrl;
     }
 
@@ -2752,16 +2728,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (data.progress !== undefined) dbPayload.progress = data.progress;
     if (data.assignedTo !== undefined) dbPayload.assigned_to = data.assignedTo;
     if (data.tasks !== undefined) {
-      dbPayload.tasks = data.tasks.map((t: any) => {
-        const tCopy = { ...t };
-        if (tCopy.imageUrl && typeof tCopy.imageUrl === "string" && tCopy.imageUrl.startsWith("data:")) {
-          delete tCopy.imageUrl;
-        }
-        return tCopy;
-      });
+      dbPayload.tasks = data.tasks;
     }
     if (data.notes !== undefined) dbPayload.notes = data.notes;
-    if (data.bannerUrl !== undefined && !data.bannerUrl.startsWith("data:")) dbPayload.banner_url = data.bannerUrl;
+    if (data.bannerUrl !== undefined) dbPayload.banner_url = data.bannerUrl;
     if (data.createdBy !== undefined) dbPayload.created_by = data.createdBy;
     if (data.updatedBy !== undefined) dbPayload.updated_by = data.updatedBy;
     if (data.price !== undefined) dbPayload.price = data.price;

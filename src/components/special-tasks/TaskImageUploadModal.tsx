@@ -14,7 +14,7 @@ interface TaskImageUploadModalProps {
 }
 
 // Compress image using HTML5 Canvas to keep Data URL lightweight for storage
-const compressImage = (file: File, maxWidth = 1200, maxHeight = 1200, quality = 0.85): Promise<string> => {
+const compressImage = (file: File, maxWidth = 1000, maxHeight = 1000, quality = 0.8): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {

@@ -293,7 +293,7 @@ export function SpecialTasksPage() {
   }, [session, users]);
 
   // Dynamic checklist in form
-  const [formTasks, setFormTasks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
+  const [formTasks, setFormTasks] = useState<{ id: string; title: string; completed: boolean; imageUrl?: string; completedAt?: string }[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
 
   // Calendar View states
@@ -635,7 +635,9 @@ export function SpecialTasksPage() {
               id: t.id,
               name: t.title,
               title: t.title,
-              completed: t.completed
+              completed: t.completed,
+              imageUrl: t.imageUrl,
+              completedAt: t.completedAt
             })),
             bannerUrl: editingTask.bannerUrl,
             createdBy: editingTask.createdBy || currentUser,
@@ -663,7 +665,9 @@ export function SpecialTasksPage() {
               id: t.id,
               name: t.title,
               title: t.title,
-              completed: t.completed
+              completed: t.completed,
+              imageUrl: t.imageUrl,
+              completedAt: t.completedAt
             })),
             createdBy: currentUser,
             createdAt: new Date().toISOString(),
