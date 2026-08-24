@@ -814,6 +814,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           priority: o.priority,
           startDate: o.start_date || undefined,
           endDate: o.end_date || undefined,
+          isConstant: o.is_constant ?? o.isConstant ?? (!o.end_date || o.end_date === ""),
           progress: o.progress ?? 0,
           assignedTo: Array.isArray(o.assigned_to) ? o.assigned_to : [],
           tasks: Array.isArray(o.tasks) ? o.tasks : [],
@@ -1151,28 +1152,71 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     { id: 'caf-35', name: 'Tostado J&Q', category: 'cafeteria', price: 4800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     { id: 'caf-36', name: 'Café + 2 Medialunas', category: 'cafeteria', price: 5800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     { id: 'caf-37', name: 'Café + Budín', category: 'cafeteria', price: 6500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-38', name: 'Café + Tostado', category: 'cafeteria', price: 7500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+    { id: 'caf-38', name: 'Café + Tostado', category: 'cafeteria', price: 7500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+
+    // Packs
+    { id: 'pack-1', name: 'Pack de 2 Empanadas', category: 'packs', price: 0.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pack-2', name: '2 Empanadas + 1 Salsa', category: 'packs', price: 0.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pack-3', name: 'Pack de 3 Empanadas', category: 'packs', price: 14900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pack-4', name: '3 Empanadas + 1 Salsa', category: 'packs', price: 14900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pack-5', name: 'Pack de 4 Empanadas', category: 'packs', price: 0.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pack-6', name: '4 Empanadas + 1 Salsa', category: 'packs', price: 0.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pack-7', name: 'Pack de 6 Empanadas', category: 'packs', price: 29500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pack-8', name: '6 Empanadas + 2 Salsa', category: 'packs', price: 29500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pack-9', name: 'Pack 8 Empanadas', category: 'packs', price: 36900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pack-10', name: '8 empanadas + 2 Salsas', category: 'packs', price: 36900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pack-11', name: 'Pack 12 Empanadas', category: 'packs', price: 49900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pack-12', name: '12 Empanadas + 3 salsas', category: 'packs', price: 49900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pack-13', name: 'Pack 18 Empanadas', category: 'packs', price: 72900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pack-14', name: '18 empanadas + 5 salsas', category: 'packs', price: 72900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
   ];
 
   const loadLocalPricesFallback = useCallback(() => {
     const saved = localStorage.getItem("techcontrol_product_prices");
+    const mocks = getMockPrices();
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        // If saved data has old list or lacks cafeteria items, reseed
+        const parsed: ProductPrice[] = JSON.parse(saved);
         const isOldVersion = parsed.some((p: any) => p.price === 1200 || p.id === 'm1' || p.id === 'piz-10' || p.name === 'Doble muzzarella');
-        if (isOldVersion || !parsed.some((p: any) => p.id === 'caf-1')) {
-          const initial = getMockPrices();
-          setProductPrices(initial);
-          localStorage.setItem("techcontrol_product_prices", JSON.stringify(initial));
+        if (isOldVersion) {
+          setProductPrices(mocks);
+          localStorage.setItem("techcontrol_product_prices", JSON.stringify(mocks));
         } else {
-          setProductPrices(parsed);
+          const packPricesMap: Record<string, number> = {
+            'pack-1': 0.00,
+            'pack-2': 0.00,
+            'pack-3': 14900.00,
+            'pack-4': 14900.00,
+            'pack-5': 0.00,
+            'pack-6': 0.00,
+            'pack-7': 29500.00,
+            'pack-8': 29500.00,
+            'pack-9': 36900.00,
+            'pack-10': 36900.00,
+            'pack-11': 49900.00,
+            'pack-12': 49900.00,
+            'pack-13': 72900.00,
+            'pack-14': 72900.00,
+          };
+
+          const updatedWithPrices = parsed.map(p => {
+            if (packPricesMap[p.id] !== undefined) {
+              return { ...p, price: packPricesMap[p.id] };
+            }
+            return p;
+          });
+
+          const existingIds = new Set(updatedWithPrices.map(p => p.id));
+          const missingMocks = mocks.filter(m => !existingIds.has(m.id));
+          const updated = missingMocks.length > 0 ? [...updatedWithPrices, ...missingMocks] : updatedWithPrices;
+          setProductPrices(updated);
+          localStorage.setItem("techcontrol_product_prices", JSON.stringify(updated));
         }
       } catch (e) {
-        setProductPrices(getMockPrices());
+        setProductPrices(mocks);
       }
     } else {
-      setProductPrices(getMockPrices());
+      setProductPrices(mocks);
     }
   }, []);
 
@@ -2700,6 +2744,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           priority: data.priority || "medium",
           startDate: data.startDate,
           endDate: data.endDate,
+          isConstant: data.isConstant,
           progress: data.progress ?? 0,
           assignedTo: data.assignedTo || ["Equipo IT"],
           tasks: data.tasks || [],

@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from "react";
 import { 
   Plus, Search, Edit2, Trash2, Tag, Sparkles, ArrowRightLeft, 
-  LayoutGrid, List, DollarSign, TrendingUp, Package, Layers, 
-  ArrowUpDown, CheckSquare, X, Flame, Percent, Coffee,
+  LayoutGrid, List, DollarSign, Package, Layers, 
+  ArrowUpDown, X, Flame, Percent, Coffee,
   CupSoda, Cookie, CakeSlice, Sandwich, UtensilsCrossed,
-  Beef, Disc, PieChart
+  Beef, Disc, PieChart, Globe, ExternalLink
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ export function PricesPage() {
   const { productPrices, addProductPrice, updateProductPrice, deleteProductPrice } = useApp();
   
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<ProductPriceCategory | "all">("all");
+  const [activeCategories, setActiveCategories] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [sortBy, setSortBy] = useState<"name-asc" | "name-desc" | "price-asc" | "price-desc">("name-asc");
   
@@ -153,16 +153,18 @@ export function PricesPage() {
   // Compute Stats
   const stats = useMemo(() => {
     const total = productPrices.length;
-    const avg = total > 0 ? productPrices.reduce((acc, p) => acc + p.price, 0) / total : 0;
-    const maxPrice = total > 0 ? Math.max(...productPrices.map(p => p.price)) : 0;
-    const minPrice = total > 0 ? Math.min(...productPrices.map(p => p.price)) : 0;
+    const nonZeroPrices = productPrices.filter(p => p.price > 0 && p.category !== "packs");
+    const avg = nonZeroPrices.length > 0 ? nonZeroPrices.reduce((acc, p) => acc + p.price, 0) / nonZeroPrices.length : 0;
+    const maxPrice = nonZeroPrices.length > 0 ? Math.max(...nonZeroPrices.map(p => p.price)) : 0;
+    const minPrice = nonZeroPrices.length > 0 ? Math.min(...nonZeroPrices.map(p => p.price)) : 0;
+    const hasPricedProducts = nonZeroPrices.length > 0;
 
     const categoryCounts: Record<string, number> = { all: total };
     productPrices.forEach(p => {
       categoryCounts[p.category] = (categoryCounts[p.category] || 0) + 1;
     });
 
-    return { total, avg, maxPrice, minPrice, categoryCounts };
+    return { total, avg, maxPrice, minPrice, hasPricedProducts, categoryCounts };
   }, [productPrices]);
 
   const premiumEmpanadaNames = useMemo(() => [
@@ -266,10 +268,26 @@ export function PricesPage() {
     }
   };
 
+  const handleToggleCategory = (key: string) => {
+    setActiveCategories(prev => {
+      if (prev.includes(key)) {
+        return prev.filter(k => k !== key);
+      } else {
+        return [...prev, key];
+      }
+    });
+    setSelectedIds([]);
+  };
+
+  const getPackQuantity = (name: string): number => {
+    const match = name.match(/\d+/);
+    return match ? parseInt(match[0], 10) : 0;
+  };
+
   const filteredPrices = useMemo(() => {
     const list = productPrices.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = activeCategory === "all" || p.category === activeCategory;
+      const matchesCategory = activeCategories.length === 0 || activeCategories.includes(p.category);
       return matchesSearch && matchesCategory;
     });
 
@@ -281,13 +299,28 @@ export function PricesPage() {
       if (aPrem && !bPrem) return -1;
       if (!aPrem && bPrem) return 1;
 
-      if (sortBy === "name-asc") return a.name.localeCompare(b.name);
-      if (sortBy === "name-desc") return b.name.localeCompare(a.name);
-      if (sortBy === "price-asc") return a.price - b.price;
-      if (sortBy === "price-desc") return b.price - a.price;
+      // Natural numerical sorting for packs (2, 3, 4, 6, 8, 12, 18 empanadas)
+      if (a.category === "packs" && b.category === "packs") {
+        const qtyA = getPackQuantity(a.name);
+        const qtyB = getPackQuantity(b.name);
+        if (qtyA !== qtyB) {
+          return sortBy.includes("desc") ? qtyB - qtyA : qtyA - qtyB;
+        }
+      }
+
+      if (sortBy === "name-asc") return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+      if (sortBy === "name-desc") return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
+      if (sortBy === "price-asc") {
+        if (a.price !== b.price) return a.price - b.price;
+        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+      }
+      if (sortBy === "price-desc") {
+        if (a.price !== b.price) return b.price - a.price;
+        return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
+      }
       return 0;
     });
-  }, [productPrices, search, activeCategory, sortBy]);
+  }, [productPrices, search, activeCategories, sortBy]);
 
   const handleToggleSelectAll = () => {
     if (selectedIds.length === filteredPrices.length) {
@@ -344,18 +377,6 @@ export function PricesPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-emerald-500/30 transition-all">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Precio Promedio</p>
-              <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{formatCurrencyDisplay(stats.avg)}</h3>
-            </div>
-            <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-500">
-              <TrendingUp className="size-5" />
-            </div>
-          </CardContent>
-        </Card>
-
         <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-purple-500/30 transition-all">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
@@ -368,31 +389,54 @@ export function PricesPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-blue-500/30 transition-all">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Seleccionados</p>
-              <h3 className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-0.5">{selectedIds.length}</h3>
+        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-emerald-500/30 transition-all">
+          <CardContent className="p-4 flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">Rango de Precios</p>
+              <h3 className="text-base sm:text-lg md:text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5 truncate" title={stats.hasPricedProducts ? `${formatCurrencyDisplay(stats.minPrice)} a ${formatCurrencyDisplay(stats.maxPrice)}` : "$ 0"}>
+                {stats.hasPricedProducts ? `${formatCurrencyDisplay(stats.minPrice)} - ${formatCurrencyDisplay(stats.maxPrice)}` : "$ 0"}
+              </h3>
             </div>
-            <div className="p-3 rounded-xl bg-blue-500/10 text-blue-500">
-              <CheckSquare className="size-5" />
+            <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
+              <ArrowUpDown className="size-5" />
             </div>
           </CardContent>
         </Card>
+
+        <a 
+          href="https://www.migusto.com.ar/cartadigital/" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="block group"
+        >
+          <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-blue-500/50 hover:bg-blue-500/5 transition-all cursor-pointer h-full">
+            <CardContent className="p-4 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-blue-500 transition-colors">Carta Digital</p>
+                <h3 className="text-sm sm:text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5 flex items-center gap-1 truncate group-hover:underline">
+                  Ver Menú Web <ExternalLink className="size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </h3>
+              </div>
+              <div className="p-3 rounded-xl bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
+                <Globe className="size-5" />
+              </div>
+            </CardContent>
+          </Card>
+        </a>
       </div>
 
       {/* Toolbar & Category Navigation */}
       <Card className="border-border/60 bg-card/50 backdrop-blur-xs shadow-xs">
         <CardContent className="p-4 space-y-4">
-          {/* Category Tabs */}
+          {/* Category Filter Tabs (Multi-selection) */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
             <button
               onClick={() => {
-                setActiveCategory("all");
+                setActiveCategories([]);
                 setSelectedIds([]);
               }}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 shrink-0 ${
-                activeCategory === "all"
+                activeCategories.length === 0
                   ? "bg-foreground text-background shadow-xs"
                   : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/40"
               }`}
@@ -400,7 +444,7 @@ export function PricesPage() {
               <Sparkles className="size-3.5" />
               <span>Todos</span>
               <span className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] ${
-                activeCategory === "all" ? "bg-background text-foreground" : "bg-muted text-muted-foreground"
+                activeCategories.length === 0 ? "bg-background text-foreground" : "bg-muted text-muted-foreground"
               }`}>
                 {stats.total}
               </span>
@@ -410,24 +454,21 @@ export function PricesPage() {
               const catInfo = getCategoryInfo(key);
               const Icon = catInfo.icon;
               const count = stats.categoryCounts[key] || 0;
-              const isActive = activeCategory === key;
+              const isActive = activeCategories.includes(key);
               return (
                 <button
                   key={key}
-                  onClick={() => {
-                    setActiveCategory(key as ProductPriceCategory);
-                    setSelectedIds([]);
-                  }}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 shrink-0 ${
+                  onClick={() => handleToggleCategory(key)}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 shrink-0 select-none ${
                     isActive
-                      ? `${catInfo.activeColor} shadow-xs`
+                      ? `${catInfo.activeColor} shadow-xs ring-2 ring-primary/20 scale-[1.02]`
                       : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/40"
                   }`}
                 >
                   <Icon className="size-3.5" />
                   <span>{catInfo.label}</span>
                   <span className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] ${
-                    isActive ? "bg-black/20 text-current" : "bg-muted text-muted-foreground"
+                    isActive ? "bg-black/20 text-current font-black" : "bg-muted text-muted-foreground"
                   }`}>
                     {count}
                   </span>

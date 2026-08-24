@@ -297,6 +297,7 @@ export interface SpecialTask {
   priority: "low" | "medium" | "high" | "critical";
   startDate?: string;
   endDate?: string;
+  isConstant?: boolean;
   price?: number;
   rendicion?: number;
   progress: number;

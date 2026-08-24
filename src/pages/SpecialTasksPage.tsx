@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { 
   Plus, Search, Calendar, User, CheckSquare, ListTodo, Edit2, Trash2, 
   ChevronDown, CheckSquare2, Square, Sparkles, Megaphone, PartyPopper, CalendarHeart, HelpCircle, Check, Flag, Image as ImageIcon,
-  Timer, AlertTriangle, Flame, CalendarDays, CheckCircle2, Hourglass, ChevronLeft, ChevronRight, Edit
+  Timer, AlertTriangle, Flame, CheckCircle2, Hourglass, ChevronLeft, ChevronRight, Edit
 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { getHolidayInfo } from "@/data/holidays";
@@ -239,6 +239,14 @@ export function SpecialTasksPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [durationFilter, setDurationFilter] = useState<"temporal" | "constant">("temporal");
+
+  // Helper to identify constant (permanent / no end date) tasks
+  const isTaskConstant = useCallback((t: SpecialTask): boolean => {
+    if (t.isConstant === true) return true;
+    if (t.isConstant === false) return false;
+    return !t.endDate || t.endDate.trim() === "";
+  }, []);
 
   // Expanded cards state
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
@@ -552,7 +560,7 @@ export function SpecialTasksPage() {
     setPriority("medium");
     setStartDate(validDate || new Date().toISOString().split("T")[0]);
     setEndDate("");
-    setNoEndDate(false);
+    setNoEndDate(durationFilter === "constant");
     setAssignedTo([]);
     setFormTasks([
       { id: `default-fecha-${Date.now()}`, title: "Fecha", completed: false }
@@ -571,7 +579,7 @@ export function SpecialTasksPage() {
     setPriority(task.priority);
     setStartDate(task.startDate || "");
     setEndDate(task.endDate || "");
-    setNoEndDate(!task.endDate);
+    setNoEndDate(task.isConstant === true || !task.endDate);
 
     const validAssigned = (task.assignedTo && task.assignedTo.length > 0 && !task.assignedTo.includes("Equipo IT"))
       ? task.assignedTo
@@ -649,7 +657,8 @@ export function SpecialTasksPage() {
       status: finalStatus,
       priority,
       startDate: startDate || undefined,
-      endDate: endDate || undefined,
+      endDate: noEndDate ? undefined : (endDate || undefined),
+      isConstant: noEndDate || !endDate,
       price: priceNum,
       rendicion: rendicionNum,
       progress: calculatedProgress,
@@ -957,8 +966,8 @@ export function SpecialTasksPage() {
     setExpandedCards(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Filtered tasks list including calendar special events
-  const filteredTasks = useMemo(() => {
+  // Unified tasks & events list
+  const allCombinedTasks = useMemo(() => {
     const mappedCalEvents: SpecialTask[] = calendarEvents.map(evt => {
       const tasks = Array.isArray(evt.tasks) ? evt.tasks : [];
       const completedCount = tasks.filter((t: any) => t.completed).length;
@@ -1016,6 +1025,7 @@ export function SpecialTasksPage() {
         combinedMap.set(evt.id, {
           ...evt,
           ...existing,
+          isConstant: existing.isConstant !== undefined ? existing.isConstant : (existing.endDate ? false : true),
           price: existing.price !== undefined ? existing.price : evt.price,
           rendicion: existing.rendicion !== undefined ? existing.rendicion : evt.rendicion,
           bannerUrl: existing.bannerUrl || evt.bannerUrl
@@ -1023,19 +1033,44 @@ export function SpecialTasksPage() {
       }
     });
 
-    const combined = Array.from(combinedMap.values());
+    return Array.from(combinedMap.values());
+  }, [specialTasks, calendarEvents]);
 
-    const filtered = combined.filter(t => {
+  // Counts of temporal vs constant tasks matching search & standard filters
+  const { temporalCount, constantCount } = useMemo(() => {
+    let temp = 0;
+    let consts = 0;
+    allCombinedTasks.forEach(t => {
       const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase()) || 
         (t.description || "").toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === "all" || t.status === statusFilter;
       const matchesPriority = priorityFilter === "all" || t.priority === priorityFilter;
       const matchesCategory = categoryFilter === "all" || t.category === categoryFilter;
-      return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
+      
+      if (matchesSearch && matchesStatus && matchesPriority && matchesCategory) {
+        if (isTaskConstant(t)) {
+          consts++;
+        } else {
+          temp++;
+        }
+      }
+    });
+    return { temporalCount: temp, constantCount: consts };
+  }, [allCombinedTasks, search, statusFilter, priorityFilter, categoryFilter, isTaskConstant]);
+
+  // Filtered tasks list
+  const filteredTasks = useMemo(() => {
+    const filtered = allCombinedTasks.filter(t => {
+      const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase()) || 
+        (t.description || "").toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+      const matchesPriority = priorityFilter === "all" || t.priority === priorityFilter;
+      const matchesCategory = categoryFilter === "all" || t.category === categoryFilter;
+      const matchesDuration = durationFilter === "temporal" ? !isTaskConstant(t) : isTaskConstant(t);
+      return matchesSearch && matchesStatus && matchesPriority && matchesCategory && matchesDuration;
     });
 
-    // Helper to check if task is expired
-    const isTaskExpired = (t: SpecialTask) => {
+    const isTaskExpiredFn = (t: SpecialTask) => {
       if (t.status === "completed") return false;
       if (!t.endDate) return false;
       const end = new Date(t.endDate + "T12:00:00");
@@ -1044,15 +1079,14 @@ export function SpecialTasksPage() {
       return end.getTime() < today.getTime();
     };
 
-    // Completed or expired tasks always placed last
     return filtered.sort((a, b) => {
-      const aDone = a.status === "completed" || isTaskExpired(a);
-      const bDone = b.status === "completed" || isTaskExpired(b);
+      const aDone = a.status === "completed" || isTaskExpiredFn(a);
+      const bDone = b.status === "completed" || isTaskExpiredFn(b);
       if (aDone && !bDone) return 1;
       if (!aDone && bDone) return -1;
       return 0;
     });
-  }, [specialTasks, calendarEvents, search, statusFilter, priorityFilter, categoryFilter]);
+  }, [allCombinedTasks, search, statusFilter, priorityFilter, categoryFilter, durationFilter, isTaskConstant]);
 
   const isTaskExpired = useCallback((t: SpecialTask): boolean => {
     if (t.status === "completed") return false;
@@ -1072,7 +1106,7 @@ export function SpecialTasksPage() {
   }, [filteredTasks, isTaskExpired]);
 
   // Compute days remaining info with rich visual styling details
-  const getDaysRemainingInfo = (endDateStr?: string, startDateStr?: string, status?: string) => {
+  const getDaysRemainingInfo = (endDateStr?: string, _startDateStr?: string, status?: string, isConstant?: boolean) => {
     if (status === "completed") {
       return {
         statusType: "completed" as const,
@@ -1087,16 +1121,16 @@ export function SpecialTasksPage() {
       };
     }
 
-    if (!endDateStr) {
+    if (!endDateStr || isConstant) {
       return {
         statusType: "no-date" as const,
         diffDays: null,
-        headline: "Sin fecha de finalización",
-        shortBadge: "Sin fecha fin",
-        subtext: startDateStr ? `Inicio: ${formatDate(startDateStr)}` : "Sin fecha límite programada",
-        badgeClass: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20",
-        boxClass: "bg-muted/40 border-border/50 text-muted-foreground",
-        Icon: CalendarDays,
+        headline: "♾️ PROMO CONSTANTE",
+        shortBadge: "♾️ Constante",
+        subtext: "Activa permanentemente (Sin fecha de finalización)",
+        badgeClass: "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30 font-bold",
+        boxClass: "bg-teal-500/10 border border-teal-500/30 text-teal-800 dark:text-teal-200 font-bold",
+        Icon: Sparkles,
         urgent: false
       };
     }
@@ -1162,7 +1196,8 @@ export function SpecialTasksPage() {
 
   const renderTaskCard = (task: SpecialTask) => {
     const isExpanded = expandedCards[task.id] || false;
-    const daysInfo = getDaysRemainingInfo(task.endDate, task.startDate, task.status);
+    const isConstant = isTaskConstant(task);
+    const daysInfo = getDaysRemainingInfo(task.endDate, task.startDate, task.status, isConstant);
     const isCompleted = task.status === "completed";
 
     return (
@@ -1195,6 +1230,15 @@ export function SpecialTasksPage() {
                   {getCategoryIcon(task.category)}
                   {getCategoryLabel(task.category)}
                 </Badge>
+                {isConstant ? (
+                  <Badge variant="outline" className="bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/30 text-[10px] backdrop-blur-md font-bold">
+                    ♾️ Constante
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20 text-[10px] backdrop-blur-md font-bold">
+                    ⏳ Temporal
+                  </Badge>
+                )}
                 <Badge variant="outline" className={`${getPriorityBadge(task.priority)} backdrop-blur-md`}>
                   {getPriorityLabel(task.priority)}
                 </Badge>
@@ -1443,6 +1487,64 @@ export function SpecialTasksPage() {
           <Button onClick={() => handleOpenCreate()} className="shadow-md font-semibold">
             <Plus className="mr-2 size-4" /> Nueva campaña / evento
           </Button>
+        </div>
+      </div>
+
+      {/* Switch Bar: Temporales vs Constantes (Centrado sin recuadro de fondo) */}
+      <div className="flex flex-col items-center justify-center text-center gap-1.5 py-0 max-w-xl mx-auto w-full">
+        <div className="flex items-center justify-center gap-1.5 p-1 bg-muted/60 dark:bg-muted/30 rounded-xl border border-border/40 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setDurationFilter("temporal")}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-1.5 text-xs md:text-sm font-extrabold rounded-lg transition-all cursor-pointer ${
+              durationFilter === "temporal"
+                ? "bg-orange-500 text-white shadow-md shadow-orange-500/20 scale-[1.02]"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            }`}
+          >
+            <Timer className="size-4 shrink-0" />
+            <span>Temporales</span>
+            <span className={`ml-1 px-2 py-0.5 text-[10px] font-black rounded-full ${
+              durationFilter === "temporal"
+                ? "bg-white/20 text-white"
+                : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+            }`}>
+              {temporalCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDurationFilter("constant")}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-1.5 text-xs md:text-sm font-extrabold rounded-lg transition-all cursor-pointer ${
+              durationFilter === "constant"
+                ? "bg-teal-600 text-white shadow-md shadow-teal-600/20 scale-[1.02]"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            }`}
+          >
+            <Sparkles className="size-4 shrink-0" />
+            <span>Constantes</span>
+            <span className={`ml-1 px-2 py-0.5 text-[10px] font-black rounded-full ${
+              durationFilter === "constant"
+                ? "bg-white/20 text-white"
+                : "bg-teal-500/10 text-teal-600 dark:text-teal-400"
+            }`}>
+              {constantCount}
+            </span>
+          </button>
+        </div>
+
+        {/* Subtitle text right below the switch */}
+        <div className="text-[11px] font-semibold tracking-wide text-center">
+          {durationFilter === "temporal" ? (
+            <span className="text-orange-600 dark:text-orange-400 flex items-center justify-center gap-1.5">
+              <Timer className="size-3" /> duran 1 día o período definido
+            </span>
+          ) : (
+            <span className="text-teal-600 dark:text-teal-400 flex items-center justify-center gap-1.5">
+              <Sparkles className="size-3" /> Activas sin fecha de finalización
+            </span>
+          )}
         </div>
       </div>
 
@@ -1814,39 +1916,65 @@ export function SpecialTasksPage() {
                 </div>
               </div>
 
-              {/* Dates row */}
-              <div className="md:col-span-2 grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-foreground">Fecha de Inicio</label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
+              {/* Duration Type & Dates */}
+              <div className="md:col-span-2 space-y-2.5 bg-muted/20 p-3.5 rounded-xl border border-border/60">
+                <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                  <span>Tipo de Vigencia / Duración</span>
+                  <span className="text-[11px] text-muted-foreground font-medium">
+                    {noEndDate ? "♾️ Activa permanentemente" : "⏳ Duración definida"}
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNoEndDate(false)}
+                    className={`flex items-center justify-center gap-2 p-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
+                      !noEndDate
+                        ? "bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/40 shadow-2xs font-extrabold"
+                        : "bg-background text-muted-foreground border-input hover:bg-muted/50"
+                    }`}
+                  >
+                    <Timer className="size-3.5" />
+                    <span>Temporal (Con fecha fin)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNoEndDate(true);
+                      setEndDate("");
+                    }}
+                    className={`flex items-center justify-center gap-2 p-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
+                      noEndDate
+                        ? "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/40 shadow-2xs font-extrabold"
+                        : "bg-background text-muted-foreground border-input hover:bg-muted/50"
+                    }`}
+                  >
+                    <Sparkles className="size-3.5" />
+                    <span>Constante (Sin fecha fin)</span>
+                  </button>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-foreground">Fecha Límite / Fin</label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    disabled={noEndDate}
-                    min={startDate || undefined}
-                  />
-                  <label className="flex items-center gap-2 cursor-pointer mt-1 select-none group w-fit">
-                    <input
-                      type="checkbox"
-                      checked={noEndDate}
-                      onChange={(e) => {
-                        setNoEndDate(e.target.checked);
-                        if (e.target.checked) setEndDate("");
-                      }}
-                      className="size-3.5 rounded accent-orange-600 cursor-pointer"
+
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">Fecha de Inicio</label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
                     />
-                    <span className="text-[11px] text-muted-foreground group-hover:text-foreground transition-colors">
-                      Sin límite
-                    </span>
-                  </label>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">Fecha Límite / Fin</label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      disabled={noEndDate}
+                      min={startDate || undefined}
+                      placeholder={noEndDate ? "Sin fecha fin (Constante)" : undefined}
+                    />
+                  </div>
                 </div>
               </div>
 
