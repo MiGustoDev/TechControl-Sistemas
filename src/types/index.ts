@@ -226,6 +226,7 @@ export interface SystemNote {
   content: string;
   category: string;
   isPinned: boolean;
+  sortOrder?: number;
   createdAt: string;
   updatedAt: string;
 }

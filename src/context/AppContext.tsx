@@ -458,9 +458,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         supabase.from("orders").select("*"),
         supabase.from("movements").select("*"),
         supabase.from("datalive_tvs").select("*"),
-        supabase.from("system_notes").select("*"),
+        supabase.from("system_notes").select("*").order("sort_order", { ascending: true }),
         supabase.from("office_tickets").select("*"),
-        supabase.from("database_credentials").select("*"),
+        supabase.from("database_credentials").select("*").order("name", { ascending: true }),
         supabase.from("objectives").select("*"),
         supabase.from("special_tasks").select("*")
       ]);
@@ -629,15 +629,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })));
 
       if (sysNotes) {
-        const mappedNotes = sysNotes.map(n => ({
+        const mappedNotes: SystemNote[] = sysNotes.map((n, idx) => ({
           id: n.id,
           title: n.title,
           content: n.content,
           category: n.category ?? "General",
           isPinned: n.is_pinned ?? false,
+          sortOrder: typeof n.sort_order === "number" ? n.sort_order : idx,
           createdAt: n.created_at,
           updatedAt: n.updated_at
         }));
+
+        mappedNotes.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
         const dbNoteIds = new Set(mappedNotes.map(n => n.id));
         const missingInitialNotes = initialNotes.filter(n => !dbNoteIds.has(n.id));
@@ -649,13 +652,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
           // Silently upsert/insert missing initial notes to Supabase
           Promise.all(
-            missingInitialNotes.map(n =>
+            missingInitialNotes.map((n, idx) =>
               supabase.from("system_notes").insert({
                 id: n.id,
                 title: n.title,
                 content: n.content,
                 category: n.category,
                 is_pinned: n.isPinned,
+                sort_order: n.sortOrder ?? (mappedNotes.length + idx),
                 created_at: n.createdAt,
                 updated_at: n.updatedAt
               })
@@ -748,6 +752,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             updated_at: c.updatedAt
           }))).then(() => {});
         } else {
+          mappedCreds.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
           setDatabaseCredentials(mappedCreds);
           localStorage.setItem("techcontrol_database_credentials", JSON.stringify(mappedCreds));
         }
@@ -755,7 +760,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const saved = localStorage.getItem("techcontrol_database_credentials");
         if (saved) {
           try {
-            setDatabaseCredentials(JSON.parse(saved));
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) {
+              parsed.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+              setDatabaseCredentials(parsed);
+            }
           } catch (e) {
             setDatabaseCredentials([]);
           }
@@ -1474,12 +1483,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })));
 
       // 9. System Notes
-      await supabase.from("system_notes").upsert(initialNotes.map(n => ({
+      await supabase.from("system_notes").upsert(initialNotes.map((n, idx) => ({
         id: n.id,
         title: n.title,
         content: n.content,
         category: n.category,
         is_pinned: n.isPinned,
+        sort_order: n.sortOrder ?? idx,
         created_at: n.createdAt,
         updated_at: n.updatedAt
       })));
@@ -2313,7 +2323,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...note,
       id,
       createdAt,
-      updatedAt: createdAt
+      updatedAt: createdAt,
+      sortOrder: notes.length
     };
 
     setNotes(prev => {
@@ -2328,6 +2339,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       content: newNote.content,
       category: newNote.category,
       is_pinned: newNote.isPinned,
+      sort_order: newNote.sortOrder,
       created_at: newNote.createdAt,
       updated_at: newNote.updatedAt
     });
@@ -2342,7 +2354,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     return id;
-  }, []);
+  }, [notes.length]);
 
   const updateNote = useCallback(async (id: string, data: Partial<SystemNote>) => {
     const updatedAt = now();
@@ -2357,6 +2369,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (data.content !== undefined) dbPayload.content = data.content;
     if (data.category !== undefined) dbPayload.category = data.category;
     if (data.isPinned !== undefined) dbPayload.is_pinned = data.isPinned;
+    if (data.sortOrder !== undefined) dbPayload.sort_order = data.sortOrder;
 
     const { error } = await supabase.from("system_notes").update(dbPayload).eq("id", id);
     if (error) {
@@ -2388,15 +2401,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const reorderNotes = useCallback(async (reorderedNotes: SystemNote[]) => {
-    setNotes(reorderedNotes);
-    localStorage.setItem("techcontrol_notes", JSON.stringify(reorderedNotes));
+    const notesWithSortOrder = reorderedNotes.map((n, idx) => ({
+      ...n,
+      sortOrder: idx
+    }));
+    setNotes(notesWithSortOrder);
+    localStorage.setItem("techcontrol_notes", JSON.stringify(notesWithSortOrder));
 
     try {
-      await Promise.all(
-        reorderedNotes.map((n, idx) =>
+      const results = await Promise.all(
+        notesWithSortOrder.map((n, idx) =>
           supabase.from("system_notes").update({ sort_order: idx }).eq("id", n.id)
         )
       );
+      const errResult = results.find(r => r.error);
+      if (errResult?.error) {
+        console.error("Error updating sort order in Supabase:", errResult.error);
+        toast.error("No se pudo guardar el orden en Supabase");
+      }
     } catch (e) {
       console.warn("Error updating sort order in Supabase:", e);
     }
@@ -2493,7 +2515,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newCred: DatabaseCredential = { id, ...credential, createdAt, updatedAt };
 
     setDatabaseCredentials(prev => {
-      const next = [newCred, ...prev];
+      const next = [newCred, ...prev].sort((a, b) => 
+        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+      );
       localStorage.setItem("techcontrol_database_credentials", JSON.stringify(next));
       return next;
     });
@@ -2527,7 +2551,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateDatabaseCredential = useCallback(async (id: string, data: Partial<DatabaseCredential>) => {
     const updatedAt = now();
     setDatabaseCredentials(prev => {
-      const next = prev.map(c => c.id === id ? { ...c, ...data, updatedAt } : c);
+      const next = prev.map(c => c.id === id ? { ...c, ...data, updatedAt } : c).sort((a, b) => 
+        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+      );
       localStorage.setItem("techcontrol_database_credentials", JSON.stringify(next));
       return next;
     });

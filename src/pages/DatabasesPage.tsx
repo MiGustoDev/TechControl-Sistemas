@@ -132,7 +132,7 @@ export function DatabasesPage() {
   };
 
   const filteredCreds = useMemo(() => {
-    return databaseCredentials.filter(c => {
+    const filtered = databaseCredentials.filter(c => {
       const matchesSearch = 
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.host.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -141,6 +141,10 @@ export function DatabasesPage() {
       const matchesEngine = filterEngine === "all" || c.engine === filterEngine;
       return matchesSearch && matchesEngine;
     });
+
+    return filtered.sort((a, b) => 
+      a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+    );
   }, [databaseCredentials, searchQuery, filterEngine]);
 
   return (
