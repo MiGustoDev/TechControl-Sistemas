@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { 
   Plus, Search, Edit2, Trash2, Tag, Sparkles, ArrowRightLeft, 
-  LayoutGrid, List, DollarSign, Package, Layers, 
+  LayoutGrid, List, Package, Layers, 
   ArrowUpDown, X, Flame, Percent, Coffee,
   CupSoda, Cookie, CakeSlice, Sandwich, UtensilsCrossed,
   Beef, Disc, PieChart, Globe, ExternalLink
