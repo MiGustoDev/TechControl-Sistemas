@@ -627,12 +627,12 @@ export function SpecialTasksPage() {
       calculatedProgress = status === "completed" ? 100 : (editingTask ? editingTask.progress : 0);
     }
 
-    // Auto-set status to completed if progress is 100%, or force progress to 100% if status is completed
+    // Auto-set status to in-progress if checklist has items, but DO NOT force completion on 100% progress
     let finalStatus = status;
-    if (calculatedProgress === 100) {
-      finalStatus = "completed";
-    } else if (finalStatus === "completed") {
+    if (finalStatus === "completed") {
       calculatedProgress = 100;
+    } else if (calculatedProgress > 0 && finalStatus === "pending") {
+      finalStatus = "in-progress";
     }
 
     let priceNum = editingTask?.price;
@@ -802,8 +802,8 @@ export function SpecialTasksPage() {
 
     const completedCount = updatedSubTasks.filter((t: any) => t.completed).length;
     const progress = updatedSubTasks.length > 0 ? Math.round((completedCount / updatedSubTasks.length) * 100) : 0;
-    const currentStatus = task?.status || (calEvent ? (progress === 100 ? "completed" : "in-progress") : "pending");
-    const autoStatus = progress === 100 ? "completed" : (progress > 0 ? "in-progress" : (currentStatus === "completed" ? "in-progress" : "pending"));
+    const currentStatus = task?.status || "in-progress";
+    const autoStatus = currentStatus === "completed" ? "completed" : (progress > 0 ? "in-progress" : "pending");
 
     let price = task?.price ?? calEvent?.price;
     let rendicion = task?.rendicion ?? calEvent?.rendicion;
@@ -892,7 +892,7 @@ export function SpecialTasksPage() {
     const completedCount = updatedSubTasks.filter((t: any) => t.completed).length;
     const progress = updatedSubTasks.length > 0 ? Math.round((completedCount / updatedSubTasks.length) * 100) : 0;
     const currentStatus = task?.status || "in-progress";
-    const autoStatus = progress === 100 ? "completed" : (progress > 0 ? "in-progress" : (currentStatus === "completed" ? "in-progress" : currentStatus));
+    const autoStatus = currentStatus === "completed" ? "completed" : (progress > 0 ? "in-progress" : currentStatus);
 
     if (task || specialTasks.some(t => t.id === taskId)) {
       await updateSpecialTask(taskId, {
@@ -972,7 +972,7 @@ export function SpecialTasksPage() {
       const tasks = Array.isArray(evt.tasks) ? evt.tasks : [];
       const completedCount = tasks.filter((t: any) => t.completed).length;
       const progress = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
-      const status = progress === 100 ? "completed" : "in-progress";
+      const status = progress > 0 ? "in-progress" : "pending";
 
       // Map type to category
       let category: SpecialTaskCategory = "event";
@@ -1060,7 +1060,7 @@ export function SpecialTasksPage() {
 
   // Filtered tasks list
   const filteredTasks = useMemo(() => {
-    const filtered = allCombinedTasks.filter(t => {
+    return allCombinedTasks.filter(t => {
       const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase()) || 
         (t.description || "").toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === "all" || t.status === statusFilter;
@@ -1069,51 +1069,52 @@ export function SpecialTasksPage() {
       const matchesDuration = durationFilter === "temporal" ? !isTaskConstant(t) : isTaskConstant(t);
       return matchesSearch && matchesStatus && matchesPriority && matchesCategory && matchesDuration;
     });
-
-    const isTaskExpiredFn = (t: SpecialTask) => {
-      if (t.status === "completed") return false;
-      if (!t.endDate) return false;
-      const end = new Date(t.endDate + "T12:00:00");
-      const today = new Date();
-      today.setHours(12, 0, 0, 0);
-      return end.getTime() < today.getTime();
-    };
-
-    return filtered.sort((a, b) => {
-      const aDone = a.status === "completed" || isTaskExpiredFn(a);
-      const bDone = b.status === "completed" || isTaskExpiredFn(b);
-      if (aDone && !bDone) return 1;
-      if (!aDone && bDone) return -1;
-      return 0;
-    });
   }, [allCombinedTasks, search, statusFilter, priorityFilter, categoryFilter, durationFilter, isTaskConstant]);
 
+  const getTodayIsoDate = (): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const getEffectiveEndDate = useCallback((t: SpecialTask): string | undefined => {
+    if (isTaskConstant(t)) return undefined;
+    return t.endDate || t.startDate;
+  }, [isTaskConstant]);
+
   const isTaskExpired = useCallback((t: SpecialTask): boolean => {
-    if (t.status === "completed") return false;
-    if (!t.endDate) return false;
-    const end = new Date(t.endDate + "T12:00:00");
-    const today = new Date();
-    today.setHours(12, 0, 0, 0);
-    return end.getTime() < today.getTime();
-  }, []);
+    const effectiveEnd = getEffectiveEndDate(t);
+    if (!effectiveEnd) {
+      return t.status === "completed";
+    }
+    const todayStr = getTodayIsoDate();
+    // Expirada / Finalizada automáticamente al transcurrir las 00:00 del día posterior a la fecha fin
+    return todayStr > effectiveEnd;
+  }, [getEffectiveEndDate]);
 
   const activeTasks = useMemo(() => {
-    return filteredTasks.filter(t => t.status !== "completed" && !isTaskExpired(t));
+    return filteredTasks.filter(t => !isTaskExpired(t));
   }, [filteredTasks, isTaskExpired]);
 
   const completedTasks = useMemo(() => {
-    return filteredTasks.filter(t => t.status === "completed" || isTaskExpired(t));
+    return filteredTasks.filter(t => isTaskExpired(t));
   }, [filteredTasks, isTaskExpired]);
 
   // Compute days remaining info with rich visual styling details
-  const getDaysRemainingInfo = (endDateStr?: string, _startDateStr?: string, status?: string, isConstant?: boolean) => {
-    if (status === "completed") {
+  const getDaysRemainingInfo = (endDateStr?: string, startDateStr?: string, status?: string, isConstant?: boolean) => {
+    const effectiveEndStr = isConstant ? undefined : (endDateStr || startDateStr);
+    const todayStr = getTodayIsoDate();
+    const isExpiredByDate = effectiveEndStr ? todayStr > effectiveEndStr : false;
+
+    if (isExpiredByDate || (isConstant && status === "completed")) {
       return {
         statusType: "completed" as const,
         diffDays: null,
-        headline: "Completado",
-        shortBadge: "Completado",
-        subtext: endDateStr ? `Finalizado (${formatDate(endDateStr)})` : "Tarea finalizada",
+        headline: "Finalizada",
+        shortBadge: "Finalizada",
+        subtext: effectiveEndStr ? `Finalizó el ${formatDate(effectiveEndStr)}` : "Tarea finalizada",
         badgeClass: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
         boxClass: "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300",
         Icon: CheckCircle2,
@@ -1121,7 +1122,7 @@ export function SpecialTasksPage() {
       };
     }
 
-    if (!endDateStr || isConstant) {
+    if (!effectiveEndStr || isConstant) {
       return {
         statusType: "no-date" as const,
         diffDays: null,
@@ -1135,7 +1136,7 @@ export function SpecialTasksPage() {
       };
     }
 
-    const end = new Date(endDateStr + "T12:00:00");
+    const end = new Date(effectiveEndStr + "T12:00:00");
     const today = new Date();
     today.setHours(12, 0, 0, 0);
 
@@ -1197,8 +1198,8 @@ export function SpecialTasksPage() {
   const renderTaskCard = (task: SpecialTask) => {
     const isExpanded = expandedCards[task.id] || false;
     const isConstant = isTaskConstant(task);
+    const isCompleted = isTaskExpired(task);
     const daysInfo = getDaysRemainingInfo(task.endDate, task.startDate, task.status, isConstant);
-    const isCompleted = task.status === "completed";
 
     return (
       <Card 
@@ -1244,8 +1245,8 @@ export function SpecialTasksPage() {
                 </Badge>
               </div>
               <div className="flex items-center gap-1">
-                <Badge variant="outline" className={`${getStatusBadge(task.status)} text-[10px] px-2 py-0.5 backdrop-blur-md`}>
-                  {getStatusLabel(task.status)}
+                <Badge variant="outline" className={`${getStatusBadge(isCompleted ? "completed" : task.status)} text-[10px] px-2 py-0.5 backdrop-blur-md`}>
+                  {getStatusLabel(isCompleted ? "completed" : task.status)}
                 </Badge>
 
                 {task.isCalendarEvent && (
