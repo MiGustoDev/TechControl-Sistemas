@@ -12,6 +12,16 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import type { ProductPrice, ProductPriceCategory } from "@/types";
 
@@ -36,6 +46,9 @@ export function PricesPage() {
   // Bulk Edit Dialog state
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [bulkPriceInput, setBulkPriceInput] = useState("");
+
+  // Delete Confirmation state
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const formatCurrencyDisplay = (num: number): string => {
     return `$ ${num.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -203,12 +216,8 @@ export function PricesPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("¿Estás seguro de eliminar este producto y su precio registrado?")) {
-      await deleteProductPrice(id);
-      setSelectedIds(prev => prev.filter(x => x !== id));
-      toast.success("Producto eliminado correctamente");
-    }
+  const handleDeleteTrigger = (id: string) => {
+    setDeleteConfirmId(id);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -342,7 +351,7 @@ export function PricesPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2.5">
-            <DollarSign className="size-7 text-emerald-500" /> Lista de Precios
+            Lista de Precios
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Gestión centralizada, actualización masiva y consulta de la carta oficial de precios de Mi Gusto.
@@ -353,11 +362,11 @@ export function PricesPage() {
             onClick={() => setIsBulkDialogOpen(true)}
             disabled={selectedIds.length === 0}
             variant="outline"
-            className="border-orange-500/30 hover:bg-orange-500/10 text-orange-600 dark:text-orange-400 font-bold flex items-center gap-2 shadow-xs"
+            className="border-input hover:bg-accent font-bold flex items-center gap-2 shadow-xs"
           >
             <ArrowRightLeft className="size-4" /> Actualizar Masivo ({selectedIds.length})
           </Button>
-          <Button onClick={handleOpenCreate} className="bg-orange-600 hover:bg-orange-500 text-white font-bold flex items-center gap-2 shadow-md">
+          <Button onClick={handleOpenCreate} className="bg-white text-slate-950 hover:bg-slate-100 font-bold flex items-center gap-2 shadow-md">
             <Plus className="size-4.5" /> Nuevo Producto
           </Button>
         </div>
@@ -641,7 +650,7 @@ export function PricesPage() {
                             variant="ghost"
                             size="icon"
                             className="size-8 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
-                            onClick={() => handleDelete(prod.id)}
+                            onClick={() => handleDeleteTrigger(prod.id)}
                             title="Eliminar producto"
                           >
                             <Trash2 className="size-4" />
@@ -706,7 +715,7 @@ export function PricesPage() {
                         variant="ghost"
                         size="icon"
                         className="size-7 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-md"
-                        onClick={() => handleDelete(prod.id)}
+                        onClick={() => handleDeleteTrigger(prod.id)}
                         title="Eliminar"
                       >
                         <Trash2 className="size-3.5" />
@@ -755,7 +764,7 @@ export function PricesPage() {
             <Button
               onClick={() => setIsBulkDialogOpen(true)}
               size="sm"
-              className="bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-sm gap-1.5 h-8"
+              className="bg-white text-slate-950 hover:bg-slate-100 font-bold text-xs shadow-sm gap-1.5 h-8"
             >
               <ArrowRightLeft className="size-3.5" /> Cambiar Precios Masivo
             </Button>
@@ -823,17 +832,17 @@ export function PricesPage() {
                   value={priceInput}
                   onChange={(e) => setPriceInput(e.target.value)}
                   required
-                  className="text-xs font-bold"
+                  className="text-xs font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
             </div>
 
-            <DialogFooter className="pt-4 gap-2">
+            <DialogFooter className="pt-4 gap-2 sm:justify-end">
+              <Button type="submit" className="bg-white text-slate-950 hover:bg-slate-100 font-bold text-xs shadow-sm">
+                {editingPrice ? "Guardar Cambios" : "Registrar Producto"}
+              </Button>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="text-xs">
                 Cancelar
-              </Button>
-              <Button type="submit" className="bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-sm">
-                {editingPrice ? "Guardar Cambios" : "Registrar Producto"}
               </Button>
             </DialogFooter>
           </form>
@@ -864,7 +873,7 @@ export function PricesPage() {
                 onChange={(e) => setBulkPriceInput(e.target.value)}
                 required
                 autoFocus
-                className="text-sm font-black text-emerald-600 dark:text-emerald-400"
+                className="text-sm font-black text-emerald-600 dark:text-emerald-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
 
@@ -884,17 +893,45 @@ export function PricesPage() {
               </div>
             </div>
 
-            <DialogFooter className="pt-4 gap-2">
+            <DialogFooter className="pt-4 gap-2 sm:justify-end">
+              <Button type="submit" className="bg-white text-slate-950 hover:bg-slate-100 font-bold text-xs shadow-sm">
+                Aplicar Precio Masivo
+              </Button>
               <Button type="button" variant="outline" onClick={() => setIsBulkDialogOpen(false)} className="text-xs">
                 Cancelar
-              </Button>
-              <Button type="submit" className="bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-sm">
-                Aplicar Precio Masivo
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Alert Dialog */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-bold">¿Eliminar producto?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs">
+              ¿Estás seguro de eliminar este producto y su precio registrado? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-4 gap-2 sm:justify-end">
+            <AlertDialogAction
+              className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs"
+              onClick={async () => {
+                if (deleteConfirmId) {
+                  await deleteProductPrice(deleteConfirmId);
+                  setSelectedIds(prev => prev.filter(x => x !== deleteConfirmId));
+                  toast.success("Producto eliminado correctamente");
+                  setDeleteConfirmId(null);
+                }
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+            <AlertDialogCancel className="text-xs">Cancelar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
