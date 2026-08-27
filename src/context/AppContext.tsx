@@ -162,6 +162,7 @@ interface AppContextValue {
   addSpecialTask: (specialTask: Omit<SpecialTask, "id" | "createdAt" | "updatedAt">) => Promise<SpecialTask>;
   updateSpecialTask: (id: string, data: Partial<SpecialTask>) => Promise<void>;
   deleteSpecialTask: (id: string) => Promise<void>;
+  syncSpecialTasksFromSupabase: () => Promise<void>;
 
   specialEvents: SpecialEvent[];
   saveSpecialEvent: (event: SpecialEvent) => Promise<boolean>;
@@ -851,9 +852,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const localTime = new Date(local.updatedAt || 0).getTime();
           const useLocal = localTime > dbTime;
 
+          const mergedSubTasks = (dbTask.tasks || []).map((dbSub: any) => {
+            const localSub = (local.tasks || []).find((ls: any) => ls.id === dbSub.id);
+            return {
+              ...localSub,
+              ...dbSub,
+              imageUrl: dbSub.imageUrl || localSub?.imageUrl,
+              completed: dbSub.completed || localSub?.completed,
+              completedAt: dbSub.completedAt || localSub?.completedAt
+            };
+          });
+
           return {
             ...dbTask,
             ...(useLocal ? local : {}),
+            tasks: mergedSubTasks,
             createdBy: dbTask.createdBy || local.createdBy,
             updatedBy: useLocal ? (local.updatedBy || dbTask.updatedBy) : (dbTask.updatedBy || local.updatedBy),
             price: dbTask.price !== undefined ? dbTask.price : local.price,
@@ -988,7 +1001,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setSpecialEvents(prev => {
           const map = new Map<string, SpecialEvent>();
           prev.forEach(e => map.set(e.id, e));
-          mapped.forEach(e => map.set(e.id, e));
+          mapped.forEach(dbEvt => {
+            const existing = map.get(dbEvt.id);
+            if (!existing) {
+              map.set(dbEvt.id, dbEvt);
+            } else {
+              const mergedTasks = (dbEvt.tasks || []).map((dbSub: any) => {
+                const localSub = (existing.tasks || []).find((ls: any) => ls.id === dbSub.id);
+                return {
+                  ...localSub,
+                  ...dbSub,
+                  imageUrl: dbSub.imageUrl || localSub?.imageUrl,
+                  completed: dbSub.completed || localSub?.completed,
+                  completedAt: dbSub.completedAt || localSub?.completedAt
+                };
+              });
+              map.set(dbEvt.id, {
+                ...existing,
+                ...dbEvt,
+                tasks: mergedTasks,
+                bannerUrl: dbEvt.bannerUrl || existing.bannerUrl,
+                price: dbEvt.price !== undefined ? dbEvt.price : existing.price,
+                rendicion: dbEvt.rendicion !== undefined ? dbEvt.rendicion : existing.rendicion
+              });
+            }
+          });
           const next = Array.from(map.values());
           safeLocalStorageSetItem("techcontrol_special_events", next);
           return next;
@@ -996,6 +1033,83 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       console.warn("No se pudo sincronizar eventos especiales desde Supabase:", err);
+    }
+  }, []);
+
+  const syncSpecialTasksFromSupabase = useCallback(async () => {
+    try {
+      const { data: dbSpecialTasks, error } = await supabase.from("special_tasks").select("*");
+      if (error) {
+        if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
+          console.warn("La tabla special_tasks aún no existe.");
+        }
+        return;
+      }
+
+      if (dbSpecialTasks && dbSpecialTasks.length > 0) {
+        const mappedSpecialTasks: SpecialTask[] = dbSpecialTasks.map(o => ({
+          id: o.id,
+          title: o.title,
+          description: o.description || "",
+          category: o.category,
+          status: o.status,
+          priority: o.priority,
+          startDate: o.start_date || undefined,
+          endDate: o.end_date || undefined,
+          isConstant: o.is_constant ?? o.isConstant ?? (!o.end_date || o.end_date === ""),
+          progress: o.progress ?? 0,
+          assignedTo: Array.isArray(o.assigned_to) ? o.assigned_to : [],
+          tasks: Array.isArray(o.tasks) ? o.tasks : [],
+          notes: o.notes || undefined,
+          bannerUrl: o.banner_url || o.bannerUrl || undefined,
+          createdBy: o.created_by || o.createdBy || undefined,
+          updatedBy: o.updated_by || o.updatedBy || undefined,
+          price: o.price !== undefined && o.price !== null ? Number(o.price) : undefined,
+          rendicion: o.rendicion !== undefined && o.rendicion !== null ? Number(o.rendicion) : undefined,
+          createdAt: o.created_at,
+          updatedAt: o.updated_at
+        }));
+
+        setSpecialTasks(prev => {
+          const map = new Map<string, SpecialTask>();
+          prev.forEach(t => map.set(t.id, t));
+          mappedSpecialTasks.forEach(dbTask => {
+            const existing = map.get(dbTask.id);
+            if (!existing) {
+              map.set(dbTask.id, dbTask);
+            } else {
+              const dbTime = new Date(dbTask.updatedAt || 0).getTime();
+              const localTime = new Date(existing.updatedAt || 0).getTime();
+
+              const mergedTasks = (dbTask.tasks || []).map((dbSub: any) => {
+                const localSub = (existing.tasks || []).find((ls: any) => ls.id === dbSub.id);
+                return {
+                  ...localSub,
+                  ...dbSub,
+                  imageUrl: dbSub.imageUrl || localSub?.imageUrl,
+                  completed: dbSub.completed || localSub?.completed,
+                  completedAt: dbSub.completedAt || localSub?.completedAt
+                };
+              });
+
+              map.set(dbTask.id, {
+                ...existing,
+                ...dbTask,
+                tasks: mergedTasks,
+                bannerUrl: dbTask.bannerUrl || existing.bannerUrl,
+                price: dbTask.price !== undefined ? dbTask.price : existing.price,
+                rendicion: dbTask.rendicion !== undefined ? dbTask.rendicion : existing.rendicion,
+                updatedAt: dbTime >= localTime ? dbTask.updatedAt : existing.updatedAt
+              });
+            }
+          });
+          const next = Array.from(map.values());
+          safeLocalStorageSetItem("techcontrol_special_tasks", next);
+          return next;
+        });
+      }
+    } catch (err) {
+      console.warn("No se pudo sincronizar tareas especiales desde Supabase:", err);
     }
   }, []);
 
@@ -1231,31 +1345,78 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const syncProductPricesFromSupabase = useCallback(async () => {
     try {
+      const mocks = getMockPrices();
       const { data, error } = await supabase.from("product_prices").select("*").order("name", { ascending: true });
-      if (error) {
-        if (error.code === "PGRST205" || error.message?.includes("does not exist")) {
-          console.warn("La tabla product_prices aún no existe en Supabase.");
-        } else {
-          console.warn("Error al cargar precios de Supabase:", error);
-        }
-        loadLocalPricesFallback();
-        return;
-      }
-
-      if (data && data.length > 0) {
-        const mapped = data.map((p: any) => ({
+      
+      let dbMapped: ProductPrice[] = [];
+      if (data && !error && data.length > 0) {
+        dbMapped = data.map((p: any) => ({
           id: p.id,
           name: p.name,
           category: p.category as ProductPriceCategory,
           price: Number(p.price),
           isPremium: p.is_premium || p.isPremium,
-          createdAt: p.created_at,
-          updatedAt: p.updated_at
+          createdAt: p.created_at || new Date().toISOString(),
+          updatedAt: p.updated_at || new Date().toISOString()
         }));
-        setProductPrices(mapped);
-        safeLocalStorageSetItem("techcontrol_product_prices", mapped);
-      } else {
-        loadLocalPricesFallback();
+      }
+
+      let localSaved: ProductPrice[] = [];
+      const saved = localStorage.getItem("techcontrol_product_prices");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) localSaved = parsed;
+        } catch (e) {}
+      }
+
+      let deletedIds = new Set<string>();
+      const savedDeleted = localStorage.getItem("techcontrol_deleted_product_prices");
+      if (savedDeleted) {
+        try {
+          const parsed = JSON.parse(savedDeleted);
+          if (Array.isArray(parsed)) deletedIds = new Set(parsed);
+        } catch (e) {}
+      }
+
+      const mergedMap = new Map<string, ProductPrice>();
+
+      // 1. Mocks as baseline
+      mocks.forEach(m => {
+        if (!deletedIds.has(m.id)) mergedMap.set(m.id, m);
+      });
+
+      // 2. Local storage overrides mocks
+      localSaved.forEach(l => {
+        if (l && l.id && !deletedIds.has(l.id)) mergedMap.set(l.id, l);
+      });
+
+      // 3. DB overrides both
+      dbMapped.forEach(d => {
+        if (d && d.id && !deletedIds.has(d.id)) mergedMap.set(d.id, d);
+      });
+
+      const finalPrices = Array.from(mergedMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+      setProductPrices(finalPrices);
+      safeLocalStorageSetItem("techcontrol_product_prices", finalPrices);
+
+      if (dbMapped.length > 0) {
+        const dbIds = new Set(dbMapped.map(d => d.id));
+        const missingFromDb = finalPrices.filter(p => !dbIds.has(p.id));
+        if (missingFromDb.length > 0) {
+          supabase.from("product_prices").upsert(missingFromDb.map(p => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            price: p.price,
+            is_premium: p.isPremium || false,
+            created_at: p.createdAt,
+            updated_at: p.updatedAt
+          }))).then(({ error: upsertErr }) => {
+            if (upsertErr) console.warn("Could not seed missing product prices to Supabase:", upsertErr);
+          });
+        }
       }
     } catch (err) {
       console.warn("Error al sincronizar precios:", err);
@@ -1280,41 +1441,67 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      const { error } = await supabase.from("product_prices").insert({
+      const { error } = await supabase.from("product_prices").upsert({
         id: newPrice.id,
         name: newPrice.name,
         category: newPrice.category,
-        price: newPrice.price
+        price: newPrice.price,
+        is_premium: newPrice.isPremium || false,
+        created_at: newPrice.createdAt,
+        updated_at: newPrice.updatedAt
       });
       if (error) console.warn("Error inserting product price to Supabase:", error);
     } catch (e) {}
   }, []);
 
   const updateProductPrice = useCallback(async (id: string, data: Partial<ProductPrice>) => {
+    let updatedItem: ProductPrice | undefined;
     setProductPrices(prev => {
-      const next = prev.map(p => p.id === id ? { ...p, ...data, updatedAt: new Date().toISOString() } : p)
-        .sort((a, b) => a.name.localeCompare(b.name));
+      const next = prev.map(p => {
+        if (p.id === id) {
+          updatedItem = { ...p, ...data, updatedAt: new Date().toISOString() };
+          return updatedItem;
+        }
+        return p;
+      }).sort((a, b) => a.name.localeCompare(b.name));
       safeLocalStorageSetItem("techcontrol_product_prices", next);
       return next;
     });
 
     try {
-      const dbPayload: any = {};
-      if (data.name !== undefined) dbPayload.name = data.name.trim();
-      if (data.category !== undefined) dbPayload.category = data.category;
-      if (data.price !== undefined) dbPayload.price = data.price;
-
-      const { error } = await supabase.from("product_prices").update(dbPayload).eq("id", id);
-      if (error) console.warn("Error updating product price in Supabase:", error);
+      if (updatedItem) {
+        const dbPayload: any = {
+          id: updatedItem.id,
+          name: updatedItem.name,
+          category: updatedItem.category,
+          price: updatedItem.price,
+          is_premium: updatedItem.isPremium || false,
+          updated_at: updatedItem.updatedAt
+        };
+        const { error } = await supabase.from("product_prices").upsert(dbPayload);
+        if (error) console.warn("Error upserting product price in Supabase:", error);
+      }
     } catch (e) {}
   }, []);
 
   const deleteProductPrice = useCallback(async (id: string) => {
     setProductPrices(prev => {
       const next = prev.filter(p => p.id !== id);
-      localStorage.setItem("techcontrol_product_prices", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_product_prices", next);
       return next;
     });
+
+    try {
+      const savedDeleted = localStorage.getItem("techcontrol_deleted_product_prices");
+      let deletedList: string[] = [];
+      if (savedDeleted) {
+        try { deletedList = JSON.parse(savedDeleted); } catch (e) {}
+      }
+      if (!deletedList.includes(id)) {
+        deletedList.push(id);
+        localStorage.setItem("techcontrol_deleted_product_prices", JSON.stringify(deletedList));
+      }
+    } catch (e) {}
 
     try {
       const { error } = await supabase.from("product_prices").delete().eq("id", id);
@@ -1324,17 +1511,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetchData();
+    void syncSpecialTasksFromSupabase();
     void syncSpecialEventsFromSupabase();
     void syncProductPricesFromSupabase();
-  }, [fetchData, syncSpecialEventsFromSupabase, syncProductPricesFromSupabase]);
+  }, [fetchData, syncSpecialTasksFromSupabase, syncSpecialEventsFromSupabase, syncProductPricesFromSupabase]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
-      syncGuardiasFromSupabase();
-    }, 10000);
+      void syncGuardiasFromSupabase();
+      void syncSpecialTasksFromSupabase();
+      void syncSpecialEventsFromSupabase();
+    }, 8000);
 
-    return () => window.clearInterval(intervalId);
-  }, [syncGuardiasFromSupabase]);
+    const handleFocus = () => {
+      void syncSpecialTasksFromSupabase();
+      void syncSpecialEventsFromSupabase();
+    };
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [syncGuardiasFromSupabase, syncSpecialTasksFromSupabase, syncSpecialEventsFromSupabase]);
 
   const migrateAllData = async () => {
     setLoading(true);
@@ -2912,6 +3111,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addSpecialTask,
         updateSpecialTask,
         deleteSpecialTask,
+        syncSpecialTasksFromSupabase,
         specialEvents,
         saveSpecialEvent,
         deleteSpecialEvent,

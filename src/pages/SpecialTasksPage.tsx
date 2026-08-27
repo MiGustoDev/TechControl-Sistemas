@@ -224,13 +224,20 @@ export function SpecialTasksPage() {
     addSpecialTask, 
     updateSpecialTask, 
     deleteSpecialTask, 
+    syncSpecialTasksFromSupabase,
     users,
     specialEvents,
     saveSpecialEvent,
     deleteSpecialEvent,
+    syncSpecialEventsFromSupabase,
     holidayAssignments,
     session
   } = useApp();
+
+  useEffect(() => {
+    void syncSpecialTasksFromSupabase();
+    void syncSpecialEventsFromSupabase();
+  }, [syncSpecialTasksFromSupabase, syncSpecialEventsFromSupabase]);
 
   const calendarEvents = specialEvents;
 
@@ -1022,9 +1029,21 @@ export function SpecialTasksPage() {
       if (!existing) {
         combinedMap.set(evt.id, evt);
       } else {
+        const mergedSubTasks = (existing.tasks || []).map((t: any) => {
+          const evtTask = (evt.tasks || []).find((et: any) => et.id === t.id);
+          return {
+            ...evtTask,
+            ...t,
+            imageUrl: t.imageUrl || evtTask?.imageUrl,
+            completed: t.completed || evtTask?.completed,
+            completedAt: t.completedAt || evtTask?.completedAt
+          };
+        });
+
         combinedMap.set(evt.id, {
           ...evt,
           ...existing,
+          tasks: mergedSubTasks,
           isConstant: existing.isConstant !== undefined ? existing.isConstant : (existing.endDate ? false : true),
           price: existing.price !== undefined ? existing.price : evt.price,
           rendicion: existing.rendicion !== undefined ? existing.rendicion : evt.rendicion,
