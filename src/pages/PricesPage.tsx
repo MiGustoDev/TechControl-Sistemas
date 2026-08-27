@@ -73,6 +73,30 @@ export function PricesPage() {
       activeColor: "bg-amber-500 text-slate-950 border-amber-500 font-bold",
       icon: Layers 
     },
+    fitzzas: { 
+      label: "Fitzzas", 
+      color: "bg-blue-500/10 text-blue-500 border-blue-500/20", 
+      activeColor: "bg-blue-500 text-white border-blue-500",
+      icon: Disc 
+    },
+    salsas: { 
+      label: "Salsas", 
+      color: "bg-rose-500/10 text-rose-500 border-rose-500/20", 
+      activeColor: "bg-rose-500 text-white border-rose-500",
+      icon: UtensilsCrossed 
+    },
+    bebidas: { 
+      label: "Bebidas", 
+      color: "bg-sky-500/10 text-sky-500 border-sky-500/20", 
+      activeColor: "bg-sky-500 text-white border-sky-500",
+      icon: CupSoda 
+    },
+    postres: { 
+      label: "Postres", 
+      color: "bg-pink-500/10 text-pink-500 border-pink-500/20", 
+      activeColor: "bg-pink-500 text-white border-pink-500",
+      icon: CakeSlice 
+    },
     cafeteria: { 
       label: "Cafetería", 
       color: "bg-amber-700/10 text-amber-700 dark:text-amber-400 border-amber-700/20", 
@@ -157,6 +181,10 @@ export function PricesPage() {
       return PieChart;
     }
 
+    if (cat === "fitzzas") return Disc;
+    if (cat === "salsas") return UtensilsCrossed;
+    if (cat === "bebidas") return CupSoda;
+    if (cat === "postres") return CakeSlice;
     if (cat === "promos") return Percent;
     if (cat === "packs") return Package;
 
@@ -817,6 +845,10 @@ export function PricesPage() {
                   <option value="empanadas">Empanadas</option>
                   <option value="pizzas">Pizzas</option>
                   <option value="pizzas_indi">Pizzas INDI</option>
+                  <option value="fitzzas">Fitzzas</option>
+                  <option value="salsas">Salsas</option>
+                  <option value="bebidas">Bebidas</option>
+                  <option value="postres">Postres</option>
                   <option value="cafeteria">Cafetería</option>
                   <option value="promos">Promos</option>
                   <option value="packs">Packs</option>
