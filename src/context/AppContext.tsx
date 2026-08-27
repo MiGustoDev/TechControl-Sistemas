@@ -848,30 +848,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const local = localTasks.find(l => l.id === dbTask.id);
           if (!local) return dbTask;
 
-          const dbTime = new Date(dbTask.updatedAt || 0).getTime();
-          const localTime = new Date(local.updatedAt || 0).getTime();
-          const useLocal = localTime > dbTime;
-
           const mergedSubTasks = (dbTask.tasks || []).map((dbSub: any) => {
             const localSub = (local.tasks || []).find((ls: any) => ls.id === dbSub.id);
             return {
               ...localSub,
               ...dbSub,
               imageUrl: dbSub.imageUrl || localSub?.imageUrl,
-              completed: dbSub.completed || localSub?.completed,
+              completed: dbSub.completed ?? localSub?.completed,
               completedAt: dbSub.completedAt || localSub?.completedAt
             };
           });
 
           return {
+            ...local,
             ...dbTask,
-            ...(useLocal ? local : {}),
             tasks: mergedSubTasks,
-            createdBy: dbTask.createdBy || local.createdBy,
-            updatedBy: useLocal ? (local.updatedBy || dbTask.updatedBy) : (dbTask.updatedBy || local.updatedBy),
+            bannerUrl: dbTask.bannerUrl || local.bannerUrl,
             price: dbTask.price !== undefined ? dbTask.price : local.price,
-            rendicion: dbTask.rendicion !== undefined ? dbTask.rendicion : local.rendicion,
-            bannerUrl: dbTask.bannerUrl || local.bannerUrl
+            rendicion: dbTask.rendicion !== undefined ? dbTask.rendicion : local.rendicion
           };
         });
 
@@ -1139,7 +1133,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       created_at: event.createdAt ?? new Date().toISOString(),
       updated_at: event.updatedAt ?? new Date().toISOString(),
     };
-    if (event.bannerUrl) payload.banner_url = event.bannerUrl;
+    if (event.bannerUrl !== undefined) payload.banner_url = event.bannerUrl;
     if (event.price !== undefined) payload.price = event.price;
     if (event.rendicion !== undefined) payload.rendicion = event.rendicion;
 
@@ -1148,28 +1142,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { error: insertErr } = await supabase.from("special_events").insert(payload);
       if (insertErr) {
         const { error: updateErr } = await supabase.from("special_events").update(payload).eq("id", event.id);
-        if (updateErr) {
-          const retryPayload = {
-            id: event.id,
-            date: event.date,
-            name: event.name,
-            type: event.type,
-            tasks: (event.tasks || []).map((t: any) => ({
-              id: t.id,
-              name: t.name || t.title,
-              title: t.title || t.name,
-              completed: !!t.completed,
-              imageUrl: t.imageUrl,
-              completedAt: t.completedAt
-            })),
-            created_at: event.createdAt ?? new Date().toISOString(),
-            updated_at: event.updatedAt ?? new Date().toISOString(),
-          };
-          const { error: retryErr } = await supabase.from("special_events").update(retryPayload).eq("id", event.id);
-          error = retryErr;
-        } else {
-          error = null;
-        }
+        error = updateErr;
       } else {
         error = null;
       }
@@ -1517,11 +1490,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [fetchData, syncSpecialTasksFromSupabase, syncSpecialEventsFromSupabase, syncProductPricesFromSupabase]);
 
   useEffect(() => {
+    // Realtime listener for instant multi-user synchronization across sessions
+    const channel = supabase
+      .channel("realtime-cards-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "special_tasks" }, () => {
+        void syncSpecialTasksFromSupabase();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "special_events" }, () => {
+        void syncSpecialEventsFromSupabase();
+      })
+      .subscribe();
+
     const intervalId = window.setInterval(() => {
       void syncGuardiasFromSupabase();
       void syncSpecialTasksFromSupabase();
       void syncSpecialEventsFromSupabase();
-    }, 8000);
+    }, 5000);
 
     const handleFocus = () => {
       void syncSpecialTasksFromSupabase();
@@ -1530,6 +1514,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("focus", handleFocus);
 
     return () => {
+      supabase.removeChannel(channel);
       window.clearInterval(intervalId);
       window.removeEventListener("focus", handleFocus);
     };
@@ -3010,18 +2995,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let { error } = await supabase.from("special_tasks").upsert(dbPayload);
     if (error) {
       const { error: updateErr } = await supabase.from("special_tasks").update(dbPayload).eq("id", id);
-      if (updateErr) {
-        const retryPayload = { ...dbPayload };
-        delete retryPayload.banner_url;
-        delete retryPayload.created_by;
-        delete retryPayload.updated_by;
-        delete retryPayload.price;
-        delete retryPayload.rendicion;
-        const { error: retryErr } = await supabase.from("special_tasks").update(retryPayload).eq("id", id);
-        error = retryErr;
-      } else {
-        error = null;
-      }
+      error = updateErr;
     }
 
     if (error) {
