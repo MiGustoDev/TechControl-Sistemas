@@ -246,7 +246,22 @@ const safeLocalStorageSetItem = (key: string, data: any) => {
     }
     localStorage.setItem(key, payload);
   } catch (e) {
-    console.warn(`[localStorage] Exceeded quota for key '${key}'. Local cache update safely skipped.`, e);
+    try {
+      // Auto-prune non-essential cache keys to free up space
+      const keysToClear = ["techcontrol_guardias", "techcontrol_special_tasks", "techcontrol_special_events", "techcontrol_notes", "techcontrol_product_prices"];
+      for (const k of keysToClear) {
+        if (k !== key) {
+          localStorage.removeItem(k);
+        }
+      }
+      let payload = data;
+      if (typeof data === "object" && data !== null) {
+        payload = JSON.stringify(payload);
+      }
+      localStorage.setItem(key, payload);
+    } catch (retryErr) {
+      // Safely ignore if storage quota remains full
+    }
   }
 };
 
@@ -409,7 +424,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       const mappedGuardias = dedupeGuardias(sourceGuardias);
       setGuardias(mappedGuardias);
-      localStorage.setItem("techcontrol_guardias", JSON.stringify(mappedGuardias));
+      safeLocalStorageSetItem("techcontrol_guardias", mappedGuardias);
 
       if (gdsError) {
         console.warn("Supabase guardias query returned error (table might not exist yet):", gdsError);
@@ -599,7 +614,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       const effectiveUsers = Array.from(userMap.values());
       setUsers(effectiveUsers);
-      localStorage.setItem("techcontrol_users", JSON.stringify(effectiveUsers));
+      safeLocalStorageSetItem("techcontrol_users", effectiveUsers);
 
       if (ords) setOrders(ords.map(o => ({
         ...o,
@@ -649,7 +664,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (missingInitialNotes.length > 0) {
           const mergedNotes = [...mappedNotes, ...missingInitialNotes];
           setNotes(mergedNotes);
-          localStorage.setItem("techcontrol_notes", JSON.stringify(mergedNotes));
+          safeLocalStorageSetItem("techcontrol_notes", mergedNotes);
 
           // Silently upsert/insert missing initial notes to Supabase
           Promise.all(
@@ -668,7 +683,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           ).catch(err => console.warn("Error seeding missing notes to Supabase:", err));
         } else {
           setNotes(mappedNotes);
-          localStorage.setItem("techcontrol_notes", JSON.stringify(mappedNotes));
+          safeLocalStorageSetItem("techcontrol_notes", mappedNotes);
         }
       } else {
         const saved = localStorage.getItem("techcontrol_notes");
@@ -699,7 +714,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           updatedAt: t.updated_at
         }));
         setOfficeTickets(mappedTickets);
-        localStorage.setItem("techcontrol_office_tickets", JSON.stringify(mappedTickets));
+        safeLocalStorageSetItem("techcontrol_office_tickets", mappedTickets);
       } else {
         const saved = localStorage.getItem("techcontrol_office_tickets");
         if (saved) {
@@ -740,7 +755,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             { id: "db-6", name: "MiGusto DB 6", engine: "postgres", host: "database6@migusto.com.ar", password: "MiGusto123.", project1: "Carta Digital", project2: "", createdAt: now(), updatedAt: now() }
           ];
           setDatabaseCredentials(SEED_DATABASES);
-          localStorage.setItem("techcontrol_database_credentials", JSON.stringify(SEED_DATABASES));
+          safeLocalStorageSetItem("techcontrol_database_credentials", SEED_DATABASES);
           supabase.from("database_credentials").insert(SEED_DATABASES.map(c => ({
             id: c.id,
             name: c.name,
@@ -755,7 +770,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         } else {
           mappedCreds.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
           setDatabaseCredentials(mappedCreds);
-          localStorage.setItem("techcontrol_database_credentials", JSON.stringify(mappedCreds));
+          safeLocalStorageSetItem("techcontrol_database_credentials", mappedCreds);
         }
       } else {
         const saved = localStorage.getItem("techcontrol_database_credentials");
@@ -779,7 +794,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             { id: "db-6", name: "MiGusto DB 6", engine: "postgres", host: "database6@migusto.com.ar", password: "MiGusto123.", project1: "Carta Digital", project2: "", createdAt: now(), updatedAt: now() }
           ];
           setDatabaseCredentials(SEED_DATABASES);
-          localStorage.setItem("techcontrol_database_credentials", JSON.stringify(SEED_DATABASES));
+          safeLocalStorageSetItem("techcontrol_database_credentials", SEED_DATABASES);
         }
       }
 
@@ -800,7 +815,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           updatedAt: o.updated_at
         }));
         setObjectives(mappedObjectives);
-        localStorage.setItem("techcontrol_objectives", JSON.stringify(mappedObjectives));
+        safeLocalStorageSetItem("techcontrol_objectives", mappedObjectives);
       } else {
         const saved = localStorage.getItem("techcontrol_objectives");
         if (saved) {
@@ -874,7 +889,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const finalSpecialTasks = [...mergedSpecialTasks, ...localOnly];
 
         setSpecialTasks(finalSpecialTasks);
-        localStorage.setItem("techcontrol_special_tasks", JSON.stringify(finalSpecialTasks));
+        safeLocalStorageSetItem("techcontrol_special_tasks", finalSpecialTasks);
       } else {
         const saved = localStorage.getItem("techcontrol_special_tasks");
         if (saved) {
@@ -937,7 +952,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Fallbacks / Load values
       if (hasHolidayDb) {
         setHolidayAssignments(dbHolidayAssignments);
-        localStorage.setItem("techcontrol_holiday_assignments", JSON.stringify(dbHolidayAssignments));
+        safeLocalStorageSetItem("techcontrol_holiday_assignments", dbHolidayAssignments);
       } else {
         const saved = localStorage.getItem("techcontrol_holiday_assignments");
         if (saved) {
@@ -947,7 +962,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (hasTurnDb) {
         setTurnOverrides(dbTurnOverrides);
-        localStorage.setItem("techcontrol_turn_overrides", JSON.stringify(dbTurnOverrides));
+        safeLocalStorageSetItem("techcontrol_turn_overrides", dbTurnOverrides);
       } else {
         const saved = localStorage.getItem("techcontrol_turn_overrides");
         if (saved) {
@@ -1276,7 +1291,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const isOldVersion = parsed.some((p: any) => p.price === 1200 || p.id === 'm1' || p.id === 'piz-10' || p.name === 'Doble muzzarella');
         if (isOldVersion) {
           setProductPrices(mocks);
-          localStorage.setItem("techcontrol_product_prices", JSON.stringify(mocks));
+          safeLocalStorageSetItem("techcontrol_product_prices", mocks);
         } else {
           const packPricesMap: Record<string, number> = {
             'pack-1': 0.00,
@@ -1306,7 +1321,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const missingMocks = mocks.filter(m => !existingIds.has(m.id));
           const updated = missingMocks.length > 0 ? [...updatedWithPrices, ...missingMocks] : updatedWithPrices;
           setProductPrices(updated);
-          localStorage.setItem("techcontrol_product_prices", JSON.stringify(updated));
+          safeLocalStorageSetItem("techcontrol_product_prices", updated);
         }
       } catch (e) {
         setProductPrices(mocks);
@@ -1375,19 +1390,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       safeLocalStorageSetItem("techcontrol_product_prices", finalPrices);
 
       if (dbMapped.length > 0) {
+        const ALLOWED_DB_CATEGORIES = new Set(["empanadas", "pizzas", "pizzas_indi", "promos", "packs"]);
         const dbIds = new Set(dbMapped.map(d => d.id));
-        const missingFromDb = finalPrices.filter(p => !dbIds.has(p.id));
+        const missingFromDb = finalPrices.filter(p => !dbIds.has(p.id) && ALLOWED_DB_CATEGORIES.has(p.category));
         if (missingFromDb.length > 0) {
           supabase.from("product_prices").upsert(missingFromDb.map(p => ({
             id: p.id,
             name: p.name,
             category: p.category,
             price: p.price,
-            is_premium: p.isPremium || false,
             created_at: p.createdAt,
             updated_at: p.updatedAt
           }))).then(({ error: upsertErr }) => {
-            if (upsertErr) console.warn("Could not seed missing product prices to Supabase:", upsertErr);
+            if (upsertErr) {
+              // Silently handle seeding restrictions on client side
+            }
           });
         }
       }
@@ -1419,7 +1436,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         name: newPrice.name,
         category: newPrice.category,
         price: newPrice.price,
-        is_premium: newPrice.isPremium || false,
         created_at: newPrice.createdAt,
         updated_at: newPrice.updatedAt
       });
@@ -1448,7 +1464,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           name: updatedItem.name,
           category: updatedItem.category,
           price: updatedItem.price,
-          is_premium: updatedItem.isPremium || false,
           updated_at: updatedItem.updatedAt
         };
         const { error } = await supabase.from("product_prices").upsert(dbPayload);
@@ -1472,7 +1487,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       if (!deletedList.includes(id)) {
         deletedList.push(id);
-        localStorage.setItem("techcontrol_deleted_product_prices", JSON.stringify(deletedList));
+        safeLocalStorageSetItem("techcontrol_deleted_product_prices", deletedList);
       }
     } catch (e) {}
 
@@ -2070,7 +2085,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       setUsers((prev) => {
         const next = [...prev, newUser];
-        localStorage.setItem("techcontrol_users", JSON.stringify(next));
+        safeLocalStorageSetItem("techcontrol_users", next);
         return next;
       });
 
@@ -2102,7 +2117,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateUser = useCallback(async (id: string, data: Partial<User>) => {
     setUsers((prev) => {
       const next = prev.map((u) => (u.id === id ? { ...u, ...data, updatedAt: now() } : u));
-      localStorage.setItem("techcontrol_users", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_users", next);
       return next;
     });
 
@@ -2129,7 +2144,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteUser = useCallback(async (id: string) => {
     setUsers((prev) => {
       const next = prev.filter((u) => u.id !== id);
-      localStorage.setItem("techcontrol_users", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_users", next);
       return next;
     });
 
@@ -2366,7 +2381,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       setGuardias((prev) => {
         const next = [...prev, newGuardia];
-        localStorage.setItem("techcontrol_guardias", JSON.stringify(next));
+        safeLocalStorageSetItem("techcontrol_guardias", next);
         return next;
       });
 
@@ -2394,7 +2409,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
           return merged;
         });
-        localStorage.setItem("techcontrol_guardias", JSON.stringify(next));
+        safeLocalStorageSetItem("techcontrol_guardias", next);
         return next;
       });
 
@@ -2434,7 +2449,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async (id: string) => {
       setGuardias((prev) => {
         const next = prev.filter((g) => g.id !== id);
-        localStorage.setItem("techcontrol_guardias", JSON.stringify(next));
+        safeLocalStorageSetItem("techcontrol_guardias", next);
         return next;
       });
 
@@ -2457,7 +2472,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else {
         next[date] = userId;
       }
-      localStorage.setItem("techcontrol_holiday_assignments", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_holiday_assignments", next);
       return next;
     });
 
@@ -2475,7 +2490,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setTurnOverride = useCallback(async (date: string, user: string) => {
     setTurnOverrides(prev => {
       const next = { ...prev, [date]: user };
-      localStorage.setItem("techcontrol_turn_overrides", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_turn_overrides", next);
       return next;
     });
 
@@ -2489,7 +2504,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTurnOverrides(prev => {
       const next = { ...prev };
       delete next[date];
-      localStorage.setItem("techcontrol_turn_overrides", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_turn_overrides", next);
       return next;
     });
 
@@ -2513,7 +2528,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setNotes(prev => {
       const next = [newNote, ...prev];
-      localStorage.setItem("techcontrol_notes", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_notes", next);
       return next;
     });
 
@@ -2544,7 +2559,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updatedAt = now();
     setNotes(prev => {
       const next = prev.map(n => n.id === id ? { ...n, ...data, updatedAt } : n);
-      localStorage.setItem("techcontrol_notes", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_notes", next);
       return next;
     });
 
@@ -2569,7 +2584,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteNote = useCallback(async (id: string) => {
     setNotes(prev => {
       const next = prev.filter(n => n.id !== id);
-      localStorage.setItem("techcontrol_notes", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_notes", next);
       return next;
     });
 
@@ -2590,7 +2605,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       sortOrder: idx
     }));
     setNotes(notesWithSortOrder);
-    localStorage.setItem("techcontrol_notes", JSON.stringify(notesWithSortOrder));
+    safeLocalStorageSetItem("techcontrol_notes", notesWithSortOrder);
 
     try {
       const results = await Promise.all(
@@ -2620,7 +2635,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setOfficeTickets(prev => {
       const next = [newTicket, ...prev];
-      localStorage.setItem("techcontrol_office_tickets", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_office_tickets", next);
       return next;
     });
 
@@ -2652,7 +2667,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updatedAt = now();
     setOfficeTickets(prev => {
       const next = prev.map(t => t.id === id ? { ...t, ...data, updatedAt } : t);
-      localStorage.setItem("techcontrol_office_tickets", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_office_tickets", next);
       return next;
     });
 
@@ -2677,7 +2692,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteOfficeTicket = useCallback(async (id: string) => {
     setOfficeTickets(prev => {
       const next = prev.filter(t => t.id !== id);
-      localStorage.setItem("techcontrol_office_tickets", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_office_tickets", next);
       return next;
     });
 
@@ -2702,7 +2717,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const next = [newCred, ...prev].sort((a, b) => 
         a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
       );
-      localStorage.setItem("techcontrol_database_credentials", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_database_credentials", next);
       return next;
     });
 
@@ -2738,7 +2753,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const next = prev.map(c => c.id === id ? { ...c, ...data, updatedAt } : c).sort((a, b) => 
         a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
       );
-      localStorage.setItem("techcontrol_database_credentials", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_database_credentials", next);
       return next;
     });
 
@@ -2768,7 +2783,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteDatabaseCredential = useCallback(async (id: string) => {
     setDatabaseCredentials(prev => {
       const next = prev.filter(c => c.id !== id);
-      localStorage.setItem("techcontrol_database_credentials", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_database_credentials", next);
       return next;
     });
 
@@ -2795,7 +2810,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setObjectives(prev => {
       const next = [newObjective, ...prev];
-      localStorage.setItem("techcontrol_objectives", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_objectives", next);
       return next;
     });
 
@@ -2829,7 +2844,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updatedAt = now();
     setObjectives(prev => {
       const next = prev.map(o => o.id === id ? { ...o, ...data, updatedAt } : o);
-      localStorage.setItem("techcontrol_objectives", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_objectives", next);
       return next;
     });
 
@@ -2859,7 +2874,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteObjective = useCallback(async (id: string) => {
     setObjectives(prev => {
       const next = prev.filter(o => o.id !== id);
-      localStorage.setItem("techcontrol_objectives", JSON.stringify(next));
+      safeLocalStorageSetItem("techcontrol_objectives", next);
       return next;
     });
 

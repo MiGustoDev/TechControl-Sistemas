@@ -25,11 +25,17 @@ export function LoginPage() {
       });
 
       if (error) {
-        toast.error("Credenciales incorrectas o usuario inexistente");
+        console.error("Error en inicio de sesión Supabase:", error);
+        if (error.message.includes("Failed to fetch") || error.message.includes("network")) {
+          toast.error("Error de conexión con el servidor de autenticación (Supabase)");
+        } else {
+          toast.error("Credenciales incorrectas o usuario inexistente");
+        }
       } else {
         toast.success("Sesión iniciada con éxito");
       }
     } catch (err: any) {
+      console.error("Error inesperado en inicio de sesión:", err);
       toast.error("Error al iniciar sesión");
     } finally {
       setLoading(false);
