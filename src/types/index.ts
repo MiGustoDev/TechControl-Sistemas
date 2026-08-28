@@ -266,6 +266,7 @@ export interface DatabaseCredential {
 export interface ProjectTask {
   id: string;
   title: string;
+  name?: string;
   completed: boolean;
   imageUrl?: string;
   completedAt?: string;

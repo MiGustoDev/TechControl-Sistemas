@@ -265,6 +265,42 @@ const safeLocalStorageSetItem = (key: string, data: any) => {
   }
 };
 
+const dedupeSubTasks = (tasks: any[]): any[] => {
+  if (!Array.isArray(tasks) || tasks.length === 0) return [];
+  const map = new Map<string, any>();
+
+  tasks.forEach(t => {
+    if (!t) return;
+    const title = (t.title || t.name || "").trim();
+    const baseTitle = title.split(":")[0].replace(/!/g, "").trim().toLowerCase();
+    const key = baseTitle || t.id || Math.random().toString();
+
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, { ...t, title: t.title || t.name, name: t.name || t.title });
+    } else {
+      const isCompleted = Boolean(t.completed || existing.completed);
+      const finalTitle = (t.title && t.title.includes(":")) 
+        ? t.title 
+        : ((existing.title && existing.title.includes(":")) 
+            ? existing.title 
+            : (t.title || existing.title || t.name || existing.name));
+      const imageUrl = t.imageUrl || existing.imageUrl;
+      map.set(key, {
+        ...existing,
+        ...t,
+        title: finalTitle,
+        name: finalTitle,
+        imageUrl,
+        completed: isCompleted,
+        completedAt: isCompleted ? (t.completedAt || existing.completedAt || new Date().toISOString()) : undefined
+      });
+    }
+  });
+
+  return Array.from(map.values());
+};
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [stockItems, setStockItems] = useState<StockItem[]>(initialItems);
   const [printers, setPrinters] = useState<Printer[]>(initialPrinters);
@@ -863,24 +899,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const local = localTasks.find(l => l.id === dbTask.id);
           if (!local) return dbTask;
 
-          const mergedSubTasks = (dbTask.tasks || []).map((dbSub: any) => {
-            const localSub = (local.tasks || []).find((ls: any) => ls.id === dbSub.id);
-            return {
-              ...localSub,
-              ...dbSub,
-              imageUrl: dbSub.imageUrl || localSub?.imageUrl,
-              completed: dbSub.completed ?? localSub?.completed,
-              completedAt: dbSub.completedAt || localSub?.completedAt
-            };
-          });
+          const mergedSubTasks = dedupeSubTasks([...(local.tasks || []), ...(dbTask.tasks || [])]);
+
+          const completedCount = mergedSubTasks.filter((t: any) => t.completed).length;
+          const calculatedProgress = mergedSubTasks.length > 0
+            ? Math.round((completedCount / mergedSubTasks.length) * 100)
+            : (local.progress ?? dbTask.progress ?? 0);
 
           return {
-            ...local,
             ...dbTask,
+            ...local,
             tasks: mergedSubTasks,
-            bannerUrl: dbTask.bannerUrl || local.bannerUrl,
-            price: dbTask.price !== undefined ? dbTask.price : local.price,
-            rendicion: dbTask.rendicion !== undefined ? dbTask.rendicion : local.rendicion
+            progress: calculatedProgress,
+            bannerUrl: local.bannerUrl || dbTask.bannerUrl,
+            price: local.price !== undefined ? local.price : dbTask.price,
+            rendicion: local.rendicion !== undefined ? local.rendicion : dbTask.rendicion
           };
         });
 

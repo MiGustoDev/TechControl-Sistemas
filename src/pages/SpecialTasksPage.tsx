@@ -152,6 +152,42 @@ const getEffectiveRendicion = (task: SpecialTask): number | undefined => {
   return undefined;
 };
 
+export const dedupeSubTasks = (tasks: any[]): any[] => {
+  if (!Array.isArray(tasks) || tasks.length === 0) return [];
+  const map = new Map<string, any>();
+
+  tasks.forEach(t => {
+    if (!t) return;
+    const title = (t.title || t.name || "").trim();
+    const baseTitle = title.split(":")[0].replace(/!/g, "").trim().toLowerCase();
+    const key = baseTitle || t.id || Math.random().toString();
+
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, { ...t, title: t.title || t.name, name: t.name || t.title });
+    } else {
+      const isCompleted = Boolean(t.completed || existing.completed);
+      const finalTitle = (t.title && t.title.includes(":")) 
+        ? t.title 
+        : ((existing.title && existing.title.includes(":")) 
+            ? existing.title 
+            : (t.title || existing.title || t.name || existing.name));
+      const imageUrl = t.imageUrl || existing.imageUrl;
+      map.set(key, {
+        ...existing,
+        ...t,
+        title: finalTitle,
+        name: finalTitle,
+        imageUrl,
+        completed: isCompleted,
+        completedAt: isCompleted ? (t.completedAt || existing.completedAt || new Date().toISOString()) : undefined
+      });
+    }
+  });
+
+  return Array.from(map.values());
+};
+
 const getPriorityLabel = (priority: string) => {
   switch (priority) {
     case "critical": return "Crítica";
@@ -863,9 +899,9 @@ export function SpecialTasksPage() {
 
     if (!calEvent && !task) return;
 
-    const currentSubTasks: any[] = (task?.tasks && task.tasks.length > 0) 
-      ? task.tasks 
-      : (calEvent?.tasks || []);
+    const taskSubTasks = task?.tasks || [];
+    const calSubTasks = calEvent?.tasks || [];
+    const currentSubTasks: any[] = dedupeSubTasks([...taskSubTasks, ...calSubTasks]);
     
     let price = task?.price ?? calEvent?.price;
     let rendicion = task?.rendicion ?? calEvent?.rendicion;
@@ -1023,27 +1059,30 @@ export function SpecialTasksPage() {
 
     // Deduplicate by ID to prevent ANY duplicate card from ever rendering
     const combinedMap = new Map<string, SpecialTask>();
-    (specialTasks || []).forEach(t => combinedMap.set(t.id, t));
+    (specialTasks || []).forEach(t => combinedMap.set(t.id, {
+      ...t,
+      tasks: dedupeSubTasks(t.tasks || [])
+    }));
     mappedCalEvents.forEach(evt => {
       const existing = combinedMap.get(evt.id);
       if (!existing) {
-        combinedMap.set(evt.id, evt);
-      } else {
-        const mergedSubTasks = (existing.tasks || []).map((t: any) => {
-          const evtTask = (evt.tasks || []).find((et: any) => et.id === t.id);
-          return {
-            ...evtTask,
-            ...t,
-            imageUrl: t.imageUrl || evtTask?.imageUrl,
-            completed: t.completed || evtTask?.completed,
-            completedAt: t.completedAt || evtTask?.completedAt
-          };
+        combinedMap.set(evt.id, {
+          ...evt,
+          tasks: dedupeSubTasks(evt.tasks || [])
         });
+      } else {
+        const mergedSubTasks = dedupeSubTasks([...(existing.tasks || []), ...(evt.tasks || [])]);
+
+        const completedCount = mergedSubTasks.filter((t: any) => t.completed).length;
+        const calculatedProgress = mergedSubTasks.length > 0
+          ? Math.round((completedCount / mergedSubTasks.length) * 100)
+          : (existing.progress ?? evt.progress ?? 0);
 
         combinedMap.set(evt.id, {
           ...evt,
           ...existing,
           tasks: mergedSubTasks,
+          progress: calculatedProgress,
           isConstant: existing.isConstant !== undefined ? existing.isConstant : (existing.endDate ? false : true),
           price: existing.price !== undefined ? existing.price : evt.price,
           rendicion: existing.rendicion !== undefined ? existing.rendicion : evt.rendicion,
