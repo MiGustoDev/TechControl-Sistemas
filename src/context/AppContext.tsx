@@ -250,6 +250,73 @@ const safeLocalStorageSetItem = (key: string, data: any) => {
   }
 };
 
+const DATALIVE_BRANCH_LIST = [
+  'Ballester', 'Balvanera', 'Barrancas de Belgrano', 'Bella Vista',
+  'Belgrano', 'Caballito', 'Campana', 'Canitas', 'Delviso',
+  'Don Torcuato', 'Devoto', 'Escobar', 'Floresta', 'Florida',
+  'Hurlingham', 'Ituzaingo', 'Jose C Paz', 'Maschwitz', 'Martinez',
+  'Mataderos', 'Merlo', 'Moreno', 'Muniz', 'Munro', 'Pacheco',
+  'Palermo', 'Paternal', 'Pilar Centro', 'Pilar Derqui', 'Polvorines',
+  'Puerto Madero', 'San Fernando', 'San Martin', 'San Miguel',
+  'Tigre', 'Vicente Lopez', 'Villa Adelina', 'Villa Crespo',
+  'Villa Urquiza'
+];
+
+const DATALIVE_BRANCH_TASKS = [
+  { id: "task-datalive-ballester", title: "Migrar BALLESTER !", completed: false },
+  { id: "task-datalive-campana", title: "Migrar CAMPANA !", completed: false },
+  ...DATALIVE_BRANCH_LIST
+    .filter(b => b !== 'Ballester' && b !== 'Campana')
+    .map((branch) => ({
+      id: `task-datalive-${branch.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-')}`,
+      title: `Migrar ${branch.toUpperCase()}`,
+      completed: true
+    }))
+];
+
+const ensureDataliveObjective = (existingObjectives: Objective[]): Objective[] => {
+  const dataliveIndex = existingObjectives.findIndex(o => 
+    o.title.toLowerCase().includes("datalive") || o.id === "obj-datalive-migration"
+  );
+
+  const completedCount = DATALIVE_BRANCH_TASKS.filter(t => t.completed).length;
+  const progress = Math.round((completedCount / DATALIVE_BRANCH_TASKS.length) * 100);
+
+  if (dataliveIndex >= 0) {
+    const updated = [...existingObjectives];
+    const target = updated[dataliveIndex];
+    updated[dataliveIndex] = {
+      ...target,
+      title: "Migración completa DataliveTV",
+      description: target.description || "Migración completa de todas las sucursales a Datalive TV.",
+      tasks: DATALIVE_BRANCH_TASKS,
+      progress,
+      status: progress === 100 ? "completed" : "in-progress",
+      updatedAt: new Date().toISOString()
+    };
+    return updated;
+  } else {
+    const newObj: Objective = {
+      id: "obj-datalive-migration",
+      title: "Migración completa DataliveTV",
+      description: "Migración completa de todas las sucursales a Datalive TV.",
+      category: "software",
+      horizon: "Q3 2026",
+      status: "in-progress",
+      priority: "high",
+      startDate: "2026-06-01",
+      endDate: "2026-09-30",
+      progress,
+      assignedTo: ["Facundo Carrizo", "Ramiro Lacci", "Gustavo Gonzalez"],
+      tasks: DATALIVE_BRANCH_TASKS,
+      notes: "Pendientes de migración y configuración final únicamente Ballester y Campana.",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    return [newObj, ...existingObjectives];
+  }
+};
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [stockItems, setStockItems] = useState<StockItem[]>(initialItems);
   const [printers, setPrinters] = useState<Printer[]>(initialPrinters);
@@ -263,7 +330,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [notes, setNotes] = useState<SystemNote[]>([]);
   const [officeTickets, setOfficeTickets] = useState<OfficeTicket[]>([]);
   const [databaseCredentials, setDatabaseCredentials] = useState<DatabaseCredential[]>([]);
-  const [objectives, setObjectives] = useState<Objective[]>([]);
+  const [objectives, setObjectives] = useState<Objective[]>(() => {
+    const saved = localStorage.getItem("techcontrol_objectives");
+    let initialList: Objective[] = [];
+    if (saved) {
+      try { initialList = JSON.parse(saved); } catch (e) { initialList = []; }
+    }
+    return ensureDataliveObjective(initialList);
+  });
   const [specialTasks, setSpecialTasks] = useState<SpecialTask[]>([]);
   const [specialEvents, setSpecialEvents] = useState<SpecialEvent[]>(() => {
     const saved = localStorage.getItem("techcontrol_special_events");
@@ -788,6 +862,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           id: o.id,
           title: o.title,
           description: o.description || "",
+          category: o.category || undefined,
+          horizon: o.horizon || undefined,
           status: o.status,
           priority: o.priority,
           startDate: o.start_date || undefined,
@@ -799,18 +875,63 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           createdAt: o.created_at,
           updatedAt: o.updated_at
         }));
-        setObjectives(mappedObjectives);
-        localStorage.setItem("techcontrol_objectives", JSON.stringify(mappedObjectives));
+        const finalObjectives = ensureDataliveObjective(mappedObjectives);
+        setObjectives(finalObjectives);
+        localStorage.setItem("techcontrol_objectives", JSON.stringify(finalObjectives));
+
+        const dataliveObj = finalObjectives.find(o => o.title.toLowerCase().includes("datalive"));
+        if (dataliveObj) {
+          supabase.from("objectives").upsert({
+            id: dataliveObj.id,
+            title: dataliveObj.title,
+            description: dataliveObj.description || null,
+            category: dataliveObj.category || null,
+            horizon: dataliveObj.horizon || null,
+            status: dataliveObj.status,
+            priority: dataliveObj.priority,
+            start_date: dataliveObj.startDate || null,
+            end_date: dataliveObj.endDate || null,
+            progress: dataliveObj.progress,
+            assigned_to: dataliveObj.assignedTo || [],
+            tasks: dataliveObj.tasks || [],
+            notes: dataliveObj.notes || null,
+            created_at: dataliveObj.createdAt,
+            updated_at: dataliveObj.updatedAt
+          }).then(() => {});
+        }
       } else {
         const saved = localStorage.getItem("techcontrol_objectives");
+        let initialList: Objective[] = [];
         if (saved) {
           try {
-            setObjectives(JSON.parse(saved));
+            initialList = JSON.parse(saved);
           } catch (e) {
-            setObjectives([]);
+            initialList = [];
           }
-        } else {
-          setObjectives([]);
+        }
+        const finalObjectives = ensureDataliveObjective(initialList);
+        setObjectives(finalObjectives);
+        localStorage.setItem("techcontrol_objectives", JSON.stringify(finalObjectives));
+
+        const dataliveObj = finalObjectives.find(o => o.title.toLowerCase().includes("datalive"));
+        if (dataliveObj) {
+          supabase.from("objectives").upsert({
+            id: dataliveObj.id,
+            title: dataliveObj.title,
+            description: dataliveObj.description || null,
+            category: dataliveObj.category || null,
+            horizon: dataliveObj.horizon || null,
+            status: dataliveObj.status,
+            priority: dataliveObj.priority,
+            start_date: dataliveObj.startDate || null,
+            end_date: dataliveObj.endDate || null,
+            progress: dataliveObj.progress,
+            assigned_to: dataliveObj.assignedTo || [],
+            tasks: dataliveObj.tasks || [],
+            notes: dataliveObj.notes || null,
+            created_at: dataliveObj.createdAt,
+            updated_at: dataliveObj.updatedAt
+          }).then(() => {});
         }
       }
 
@@ -2803,6 +2924,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       id: newObjective.id,
       title: newObjective.title,
       description: newObjective.description || null,
+      category: newObjective.category || null,
+      horizon: newObjective.horizon || null,
       status: newObjective.status,
       priority: newObjective.priority,
       start_date: newObjective.startDate || null,
@@ -2836,6 +2959,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const dbPayload: Record<string, any> = { updated_at: updatedAt };
     if (data.title !== undefined) dbPayload.title = data.title;
     if (data.description !== undefined) dbPayload.description = data.description;
+    if (data.category !== undefined) dbPayload.category = data.category;
+    if (data.horizon !== undefined) dbPayload.horizon = data.horizon;
     if (data.status !== undefined) dbPayload.status = data.status;
     if (data.priority !== undefined) dbPayload.priority = data.priority;
     if (data.startDate !== undefined) dbPayload.start_date = data.startDate;

@@ -271,10 +271,14 @@ export interface ProjectTask {
   completedAt?: string;
 }
 
+export type ObjectiveCategory = "infrastructure" | "security" | "software" | "processes" | "other";
+
 export interface Objective {
   id: string;
   title: string;
   description?: string;
+  category?: ObjectiveCategory;
+  horizon?: string;
   status: "pending" | "in-progress" | "completed" | "on-hold";
   priority: "low" | "medium" | "high" | "critical";
   startDate?: string;

@@ -1118,8 +1118,17 @@ export function SpecialTasksPage() {
   }, [filteredTasks, isTaskExpired]);
 
   const completedTasks = useMemo(() => {
-    return filteredTasks.filter(t => isTaskExpired(t));
-  }, [filteredTasks, isTaskExpired]);
+    return filteredTasks
+      .filter(t => isTaskExpired(t))
+      .sort((a, b) => {
+        const dateA = getEffectiveEndDate(a) || a.endDate || a.startDate || a.updatedAt || a.createdAt || "";
+        const dateB = getEffectiveEndDate(b) || b.endDate || b.startDate || b.updatedAt || b.createdAt || "";
+        if (dateA !== dateB) {
+          return dateB.localeCompare(dateA);
+        }
+        return (b.updatedAt || b.createdAt || b.id).localeCompare(a.updatedAt || a.createdAt || a.id);
+      });
+  }, [filteredTasks, isTaskExpired, getEffectiveEndDate]);
 
   // Compute days remaining info with rich visual styling details
   const getDaysRemainingInfo = (endDateStr?: string, startDateStr?: string, status?: string, isConstant?: boolean) => {
