@@ -221,7 +221,7 @@ const pathMap: Record<string, string> = {
 };
 
 const getPageFromPath = (): string => {
-  const hash = window.location.hash.replace(/^#\/?/, "").replace(/\/$/, "");
+  const hash = window.location.hash.replace(/^#\/?/, "").replace(/\/$/, "").split("?")[0];
   const pathname = window.location.pathname.replace(/\/$/, "");
   const searchParam = new URLSearchParams(window.location.search).get("page");
 
@@ -397,12 +397,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const route = getPathFromPage(currentPage);
-    const currentHash = window.location.hash.replace(/^#\/?/, "").replace(/\/$/, "");
+    const currentHash = window.location.hash.replace(/^#\/?/, "").replace(/\/$/, "").split("?")[0];
     const currentPath = window.location.pathname.replace(/\/$/, "");
 
     if (currentHash !== route && !currentPath.endsWith("/" + route)) {
       const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const newUrl = `${base}/#/${route}`;
+      const search = window.location.search;
+      const newUrl = `${base}/${search}#/${route}`;
       window.history.pushState(null, '', newUrl);
     }
   }, [currentPage]);

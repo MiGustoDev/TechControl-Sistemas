@@ -1157,7 +1157,10 @@ export function GuardiasPage() {
     setSelectedCalDate(isoDate);
   };
 
-  const isUrlFullscreen = typeof window !== "undefined" && window.location.search.includes("fullscreenCalendar=true");
+  const isUrlFullscreen = typeof window !== "undefined" && (
+    window.location.search.includes("fullscreenCalendar=true") ||
+    window.location.hash.includes("fullscreenCalendar=true")
+  );
 
   // Calculating Today's Turn variables for the weekly shift card
   const todayStr = useMemo(() => {
@@ -1185,11 +1188,13 @@ export function GuardiasPage() {
             .guardias-page-container > *:not(.fullscreen-overlay) {
               display: none !important;
             }
-            body, html {
+            html, body, #root {
+              height: 100% !important;
+              width: 100% !important;
               overflow: hidden !important;
               margin: 0 !important;
               padding: 0 !important;
-              background: hsl(var(--background)) !important;
+              background-color: var(--background) !important;
             }
           `}</style>
 
@@ -1771,7 +1776,7 @@ export function GuardiasPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open(window.location.origin + window.location.pathname + "?fullscreenCalendar=true", "_blank")}
+            onClick={() => window.open(window.location.origin + window.location.pathname + "?fullscreenCalendar=true#/guardias", "_blank")}
             className="font-semibold text-xs h-8 px-2.5 shrink-0"
             title="Ver calendario en pestaña aparte"
           >
