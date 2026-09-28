@@ -2629,8 +2629,12 @@ export const dataliveTVs: DataliveTV[] = [
   { id: "dtv-vad-04", branch: "Villa Adelina", name: "TV4", user: "migusto", deviceId: "361", pin: "85749621", createdAt: "2024-06-01T08:00:00Z", updatedAt: "2026-05-01T08:00:00Z" },
   { id: "dtv-vad-05", branch: "Villa Adelina", name: "TV5", user: "migusto", deviceId: "362", pin: "85749621", createdAt: "2024-06-01T08:00:00Z", updatedAt: "2026-05-01T08:00:00Z" },
 
+  // Ballester
+  { id: "dtv-blt-01", branch: "Ballester", name: "TV1", user: "migusto", deviceId: "490", pin: "85749621", createdAt: "2026-09-28T08:00:00Z", updatedAt: "2026-09-28T08:00:00Z" },
+  { id: "dtv-blt-02", branch: "Ballester", name: "TV2", user: "migusto", deviceId: "491", pin: "85749621", createdAt: "2026-09-28T08:00:00Z", updatedAt: "2026-09-28T08:00:00Z" },
+  { id: "dtv-blt-03", branch: "Ballester", name: "TV3", user: "migusto", deviceId: "492", pin: "85749621", createdAt: "2026-09-28T08:00:00Z", updatedAt: "2026-09-28T08:00:00Z" },
+
   // Próximamente
-  { id: "dtv-bal-soon", branch: "Ballester", name: "Próximamente", user: "-", deviceId: "-", pin: "-", createdAt: "2026-05-07T00:00:00Z", updatedAt: "2026-05-07T00:00:00Z" },
   { id: "dtv-bv-soon", branch: "Bella Vista", name: "Próximamente", user: "-", deviceId: "-", pin: "-", createdAt: "2026-05-07T00:00:00Z", updatedAt: "2026-05-07T00:00:00Z" },
   { id: "dtv-cam-soon", branch: "Campana", name: "Próximamente", user: "-", deviceId: "-", pin: "-", createdAt: "2026-05-07T00:00:00Z", updatedAt: "2026-05-07T00:00:00Z" },
   { id: "dtv-tig-soon", branch: "Tigre", name: "Próximamente", user: "-", deviceId: "-", pin: "-", createdAt: "2026-05-07T00:00:00Z", updatedAt: "2026-05-07T00:00:00Z" },

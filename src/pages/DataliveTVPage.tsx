@@ -333,7 +333,13 @@ export function DataliveTVPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {Object.entries(grouped).map(([branch, devices]) => (
+          {Object.entries(grouped)
+            .sort(([a], [b]) => {
+              if (a === "Campana") return -1;
+              if (b === "Campana") return 1;
+              return a.localeCompare(b);
+            })
+            .map(([branch, devices]) => (
             <TVBranchCard 
               key={branch} 
               branch={branch} 

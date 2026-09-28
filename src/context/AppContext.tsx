@@ -278,7 +278,7 @@ const DATALIVE_BRANCH_LIST = [
 ];
 
 const DATALIVE_BRANCH_TASKS = [
-  { id: "task-datalive-ballester", title: "Migrar BALLESTER !", completed: false },
+  { id: "task-datalive-ballester", title: "Migrar BALLESTER !", completed: true },
   { id: "task-datalive-campana", title: "Migrar CAMPANA !", completed: false },
   ...DATALIVE_BRANCH_LIST
     .filter(b => b !== 'Ballester' && b !== 'Campana')
@@ -398,7 +398,7 @@ const ensureDataliveObjective = (existingObjectives: Objective[]): Objective[] =
       progress,
       assignedTo: ["Facundo Carrizo", "Ramiro Lacci", "Gustavo Gonzalez"],
       tasks: DATALIVE_BRANCH_TASKS,
-      notes: "Pendientes de migración y configuración final únicamente Ballester y Campana.",
+      notes: "Pendiente de migración y configuración final únicamente Campana.",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -538,7 +538,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = useState<User[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
-  const [dataliveTVs, setDataliveTVs] = useState<DataliveTV[]>([]);
+  const [dataliveTVs, setDataliveTVs] = useState<DataliveTV[]>(initialTVs);
   const [guardias, setGuardias] = useState<Guardia[]>([]);
   const [notes, setNotes] = useState<SystemNote[]>([]);
   const [officeTickets, setOfficeTickets] = useState<OfficeTicket[]>([]);
@@ -915,17 +915,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         relatedAssetId: m.related_asset_id
       })));
 
-      if (tvs) setDataliveTVs(tvs.map(tv => ({
-        id: tv.id,
-        branch: tv.branch,
-        name: tv.name,
-        user: tv.username,
-        deviceId: tv.device_id,
-        pin: tv.pin,
-        notes: tv.notes,
-        createdAt: tv.created_at,
-        updatedAt: tv.updated_at
-      })));
+      if (tvs && tvs.length > 0) {
+        const dbMapped = tvs.map(tv => ({
+          id: tv.id,
+          branch: tv.branch,
+          name: tv.name,
+          user: tv.username,
+          deviceId: tv.device_id,
+          pin: tv.pin,
+          notes: tv.notes,
+          createdAt: tv.created_at,
+          updatedAt: tv.updated_at
+        }));
+        // Merge initialTVs with dbMapped, giving priority to initialTVs for branches modified locally (like Ballester) or combining them
+        const dbMap = new Map(dbMapped.map(tv => [tv.id, tv]));
+        // Remove old 'dtv-bal-soon' if present in dbMap
+        dbMap.delete("dtv-bal-soon");
+        initialTVs.forEach(tv => {
+          if (!dbMap.has(tv.id)) {
+            dbMap.set(tv.id, tv);
+          }
+        });
+        const mergedTVs = Array.from(dbMap.values());
+        setDataliveTVs(mergedTVs);
+      } else {
+        setDataliveTVs(initialTVs);
+      }
 
       if (sysNotes) {
         const mappedNotes: SystemNote[] = sysNotes.map((n, idx) => ({
