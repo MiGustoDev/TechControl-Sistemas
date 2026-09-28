@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS public.objectives (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT,
+    category TEXT,
+    horizon TEXT,
     status TEXT DEFAULT 'pending',
     priority TEXT DEFAULT 'medium',
     start_date TEXT,
@@ -16,6 +18,10 @@ CREATE TABLE IF NOT EXISTS public.objectives (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Ensure columns exist if table was created previously without them
+ALTER TABLE public.objectives ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE public.objectives ADD COLUMN IF NOT EXISTS horizon TEXT;
 
 -- Enable RLS
 ALTER TABLE public.objectives ENABLE ROW LEVEL SECURITY;
@@ -48,23 +54,49 @@ VALUES (
     now()
 ) ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.objectives (id, title, description, status, priority, start_date, end_date, progress, assigned_to, tasks, notes, created_at, updated_at)
+INSERT INTO public.objectives (id, title, description, category, horizon, status, priority, start_date, end_date, progress, assigned_to, tasks, notes, created_at, updated_at)
 VALUES (
-    'obj-002',
-    'Renovación de Equipos Logística',
-    'Adquisición e instalación de 4 nuevas notebooks y 2 impresoras en el sector de Logística.',
+    'obj-pickeos-bandejas',
+    'Continuar proyecto de APP DE PICKEOS de bandejas',
+    '',
+    'other',
+    'Q3 2026',
     'pending',
-    'high',
-    '2026-08-10',
-    '2026-08-30',
+    'medium',
+    '2026-09-01',
+    '2026-12-30',
     0,
-    '["Ramiro Lacci"]'::jsonb,
+    '["Facundo Carrizo", "Ramiro Lacci"]'::jsonb,
     '[
-        {"id": "t-1", "title": "Aprobación de presupuesto", "completed": false},
-        {"id": "t-2", "title": "Configuración de sistema operativo y software base", "completed": false},
-        {"id": "t-3", "title": "Instalación física y pruebas en sucursal", "completed": false}
+        {"id": "t-pickeos-1", "title": "Evaluar instacia actual de la app por parte de Datalive", "completed": false},
+        {"id": "t-pickeos-2", "title": "Intentar replicarla nosotros y evaluar tiempo de desarrollo menor al de data", "completed": false}
     ]'::jsonb,
-    'Pendiente de confirmación de Compras.',
+    '',
     now(),
     now()
 ) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.objectives (id, title, description, category, horizon, status, priority, start_date, end_date, progress, assigned_to, tasks, notes, created_at, updated_at)
+VALUES (
+    'obj-rp-sistemas',
+    'Investigacion y reconocimiento de RP sistemas',
+    'Aprender a fondo el funcionamiento completo de RP sistemas para poder dar catedra de uso dentro de fabrica para colaboradores y encargados',
+    'infrastructure',
+    'Q3 2026',
+    'in-progress',
+    'medium',
+    '2026-09-01',
+    '2026-12-30',
+    0,
+    '["Facundo Carrizo", "Ramiro Lacci"]'::jsonb,
+    '[
+        {"id": "t-rp-1", "title": "Ver videos tutoriales", "completed": false},
+        {"id": "t-rp-2", "title": "Probar con usuario Piloto", "completed": false},
+        {"id": "t-rp-3", "title": "Hacer pruebas de funciones especificas", "completed": false},
+        {"id": "t-rp-4", "title": "Probar cada modulo", "completed": false}
+    ]'::jsonb,
+    '',
+    now(),
+    now()
+) ON CONFLICT (id) DO NOTHING;
+

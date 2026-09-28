@@ -152,6 +152,42 @@ const getEffectiveRendicion = (task: SpecialTask): number | undefined => {
   return undefined;
 };
 
+export const dedupeSubTasks = (tasks: any[]): any[] => {
+  if (!Array.isArray(tasks) || tasks.length === 0) return [];
+  const map = new Map<string, any>();
+
+  tasks.forEach(t => {
+    if (!t) return;
+    const title = (t.title || t.name || "").trim();
+    const baseTitle = title.split(":")[0].replace(/!/g, "").trim().toLowerCase();
+    const key = baseTitle || t.id || Math.random().toString();
+
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, { ...t, title: t.title || t.name, name: t.name || t.title });
+    } else {
+      const isCompleted = Boolean(t.completed || existing.completed);
+      const finalTitle = (t.title && t.title.includes(":")) 
+        ? t.title 
+        : ((existing.title && existing.title.includes(":")) 
+            ? existing.title 
+            : (t.title || existing.title || t.name || existing.name));
+      const imageUrl = t.imageUrl || existing.imageUrl;
+      map.set(key, {
+        ...existing,
+        ...t,
+        title: finalTitle,
+        name: finalTitle,
+        imageUrl,
+        completed: isCompleted,
+        completedAt: isCompleted ? (t.completedAt || existing.completedAt || new Date().toISOString()) : undefined
+      });
+    }
+  });
+
+  return Array.from(map.values());
+};
+
 const getPriorityLabel = (priority: string) => {
   switch (priority) {
     case "critical": return "Crítica";
@@ -538,7 +574,11 @@ export function SpecialTasksPage() {
   }, [currentCalMonth, currentCalYear, startOffset, daysInMonth, daysInPrevMonth]);
 
   const getSpecialEventsForDate = (dateStr: string) => {
-    return filteredTasks.filter(task => {
+    return allCombinedTasks.filter(task => {
+      const matchesSearch = task.title.toLowerCase().includes(search.toLowerCase()) || 
+        (task.description || "").toLowerCase().includes(search.toLowerCase());
+      const matchesCategory = categoryFilter === "all" || task.category === categoryFilter;
+      if (!matchesSearch || !matchesCategory) return false;
       if (task.isCalendarEvent) {
         return task.startDate === dateStr;
       }
@@ -863,9 +903,9 @@ export function SpecialTasksPage() {
 
     if (!calEvent && !task) return;
 
-    const currentSubTasks: any[] = (task?.tasks && task.tasks.length > 0) 
-      ? task.tasks 
-      : (calEvent?.tasks || []);
+    const taskSubTasks = task?.tasks || [];
+    const calSubTasks = calEvent?.tasks || [];
+    const currentSubTasks: any[] = dedupeSubTasks([...taskSubTasks, ...calSubTasks]);
     
     let price = task?.price ?? calEvent?.price;
     let rendicion = task?.rendicion ?? calEvent?.rendicion;
@@ -1023,27 +1063,30 @@ export function SpecialTasksPage() {
 
     // Deduplicate by ID to prevent ANY duplicate card from ever rendering
     const combinedMap = new Map<string, SpecialTask>();
-    (specialTasks || []).forEach(t => combinedMap.set(t.id, t));
+    (specialTasks || []).forEach(t => combinedMap.set(t.id, {
+      ...t,
+      tasks: dedupeSubTasks(t.tasks || [])
+    }));
     mappedCalEvents.forEach(evt => {
       const existing = combinedMap.get(evt.id);
       if (!existing) {
-        combinedMap.set(evt.id, evt);
-      } else {
-        const mergedSubTasks = (existing.tasks || []).map((t: any) => {
-          const evtTask = (evt.tasks || []).find((et: any) => et.id === t.id);
-          return {
-            ...evtTask,
-            ...t,
-            imageUrl: t.imageUrl || evtTask?.imageUrl,
-            completed: t.completed || evtTask?.completed,
-            completedAt: t.completedAt || evtTask?.completedAt
-          };
+        combinedMap.set(evt.id, {
+          ...evt,
+          tasks: dedupeSubTasks(evt.tasks || [])
         });
+      } else {
+        const mergedSubTasks = dedupeSubTasks([...(existing.tasks || []), ...(evt.tasks || [])]);
+
+        const completedCount = mergedSubTasks.filter((t: any) => t.completed).length;
+        const calculatedProgress = mergedSubTasks.length > 0
+          ? Math.round((completedCount / mergedSubTasks.length) * 100)
+          : (existing.progress ?? evt.progress ?? 0);
 
         combinedMap.set(evt.id, {
           ...evt,
           ...existing,
           tasks: mergedSubTasks,
+          progress: calculatedProgress,
           isConstant: existing.isConstant !== undefined ? existing.isConstant : (existing.endDate ? false : true),
           price: existing.price !== undefined ? existing.price : evt.price,
           rendicion: existing.rendicion !== undefined ? existing.rendicion : evt.rendicion,
@@ -1741,9 +1784,15 @@ export function SpecialTasksPage() {
                             {showEventos && dayEvents.map((evt) => {
                               const isAllCompleted = evt.tasks && evt.tasks.length > 0 && evt.tasks.every(t => t.completed);
                               
-                              // Category styling
+                              const isRedBox = (evt as any).originalType === "onfire" || evt.title.toUpperCase().includes("ON FIRE") || evt.title.toUpperCase().includes("MGL") || evt.title.toUpperCase().includes("PACK 6+2");
+                              const isTanBox = evt.title.toUpperCase().includes("PROMO CLASICA") || evt.title.toUpperCase().includes("PIZZA FAMILY") || evt.title.toUpperCase().includes("PIZZA INDI");
+
                               let badgeClass = "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20";
-                              if (evt.category === "event") {
+                              if (isRedBox) {
+                                badgeClass = "bg-red-600 text-white border-red-700 font-black shadow-xs";
+                              } else if (isTanBox) {
+                                badgeClass = "bg-amber-800/80 text-amber-100 border-amber-600/70 font-bold";
+                              } else if (evt.category === "event") {
                                 badgeClass = "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20";
                               } else if (evt.category === "special-day") {
                                 badgeClass = "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20";

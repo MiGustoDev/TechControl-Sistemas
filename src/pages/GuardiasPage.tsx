@@ -331,8 +331,7 @@ export function GuardiasPage() {
     specialEvents,
     specialTasks,
     saveSpecialEvent,
-    deleteSpecialEvent,
-    syncSpecialEventsFromSupabase
+    deleteSpecialEvent
   } = useApp();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -485,12 +484,7 @@ export function GuardiasPage() {
     });
     setEventDialogOpen(true);
   };
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      void syncSpecialEventsFromSupabase();
-    }, 10000);
-    return () => window.clearInterval(intervalId);
-  }, [syncSpecialEventsFromSupabase]);
+
 
   const getSpecialEvents = (dateStr: string): SpecialEvent[] => {
     const list: SpecialEvent[] = [];
