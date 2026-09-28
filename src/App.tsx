@@ -39,6 +39,19 @@ function AppContent() {
     return <LoginPage />;
   }
 
+  const isFullscreen = typeof window !== "undefined" && (
+    window.location.search.includes("fullscreenCalendar=true") ||
+    window.location.hash.includes("fullscreenCalendar=true")
+  );
+
+  if (isFullscreen) {
+    return (
+      <div className="h-screen w-screen bg-background overflow-hidden">
+        <GuardiasPage />
+      </div>
+    );
+  }
+
   const renderPage = () => {
     // Marketing can only see campaigns & events
     if (userRole === "marketing") {

@@ -1,88 +1,128 @@
-# TechControl - Sistemas de Inventario IT
+<div align="center">
 
-## Una solución integral para la gestión de activos tecnológicos
+  <h1>💻 TechControl</h1>
+  <h3>Sistema Integral de Gestión y Control de Activos IT</h3>
 
-**TechControl** es una plataforma de gestión de inventario de última generación diseñada para centralizar, optimizar y auditar todos los recursos de infraestructura IT. Desde el control minucioso de consumibles hasta el seguimiento de hardware crítico, TechControl ofrece una interfaz premium y nítida enfocada en la eficiencia operativa.
+  <p>
+    Una solución web de última generación diseñada para centralizar, auditar y optimizar el ciclo de vida de la infraestructura tecnológica empresarial.
+  </p>
 
----
+  <p>
+    <a href="#-módulos-principales"><img src="https://img.shields.io/badge/Estado-Activo-emerald?style=for-the-badge" alt="Estado"></a>
+    <a href="#-stack-tecnológico"><img src="https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB" alt="React"></a>
+    <a href="#-stack-tecnológico"><img src="https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"></a>
+    <a href="#-stack-tecnológico"><img src="https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS"></a>
+    <a href="#-stack-tecnológico"><img src="https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white" alt="Vite"></a>
+  </p>
 
-## 💎 Características Principales
-
-### 📊 Dashboard Inteligente
-Visualización en tiempo real de métricas críticas. Identifica al instante faltantes de stock, alertas de mantenimiento de impresoras y estados de pedidos a compras mediante un panel de control dinámico y elegante.
-
-### 💻 Gestión de Equipamiento (Notebooks & PCs)
-Control detallado del ciclo de vida de los equipos. 
-- Asignaciones permanentes y préstamos temporales.
-- Historial completo de movimientos por usuario y área.
-- Especificaciones técnicas y estado funcional detallado.
-
-### 🖨️ Centro de Impresión & Consumibles
-Monitoreo preventivo de niveles de Toner y Unidades de Imagen.
-- Alertas automáticas para niveles críticos.
-- Registro de cambios y mantenimiento.
-- Seguimiento por sucursal y sector.
-
-### 📺 DataliveTV (Cartelería Digital)
-Módulo especializado para la gestión de credenciales de cartelería digital.
-- Organización por sucursales.
-- Gestión de IDs de dispositivos y códigos de acceso universal.
-- Copiado rápido de credenciales para despliegue ágil.
-
-### 🛒 Gestión de Pedidos a Compras
-Optimización de la cadena de suministro IT.
-- Generación de solicitudes de compra.
-- Seguimiento de estados: Solicitado, En Proceso, Pedido y Entregado.
-- Priorización inteligente de necesidades.
-
-### 📈 Trazabilidad & Reportes
-Auditoría total mediante un registro histórico de movimientos (ingresos, egresos, reasignaciones). Generación de reportes detallados y exportación de datos para análisis profundo.
+</div>
 
 ---
 
-## 🚀 Tecnologías Core
+## 🌟 Visión General
 
-El ecosistema de TechControl está construido sobre un stack moderno y de alto rendimiento:
-
-- **Frontend**: [React](https://reactjs.org/) con [TypeScript](https://www.typescriptlang.org/) para una arquitectura robusta.
-- **Estilos**: [Tailwind CSS](https://tailwindcss.com/) con un sistema de diseño personalizado basado en **OKLCH** para colores vibrantes y nítidos.
-- **Componentes UI**: Basados en [Radix UI](https://www.radix-ui.com/) y optimizados para accesibilidad y estética premium.
-- **Animaciones**: Micro-interacciones fluidas mediante **GSAP**.
-- **Iconografía**: [Lucide React](https://lucide.dev/) para una identidad visual consistente.
+**TechControl** es una plataforma avanzada de gestión IT que simplifica la administración operativa y la toma de decisiones estratégicas. Permite a los equipos de infraestructura y soporte técnico llevar un control riguroso sobre equipos informáticos, consumibles de impresión, dispositivos de cartelería digital, registros de guardias y presupuestos de compras desde una interfaz unificada, intuitiva y de alto rendimiento.
 
 ---
 
-## 🎨 Filosofía de Diseño
+## ✨ Módulos Principales
 
-TechControl no solo gestiona datos; ofrece una experiencia. El diseño se centra en la **nitidez visual** y el **contraste optimizado**, asegurando que la información crítica sea siempre legible y destaque mediante una jerarquía cromática inteligente.
-
-- **Modo Claro**: Estructuras definidas, bordes precisos y tipografía de alto contraste.
-- **Modo Oscuro**: Estética "glassmorphism" profunda con acentos de color vibrantes.
-- **Responsividad**: Experiencia adaptativa impecable desde dispositivos móviles hasta estaciones de trabajo 4K.
+| Módulo | Descripción |
+| :--- | :--- |
+| 📊 **Dashboard Ejecutivo** | Métricas e indicadores clave en tiempo real sobre el estado de stock, alertas operativas y consumibles en nivel crítico. |
+| 💻 **Equipamiento IT** | Registro detallado de notebooks y estaciones de trabajo, seguimiento de asignaciones, estado funcional y trazabilidad por usuario. |
+| 🖨️ **Centro de Impresión** | Monitoreo proactivo de niveles de tóner, unidades de imagen y alertas automáticas de mantenimiento por sucursal. |
+| 📺 **DataliveTV (Cartelería Digital)** | Módulo para la organización de credenciales, IDs de dispositivos y accesos universales para pantallas corporativas. |
+| 🛡️ **Guardias IT & Tareas Especiales** | Registro operacional de turnos de guardia, tareas extraordinarias, coberturas y cronogramas del personal técnico. |
+| 🛒 **Gestión de Pedidos & Compras** | Workflow para la generación, seguimiento y priorización de solicitudes de compra de hardware y suministros. |
+| 📈 **Histórico & Auditoría** | Trazabilidad completa de ingresos, egresos y movimientos de activos con reportes exportables para control interno. |
 
 ---
 
-## 🖼️ Vista de la Interfaz
+## 🎨 Arquitectura Visual & Experiencia de Usuario
+
+TechControl se destaca por un diseño de interfaz nítido y moderno enfocado en la usabilidad profesional:
+
+- 💎 **Diseño Neomórfico & Glassmorphism**: Acabados visuales elegantes con jerarquía cromática optimizada mediante el espacio de color **OKLCH**.
+- 🌓 **Soporte Tema Claro / Oscuro**: Adaptación dinámica para maximizar el confort visual en extensas jornadas de trabajo.
+- ⚡ **Respuesta Instantánea**: Interacciones fluidas impulsadas por componentes Radix UI accesibles y animaciones optimizadas.
+
+---
+
+## 🖼️ Galería de la Interfaz
 
 <div align="center">
-  <table border="0">
+  <table>
     <tr>
-      <td align="center">
-        <img src="./public/equipos.png" width="400px" alt="Gestión de Equipamiento" />
+      <td width="50%" align="center">
+        <img src="./public/screenshots/Screenshot_1.png" alt="Dashboard Principal" width="100%" />
         <br />
-        <sub><b>Gestión de Equipamiento — Notebooks & PCs</b></sub>
+        <sub><b>01. Dashboard Principal & Métricas Generales</b></sub>
       </td>
-      <td align="center">
-        <img src="./public/impresoras.png" width="400px" alt="Centro de Impresión" />
+      <td width="50%" align="center">
+        <img src="./public/screenshots/Screenshot_2.png" alt="Gestión de Equipamiento" width="100%" />
         <br />
-        <sub><b>Centro de Impresión — Consumibles & Alertas</b></sub>
+        <sub><b>02. Control de Inventario de Notebooks & PCs</b></sub>
       </td>
     </tr>
     <tr>
-      <td align="center" colspan="2">
-        <img src="./public/monitores.png" width="815px" alt="Monitoreo de Pantallas" />
+      <td width="50%" align="center">
+        <img src="./public/screenshots/Screenshot_3.png" alt="Centro de Impresión" width="100%" />
         <br />
-        <sub><b>Monitoreo de Pantallas — Ubicación & Estado</b></sub>
+        <sub><b>03. Monitoreo de Impresoras & Tóner</b></sub>
+      </td>
+      <td width="50%" align="center">
+        <img src="./public/screenshots/Screenshot_4.png" alt="DataliveTV" width="100%" />
+        <br />
+        <sub><b>04. Módulo de Cartelería Digital (DataliveTV)</b></sub>
+      </td>
+    </tr>
+    <tr>
+      <td width="50%" align="center">
+        <img src="./public/screenshots/Screenshot_5.png" alt="Pedidos a Compras" width="100%" />
+        <br />
+        <sub><b>05. Gestión & Seguimiento de Solicitudes de Compra</b></sub>
+      </td>
+      <td width="50%" align="center">
+        <img src="./public/screenshots/Screenshot_6.png" alt="Histórico de Movimientos" width="100%" />
+        <br />
+        <sub><b>06. Auditoría & Registro de Movimientos</b></sub>
+      </td>
+    </tr>
+    <tr>
+      <td width="50%" align="center">
+        <img src="./public/screenshots/Screenshot_7.png" alt="Gestión de Personal" width="100%" />
+        <br />
+        <sub><b>07. Administración de Personal & Asignaciones</b></sub>
+      </td>
+      <td width="50%" align="center">
+        <img src="./public/screenshots/Screenshot_8.png" alt="Módulo de Guardias IT" width="100%" />
+        <br />
+        <sub><b>08. Programación & Registro de Guardias IT</b></sub>
+      </td>
+    </tr>
+    <tr>
+      <td width="50%" align="center">
+        <img src="./public/screenshots/Screenshot_9.png" alt="Tareas Especiales" width="100%" />
+        <br />
+        <sub><b>09. Control de Tareas Especiales & Mantenimiento</b></sub>
+      </td>
+      <td width="50%" align="center">
+        <img src="./public/screenshots/Screenshot_10.png" alt="Gestión de Precios" width="100%" />
+        <br />
+        <sub><b>10. Cotizaciones & Lista de Precios IT</b></sub>
+      </td>
+    </tr>
+    <tr>
+      <td width="50%" align="center">
+        <img src="./public/screenshots/Screenshot_11.png" alt="Catálogo & Bases de Datos" width="100%" />
+        <br />
+        <sub><b>11. Catálogo de Productos & Base de Datos</b></sub>
+      </td>
+      <td width="50%" align="center">
+        <img src="./public/screenshots/Screenshot_12.png" alt="Reportes & Analítica" width="100%" />
+        <br />
+        <sub><b>12. Módulo de Reportes & Exportación</b></sub>
       </td>
     </tr>
   </table>
@@ -90,4 +130,8 @@ TechControl no solo gestiona datos; ofrece una experiencia. El diseño se centra
 
 ---
 
-© 2026 TechControl IT Solutions. Todos los derechos reservados.
+<div align="center">
+
+  <sub>© 2026 TechControl IT Solutions. Todos los derechos reservados.</sub>
+
+</div>
