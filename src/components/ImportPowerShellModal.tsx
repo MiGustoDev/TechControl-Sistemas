@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ export function ImportPowerShellModal({ open, onClose }: ImportPowerShellModalPr
   const [loading, setLoading] = useState(false);
   const [parsedResults, setParsedResults] = useState<ParsedEquipmentResult[]>([]);
   const [assignments, setAssignments] = useState<Record<string, string>>({}); // equipmentCode -> userId
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const removeResult = (code: string) => {
     setParsedResults((prev) => prev.filter((r) => r.equipmentCode !== code));
@@ -78,6 +79,39 @@ export function ImportPowerShellModal({ open, onClose }: ImportPowerShellModalPr
     }
   };
 
+  const handleSelectFolder = async () => {
+    if (typeof window !== "undefined" && "showDirectoryPicker" in window) {
+      try {
+        const dirHandle = await (window as any).showDirectoryPicker();
+        setLoading(true);
+        const files: File[] = [];
+
+        async function readDir(handle: any) {
+          for await (const entry of handle.values()) {
+            if (entry.kind === "file") {
+              const file = await entry.getFile();
+              files.push(file);
+            } else if (entry.kind === "directory") {
+              await readDir(entry);
+            }
+          }
+        }
+
+        await readDir(dirHandle);
+        await processFileList(files);
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          console.error("Error al seleccionar carpeta con File System API:", err);
+          folderInputRef.current?.click();
+        }
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      folderInputRef.current?.click();
+    }
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       await processFileList(e.target.files);
@@ -100,7 +134,6 @@ export function ImportPowerShellModal({ open, onClose }: ImportPowerShellModalPr
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       await processFileList(e.dataTransfer.files);
     }
@@ -233,26 +266,30 @@ export function ImportPowerShellModal({ open, onClose }: ImportPowerShellModalPr
               <Folder className={`size-12 mb-2 transition-transform ${isDragging ? "scale-110 text-primary animate-bounce" : "text-primary/70"}`} />
               <p className="text-base font-semibold">Arrastrá y soltá la carpeta o archivos acá</p>
               <p className="text-xs text-muted-foreground mt-1 mb-5 max-w-md">
-                Podés arrastrar la carpeta directamente para evitar el cartel del navegador, o usar las opciones de selección abajo.
+                Podés arrastrar la carpeta directamente o seleccionarla con el explorador nativo.
               </p>
               
               <div className="flex flex-wrap items-center justify-center gap-3">
-                {/* Directory picker */}
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    {...({ webkitdirectory: "", directory: "" } as any)}
-                    multiple
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                  <Button variant="default" size="lg" asChild disabled={loading} className="gap-2 shadow-sm">
-                    <span>
-                      {loading ? <Loader2 className="size-4 animate-spin" /> : <Folder className="size-4" />}
-                      Seleccionar Carpeta Completa
-                    </span>
-                  </Button>
-                </label>
+                {/* Directory picker (Modern File System API + fallback) */}
+                <input
+                  ref={folderInputRef}
+                  type="file"
+                  {...({ webkitdirectory: "", directory: "" } as any)}
+                  multiple
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <Button 
+                  type="button" 
+                  variant="default" 
+                  size="lg" 
+                  onClick={handleSelectFolder} 
+                  disabled={loading} 
+                  className="gap-2 shadow-sm"
+                >
+                  {loading ? <Loader2 className="size-4 animate-spin" /> : <Folder className="size-4" />}
+                  Seleccionar Carpeta Completa
+                </Button>
 
                 {/* Individual file picker */}
                 <label className="cursor-pointer">
@@ -284,21 +321,17 @@ export function ImportPowerShellModal({ open, onClose }: ImportPowerShellModalPr
                 <span className="font-semibold">{parsedResults.length} equipo(s) detectado(s) en la carpeta</span>
               </div>
               <div className="flex items-center gap-2">
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    {...({ webkitdirectory: "", directory: "" } as any)}
-                    multiple
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                  <Button variant="outline" size="sm" asChild disabled={loading} className="gap-1.5 text-xs">
-                    <span>
-                      <Folder className="size-3.5" />
-                      Cambiar Carpeta
-                    </span>
-                  </Button>
-                </label>
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleSelectFolder} 
+                  disabled={loading} 
+                  className="gap-1.5 text-xs"
+                >
+                  <Folder className="size-3.5" />
+                  Cambiar Carpeta
+                </Button>
               </div>
             </div>
           )}
@@ -402,9 +435,6 @@ export function ImportPowerShellModal({ open, onClose }: ImportPowerShellModalPr
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
           <Button
             onClick={handleImport}
             disabled={parsedResults.length === 0 || loading}
@@ -413,8 +443,12 @@ export function ImportPowerShellModal({ open, onClose }: ImportPowerShellModalPr
             {loading ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Sparkles className="mr-2 size-4" />}
             Confirmar e Importar ({parsedResults.length})
           </Button>
+          <Button variant="outline" onClick={onClose} disabled={loading}>
+            Cancelar
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+

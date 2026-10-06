@@ -1,10 +1,20 @@
-import { useState } from "react";
-import { Plus, Search, Laptop, User, Cpu, HardDrive, Monitor, Pencil as Edit, Save, History, Database, Loader2, Copy, Check, Key, FileCode, ShieldCheck, Trash2, Building2, ChevronsUpDown } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Plus, Search, Laptop, User, Cpu, HardDrive, Monitor, Pencil as Edit, Save, History, Database, Copy, Check, Key, FileCode, ShieldCheck, Trash2, Building2, ChevronsUpDown } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { useApp } from "@/context/AppContext";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { cn } from "@/lib/utils";
 import {
   notebookStatusLabel,
   notebookStatusColor,
@@ -21,6 +32,44 @@ import {
 import type { Notebook, NotebookStatus } from "@/types";
 import { toast } from "sonner";
 import { ImportPowerShellModal } from "@/components/ImportPowerShellModal";
+
+function AutoResizeTextarea({
+  value,
+  onChange,
+  placeholder,
+  className,
+  rows = 2,
+  ...props
+}: React.ComponentProps<typeof Textarea>) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustHeight = () => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = `${Math.max(el.scrollHeight, 60)}px`;
+    }
+  };
+
+  useEffect(() => {
+    adjustHeight();
+  }, [value]);
+
+  return (
+    <Textarea
+      ref={textareaRef}
+      value={value}
+      onChange={(e) => {
+        onChange?.(e);
+        adjustHeight();
+      }}
+      rows={rows}
+      placeholder={placeholder}
+      className={cn("resize-none overflow-hidden transition-[height] duration-75", className)}
+      {...props}
+    />
+  );
+}
 
 
 interface NotebookCardProps {
@@ -415,6 +464,7 @@ export function NotebooksPage() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [editingNotebook, setEditingNotebook] = useState<Notebook | null>(null);
   const [detailNotebook, setDetailNotebook] = useState<Notebook | null>(null);
+  const [notebookToDelete, setNotebookToDelete] = useState<Notebook | null>(null);
   const [form, setForm] = useState(defaultForm);
   const [userSearchFilter, setUserSearchFilter] = useState("");
   const [userPopoverOpen, setUserPopoverOpen] = useState(false);
@@ -438,20 +488,28 @@ export function NotebooksPage() {
   });
 
   const handleDelete = (n: Notebook) => {
-    if (window.confirm(`¿Estás seguro de que deseas eliminar el equipo ${n.internalCode}?`)) {
-      deleteNotebook(n.id);
-      toast.success(`Equipo ${n.internalCode} eliminado.`);
-      if (detailNotebook?.id === n.id) setDetailOpen(false);
-      if (editingNotebook?.id === n.id) setDialogOpen(false);
-    }
+    setNotebookToDelete(n);
+  };
+
+  const confirmDelete = () => {
+    if (!notebookToDelete) return;
+    const id = notebookToDelete.id;
+    const code = notebookToDelete.internalCode;
+    deleteNotebook(id);
+    toast.success(`Equipo ${code} eliminado correctamente.`);
+    if (detailNotebook?.id === id) setDetailOpen(false);
+    if (editingNotebook?.id === id) setDialogOpen(false);
+    setNotebookToDelete(null);
   };
 
   // Get list of unique areas from users or assigned notebooks
-  const availableAreas = Array.from(
-    new Set([
-      ...users.map((u) => u.location).filter(Boolean),
-      ...notebooks.map((n) => n.currentAssignment?.area).filter(Boolean),
-    ])
+  const availableAreas: string[] = Array.from(
+    new Set(
+      [
+        ...users.map((u) => u.location),
+        ...notebooks.map((n) => n.currentAssignment?.area),
+      ].filter((area): area is string => Boolean(area && area.trim()))
+    )
   ).sort();
 
   const filtered = notebooks.filter((n) => {
@@ -477,14 +535,6 @@ export function NotebooksPage() {
       (n) => (n.currentAssignment?.area || "").toLowerCase() === area.toLowerCase()
     ).length;
   });
-
-  const statsCounts: Record<NotebookStatus, number> = {
-    "in-use": notebooks.filter((n) => n.status === "in-use").length,
-    loaned: notebooks.filter((n) => n.status === "loaned").length,
-    "in-stock": notebooks.filter((n) => n.status === "in-stock").length,
-    "in-repair": notebooks.filter((n) => n.status === "in-repair").length,
-    decommissioned: notebooks.filter((n) => n.status === "decommissioned").length,
-  };
 
   const openCreate = () => {
     setEditingNotebook(null);
@@ -836,7 +886,11 @@ export function NotebooksPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Observaciones</Label>
-              <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
+              <AutoResizeTextarea
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                placeholder="Notas u observaciones adicionales sobre el equipo..."
+              />
             </div>
 
             <Separator />
@@ -866,7 +920,7 @@ export function NotebooksPage() {
                       className="w-[280px] p-2 pointer-events-auto" 
                       align="start"
                       onWheel={(e) => e.stopPropagation()}
-                      onPointerDownOutside={(e) => {
+                      onPointerDownOutside={() => {
                         // Keep open if interacting with popover content
                       }}
                     >
@@ -975,12 +1029,51 @@ export function NotebooksPage() {
               </Button>
             )}
             <div className="flex items-center gap-2 ml-auto">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={handleSave}><Save className="size-4 mr-1" />{editingNotebook ? "Guardar" : "Registrar equipo"}</Button>
+              <Button onClick={handleSave}>
+                <Save className="size-4 mr-1" />
+                {editingNotebook ? "Guardar" : "Registrar equipo"}
+              </Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancelar
+              </Button>
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Styled Delete Confirmation Dialog */}
+      <AlertDialog open={!!notebookToDelete} onOpenChange={(open) => !open && setNotebookToDelete(null)}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 items-center justify-center rounded-full bg-destructive/10 text-destructive shrink-0 mt-0.5">
+                <Trash2 className="size-5" />
+              </div>
+              <div className="space-y-1">
+                <AlertDialogTitle className="text-lg font-bold">¿Eliminar equipo?</AlertDialogTitle>
+                <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed">
+                  ¿Estás seguro de que deseás eliminar el equipo{" "}
+                  <strong className="font-semibold text-foreground">{notebookToDelete?.internalCode}</strong>
+                  {notebookToDelete?.brand ? ` (${notebookToDelete.brand} ${notebookToDelete.model})` : ""}?
+                  Esta acción eliminará el registro de forma permanente.
+                </AlertDialogDescription>
+              </div>
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-4 gap-2 sm:justify-end">
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-medium"
+            >
+              <Trash2 className="size-4 mr-1.5" />
+              Sí, eliminar equipo
+            </AlertDialogAction>
+            <AlertDialogCancel className="mt-0">
+              Cancelar
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ImportPowerShellModal open={importModalOpen} onClose={() => setImportModalOpen(false)} />
     </div>
