@@ -364,7 +364,7 @@ export function getEffectivePrinterBranch(sector: string): string {
   const s = (sector || "").trim().toLowerCase();
   const normalized = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (normalized === "armado" || normalized === "calidad" || normalized === "logistica") {
-    return "Planta MG";
+    return "Fábrica";
   }
   return "Oficinas";
 }

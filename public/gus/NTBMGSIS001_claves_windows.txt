@@ -1,0 +1,71 @@
+﻿============================================================
+INVENTARIO DE CLAVES DE WINDOWS - INFORMACION CONFIDENCIAL
+============================================================
+
+Fecha de inventario: 2026-10-02 15:35:24
+Equipo: NTBMGSIS001
+Usuario actual: Gustavo Gonzalez
+Dominio o grupo: WORKGROUP
+
+Fabricante: LENOVO
+Modelo: 21MW
+Numero de serie del equipo: PW0FQ2EP
+UUID del equipo: 459CD081-40CC-EF11-8BC9-137E6A77C248
+
+Sistema operativo: Microsoft Windows 11 Pro
+Version Windows: 10.0.26200
+Build Windows: 26200
+Edicion detectada: Windows(R), Professional edition
+
+Product ID de Windows:
+00355-62083-50292-AAOEM
+
+ID tecnico de producto/licencia:
+fe74f55b-0338-41d6-b267-4a201abe7285
+
+SKU ID de licencia:
+
+
+Canal de licencia:
+Windows(R) Operating System, OEM_DM channel
+
+Estado de activacion:
+Activado
+
+Ultimos 5 caracteres de la clave instalada:
+8HWGG
+
+Clave OEM original detectada en BIOS/UEFI:
+HPNK8-PJCPT-C84TH-W6FPV-8HWGG
+
+Clave instalada recuperada desde Windows:
+HPNK8-PJCPT-C84TH-W6FPV-8HWGG
+
+RAM fisica instalada:
+16 GB
+
+RAM utilizable por Windows:
+13.35 GB
+
+Detalle de modulos de memoria:
+16 GB | Slot: DIMM 0 | Banco: P0 CHANNEL B | Fabricante: Ramaxel Technology | Velocidad: 5600 MHz | Part Number: RMSB3410HA88IBF-5600
+
+Evaluacion automatica de licencia:
+
+
+Accion sugerida de licenciamiento:
+
+
+Evaluacion Windows 11:
+
+
+Accion sugerida Windows 11:
+
+
+IMPORTANTE:
+- Este archivo contiene claves de producto completas.
+- No enviar por correo, WhatsApp o servicios no autorizados.
+- No guardar en carpetas compartidas sin permisos restringidos.
+- No reutilizar una clave OEM en otro equipo.
+- Una clave recuperada no demuestra por si sola que la licencia sea legal.
+- Validar siempre contra factura, contrato CSP/volumen o comprobante OEM.

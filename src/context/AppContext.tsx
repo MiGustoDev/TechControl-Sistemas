@@ -816,19 +816,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setPrinters(mappedPts);
       }
 
-      if (nbs) setNotebooks(nbs.map(n => ({
-        ...n,
-        serialNumber: n.serial_number,
-        internalCode: n.internal_code,
-        functionalStatus: n.functional_status,
-        physicalCondition: n.physical_condition,
-        currentAssignment: n.current_assignment,
-        assignmentHistory: n.assignment_history,
-        entryDate: n.entry_date,
-        lastReviewDate: n.last_review_date,
-        createdAt: n.created_at,
-        updatedAt: n.updated_at
-      })));
+      if (nbs) setNotebooks(nbs.map(n => {
+        let assignment = n.current_assignment;
+        if (assignment && assignment.area) {
+          const areaLower = assignment.area.toLowerCase();
+          if (areaLower.includes("community manager")) {
+            assignment = { ...assignment, area: "Marketing" };
+          } else if (assignment.area === "Planta MG") {
+            assignment = { ...assignment, area: "Fábrica" };
+          } else if (areaLower.includes("fichaje") || areaLower.includes("seguridad")) {
+            assignment = { ...assignment, area: "Seguridad" };
+          }
+        }
+        return {
+          ...n,
+          serialNumber: n.serial_number,
+          internalCode: n.internal_code,
+          functionalStatus: n.functional_status,
+          physicalCondition: n.physical_condition,
+          currentAssignment: assignment,
+          assignmentHistory: n.assignment_history,
+          entryDate: n.entry_date,
+          lastReviewDate: n.last_review_date,
+          createdAt: n.created_at,
+          updatedAt: n.updated_at,
+          productKeyOEM: n.product_key_oem,
+          productKeyInstalled: n.product_key_installed,
+          activationStatus: n.activation_status,
+          licenseChannel: n.license_channel,
+          productId: n.product_id,
+          uuid: n.uuid,
+          biosVersion: n.bios_version,
+          win11Evaluation: n.win11_evaluation,
+          tpmInfo: n.tpm_info,
+          currentUserLocal: n.current_user_local,
+          coresThreads: n.cores_threads,
+          ramModules: n.ram_modules,
+          ramUsable: n.ram_usable
+        };
+      }));
 
       if (mons) setMonitors(mons.map(m => ({
         ...m,
@@ -884,18 +910,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           });
       }
 
-      // Merge initialUsers, localSavedUsers, and dbUsers without filtering out any members!
+      // Use initialUsers as authoritative list (merged with dbUsers details if available)
       const userMap = new Map<string, User>();
       initialUsers.forEach(u => userMap.set(u.id, u));
-      localSavedUsers.forEach(u => userMap.set(u.id, u));
+
       dbUsers.forEach(u => {
         const existingKey = Array.from(userMap.entries()).find(
           ([_, existing]) => existing.id === u.id || existing.fullName.toLowerCase() === u.fullName.toLowerCase()
-        )?.[0] || u.id;
-        userMap.set(existingKey, { ...userMap.get(existingKey), ...u });
+        )?.[0];
+        if (existingKey) {
+          userMap.set(existingKey, { ...userMap.get(existingKey), ...u });
+        } else {
+          userMap.set(u.id, u);
+        }
       });
 
-      const effectiveUsers = Array.from(userMap.values());
+      const effectiveUsers = Array.from(userMap.values()).map((u) => {
+        let loc = u.location || "Sistemas";
+        if (loc.toLowerCase().includes("community manager")) {
+          loc = "Marketing";
+        } else if (loc === "Planta MG") {
+          loc = "Fábrica";
+        } else if (loc.toLowerCase().includes("fichaje") || loc.toLowerCase().includes("seguridad")) {
+          loc = "Seguridad";
+        }
+        return { ...u, location: loc };
+      });
       setUsers(effectiveUsers);
       safeLocalStorageSetItem("techcontrol_users", effectiveUsers);
 
@@ -2214,11 +2254,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         last_review_date: newNB.lastReviewDate,
         notes: newNB.notes,
         created_at: newNB.createdAt,
-        updated_at: newNB.updatedAt
+        updated_at: newNB.updatedAt,
+        product_key_oem: newNB.productKeyOEM,
+        product_key_installed: newNB.productKeyInstalled,
+        activation_status: newNB.activationStatus,
+        license_channel: newNB.licenseChannel,
+        product_id: newNB.productId,
+        uuid: newNB.uuid,
+        bios_version: newNB.biosVersion,
+        win11_evaluation: newNB.win11Evaluation,
+        tpm_info: newNB.tpmInfo,
+        current_user_local: newNB.currentUserLocal,
+        cores_threads: newNB.coresThreads,
+        ram_modules: newNB.ramModules,
+        ram_usable: newNB.ramUsable
       });
 
       if (error) {
-        toast.error("Error al guardar notebook");
+        console.error("Supabase insert error for notebook:", error);
+        toast.error("Error al guardar notebook: " + (error.message || ""));
         fetchData();
       }
     },
@@ -2266,6 +2320,57 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (data.lastReviewDate !== undefined) {
       updateData.last_review_date = data.lastReviewDate ? data.lastReviewDate : null;
       delete updateData.lastReviewDate;
+    }
+    if (data.productKeyOEM !== undefined) {
+      updateData.product_key_oem = data.productKeyOEM;
+      delete updateData.productKeyOEM;
+    }
+    if (data.productKeyInstalled !== undefined) {
+      updateData.product_key_installed = data.productKeyInstalled;
+      delete updateData.productKeyInstalled;
+    }
+    if (data.activationStatus !== undefined) {
+      updateData.activation_status = data.activationStatus;
+      delete updateData.activationStatus;
+    }
+    if (data.licenseChannel !== undefined) {
+      updateData.license_channel = data.licenseChannel;
+      delete updateData.licenseChannel;
+    }
+    if (data.productId !== undefined) {
+      updateData.product_id = data.productId;
+      delete updateData.productId;
+    }
+    if (data.uuid !== undefined) {
+      updateData.uuid = data.uuid;
+    }
+    if (data.biosVersion !== undefined) {
+      updateData.bios_version = data.biosVersion;
+      delete updateData.biosVersion;
+    }
+    if (data.win11Evaluation !== undefined) {
+      updateData.win11_evaluation = data.win11Evaluation;
+      delete updateData.win11Evaluation;
+    }
+    if (data.tpmInfo !== undefined) {
+      updateData.tpm_info = data.tpmInfo;
+      delete updateData.tpmInfo;
+    }
+    if (data.currentUserLocal !== undefined) {
+      updateData.current_user_local = data.currentUserLocal;
+      delete updateData.currentUserLocal;
+    }
+    if (data.coresThreads !== undefined) {
+      updateData.cores_threads = data.coresThreads;
+      delete updateData.coresThreads;
+    }
+    if (data.ramModules !== undefined) {
+      updateData.ram_modules = data.ramModules;
+      delete updateData.ramModules;
+    }
+    if (data.ramUsable !== undefined) {
+      updateData.ram_usable = data.ramUsable;
+      delete updateData.ramUsable;
     }
     delete updateData.createdAt;
     delete updateData.updatedAt;

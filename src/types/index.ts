@@ -110,7 +110,23 @@ export interface Notebook {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+
+  // Campos de inventario PowerShell y Licenciamiento
+  productKeyOEM?: string;
+  productKeyInstalled?: string;
+  activationStatus?: string;
+  licenseChannel?: string;
+  productId?: string;
+  uuid?: string;
+  biosVersion?: string;
+  win11Evaluation?: string;
+  tpmInfo?: string;
+  currentUserLocal?: string;
+  coresThreads?: string;
+  ramModules?: string;
+  ramUsable?: string;
 }
+
 
 export interface OrderHistoryEntry {
   id: string;

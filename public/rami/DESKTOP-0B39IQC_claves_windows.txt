@@ -1,0 +1,56 @@
+﻿============================================================
+INVENTARIO DE CLAVES DE WINDOWS - INFORMACION CONFIDENCIAL
+============================================================
+
+Fecha de inventario: 2026-09-30 15:39:40
+Equipo: DESKTOP-0B39IQC
+Usuario actual: Ramiro Lacci
+Dominio o grupo: WORKGROUP
+
+Fabricante: LENOVO
+Modelo: 82VG
+Numero de serie del equipo: MP2GR0Z2
+UUID del equipo: 159D52C3-FC81-11EE-A4F6-40C2BA4ABB9F
+
+Sistema operativo: Microsoft Windows 11 Pro
+Version Windows: 10.0.26200
+Build Windows: 26200
+Edicion detectada: Windows(R), Professional edition
+
+Product ID de Windows:
+00331-10000-00001-AA095
+
+ID tecnico de producto/licencia:
+2de67392-b7a7-462a-b1ca-108dd189f588
+
+SKU ID de licencia:
+
+
+Canal de licencia:
+Windows(R) Operating System, VOLUME_KMSCLIENT channel
+
+Estado de activacion:
+Activado
+
+Ultimos 5 caracteres de la clave instalada:
+T83GX
+
+Clave OEM original detectada en BIOS/UEFI:
+G993B-NX496-24CXG-KJMTD-H222Y
+
+Clave instalada recuperada desde Windows:
+GW269-WFGWX-YVC9B-4J6C9-T83GX
+
+Evaluacion automatica:
+ACTIVADO POR KMS - VALIDAR
+
+Accion sugerida:
+Confirmar que el servidor KMS y el licenciamiento por volumen pertenecen a la empresa.
+
+IMPORTANTE:
+- Este archivo contiene claves de producto completas.
+- No enviar por correo, WhatsApp o servicios no autorizados.
+- No guardar en carpetas compartidas sin permisos restringidos.
+- No reutilizar una clave OEM en otro equipo.
+- Una clave recuperada no demuestra por si sola que la licencia sea legal.
+- Validar siempre contra factura, contrato CSP/volumen o comprobante OEM.

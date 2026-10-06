@@ -1,0 +1,28 @@
+﻿Software licensing service version: 10.0.26100.9457
+
+Name: Windows(R), Professional edition
+Description: Windows(R) Operating System, VOLUME_KMSCLIENT channel
+Activation ID: 2de67392-b7a7-462a-b1ca-108dd189f588
+Application ID: 55c92734-d682-4d71-983e-d6ec3f16059f
+Extended PID: 03612-03311-000-000001-03-2058-26200.0000-1402026
+Product Key Channel: Volume:GVLK
+Installation ID: 623914590071449559070267140668124565717456396566692895311674801
+Partial Product Key: T83GX
+License Status: Licensed
+Volume activation expiration: 255993 minute(s) (178 day(s))
+Remaining Windows rearm count: 1001
+Remaining SKU rearm count: 1001
+Trusted time: 30/9/2026 15:39:39
+Configured Activation Type: All
+
+Most recent activation information:
+Key Management Service client information
+    Client Machine ID (CMID): 6a722521-8fac-4471-b7df-5e1efc2ff99e
+    Registered KMS machine name: kms.digiboy.ir:1688
+    KMS machine IP address: 193.111.236.140
+    KMS machine extended PID: 55041-00206-567-902678-03-1031-7601.0000-2772019
+    Activation interval: 120 minutes
+    Renewal interval: 10080 minutes
+    KMS host caching is enabled
+
+

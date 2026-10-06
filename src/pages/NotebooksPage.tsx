@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Laptop, User, Cpu, HardDrive, Monitor, Pencil as Edit, Save, History, Database, Loader2 } from "lucide-react";
+import { Plus, Search, Laptop, User, Cpu, HardDrive, Monitor, Pencil as Edit, Save, History, Database, Loader2, Copy, Check, Key, FileCode, ShieldCheck, Trash2, Building2, ChevronsUpDown } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { useApp } from "@/context/AppContext";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -19,14 +20,17 @@ import {
 } from "@/lib/utils-app";
 import type { Notebook, NotebookStatus } from "@/types";
 import { toast } from "sonner";
+import { ImportPowerShellModal } from "@/components/ImportPowerShellModal";
+
 
 interface NotebookCardProps {
   notebook: Notebook;
   onEdit: (n: Notebook) => void;
+  onDelete: (n: Notebook) => void;
   onViewDetail: (n: Notebook) => void;
 }
 
-function NotebookCard({ notebook, onEdit, onViewDetail }: NotebookCardProps) {
+function NotebookCard({ notebook, onEdit, onDelete, onViewDetail }: NotebookCardProps) {
   const statusColor = notebookStatusColor(notebook.status);
   const isAlert = notebook.status === "in-repair" || notebook.status === "decommissioned";
   const Icon = notebook.category === "desktop" ? Monitor : Laptop;
@@ -48,8 +52,17 @@ function NotebookCard({ notebook, onEdit, onViewDetail }: NotebookCardProps) {
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="icon-xs" onClick={() => onEdit(notebook)}>
+            <Button variant="ghost" size="icon-xs" title="Editar" onClick={() => onEdit(notebook)}>
               <Edit className="size-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              title="Eliminar equipo"
+              onClick={() => onDelete(notebook)}
+            >
+              <Trash2 className="size-3" />
             </Button>
           </div>
         </div>
@@ -77,22 +90,37 @@ function NotebookCard({ notebook, onEdit, onViewDetail }: NotebookCardProps) {
 
         {/* Quick Specs */}
         <div className="flex flex-col gap-1.5 text-[11px] text-muted-foreground min-w-0">
+          {notebook.serialNumber && (
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-semibold text-[10px] uppercase text-muted-foreground shrink-0">S/N:</span>
+              <span className="truncate font-mono font-medium text-foreground text-[10px]" title={notebook.serialNumber}>{notebook.serialNumber}</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5 min-w-0">
-            <Cpu className="size-3 shrink-0" />
-            <span className="truncate" title={notebook.processor}>{notebook.processor}</span>
+            <Cpu className="size-3 shrink-0 text-primary/70" />
+            <span className="truncate" title={notebook.processor}>{notebook.processor || "Procesador N/A"}</span>
           </div>
           <div className="flex items-center gap-1.5 min-w-0">
-            <Database className="size-3 shrink-0" />
-            <span className="truncate" title={notebook.ram}>{notebook.ram}</span>
+            <Database className="size-3 shrink-0 text-primary/70" />
+            <span className="truncate" title={notebook.ramUsable ? `${notebook.ram} (${notebook.ramUsable})` : notebook.ram}>
+              RAM: {notebook.ram}{notebook.ramUsable ? ` (${notebook.ramUsable})` : ""}
+            </span>
           </div>
           <div className="flex items-center gap-1.5 min-w-0">
-            <HardDrive className="size-3 shrink-0" />
-            <span className="truncate" title={notebook.storage}>{notebook.storage}</span>
+            <HardDrive className="size-3 shrink-0 text-primary/70" />
+            <span className="truncate" title={notebook.storage}>{notebook.storage || "Almacenamiento N/A"}</span>
           </div>
           <div className="flex items-center gap-1.5 min-w-0">
-            <Loader2 className="size-3 shrink-0" />
-            <span className="truncate" title={notebook.os}>{notebook.os}</span>
+            <Monitor className="size-3 shrink-0 text-primary/70" />
+            <span className="truncate" title={notebook.os}>{notebook.os || "Windows"}</span>
           </div>
+          {notebook.productKeyOEM && (
+            <div className="flex items-center gap-1 mt-1 pt-1 border-t border-border/40">
+              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[9px] py-0 px-1.5 font-mono">
+                <Key className="mr-1 size-2.5" /> Clave BIOS OEM
+              </Badge>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -103,12 +131,26 @@ function NotebookDetailModal({
   notebook,
   open,
   onClose,
+  onDelete,
+  onEdit,
 }: {
   notebook: Notebook | null;
   open: boolean;
   onClose: () => void;
+  onDelete?: (n: Notebook) => void;
+  onEdit?: (n: Notebook) => void;
 }) {
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
   if (!notebook) return null;
+
+  const copyToClipboard = (text: string, fieldName: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldName);
+    toast.success(`Copiado: ${fieldName}`);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -136,6 +178,12 @@ function NotebookDetailModal({
                 Funcional: {
                   { working: "Funcionando", partial: "Parcial", "not-working": "No funciona" }[notebook.functionalStatus]
                 }
+              </Badge>
+            )}
+            {notebook.activationStatus && (
+              <Badge variant="secondary" className="text-xs bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                <ShieldCheck className="mr-1 size-3" />
+                {notebook.activationStatus}
               </Badge>
             )}
           </div>
@@ -169,24 +217,103 @@ function NotebookDetailModal({
             </div>
           )}
 
+          {/* Claves de Windows y Licenciamiento */}
+          {(notebook.productKeyOEM || notebook.productKeyInstalled || notebook.productId) && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20 p-4 space-y-3">
+              <h4 className="flex items-center gap-1.5 text-sm font-semibold text-amber-800 dark:text-amber-300">
+                <Key className="size-4 text-amber-600" />
+                Licencias de Windows & PowerShell
+              </h4>
+
+              <div className="space-y-2 text-xs">
+                {notebook.productKeyOEM && (
+                  <div className="flex items-center justify-between gap-2 bg-background p-2 rounded border">
+                    <div>
+                      <span className="font-medium text-muted-foreground block">Clave OEM BIOS / UEFI:</span>
+                      <code className="font-mono text-sm font-bold">{notebook.productKeyOEM}</code>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard(notebook.productKeyOEM!, "Clave OEM BIOS")}
+                    >
+                      {copiedField === "Clave OEM BIOS" ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
+                    </Button>
+                  </div>
+                )}
+
+                {notebook.productKeyInstalled && (
+                  <div className="flex items-center justify-between gap-2 bg-background p-2 rounded border">
+                    <div>
+                      <span className="font-medium text-muted-foreground block">Clave Instalada Recuperada:</span>
+                      <code className="font-mono text-sm font-bold">{notebook.productKeyInstalled}</code>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard(notebook.productKeyInstalled!, "Clave Instalada")}
+                    >
+                      {copiedField === "Clave Instalada" ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
+                    </Button>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {notebook.productId && (
+                    <div>
+                      <span className="text-muted-foreground">Product ID:</span>{" "}
+                      <span className="font-mono">{notebook.productId}</span>
+                    </div>
+                  )}
+                  {notebook.licenseChannel && (
+                    <div>
+                      <span className="text-muted-foreground">Canal Licencia:</span>{" "}
+                      <span>{notebook.licenseChannel}</span>
+                    </div>
+                  )}
+                  {notebook.win11Evaluation && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Eval. Windows 11:</span>{" "}
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">{notebook.win11Evaluation}</span>
+                    </div>
+                  )}
+                  {notebook.tpmInfo && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Seguridad TPM:</span>{" "}
+                      <span>{notebook.tpmInfo}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div>
             <h4 className="mb-2 text-sm font-semibold">Especificaciones Técnicas</h4>
             <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
               {[
                 ["Procesador", notebook.processor],
-                ["Memoria RAM", notebook.ram],
+                ["Memoria RAM", notebook.ramUsable ? `${notebook.ram} (${notebook.ramUsable})` : notebook.ram],
                 ["Almacenamiento", notebook.storage],
                 ["Pantalla", notebook.screenSize || "N/A"],
                 ["Sistema Operativo", notebook.os],
                 ["Número de serie", notebook.serialNumber || "N/A"],
+                ["UUID Equipo", notebook.uuid || "N/A"],
+                ["Versión BIOS", notebook.biosVersion || "N/A"],
                 ["Fecha ingreso", formatDate(notebook.entryDate)],
               ].map(([label, value]) => (
                 <div key={label} className="flex gap-1">
                   <span className="text-muted-foreground">{label}:</span>
-                  <span className="font-medium">{value}</span>
+                  <span className="font-medium truncate" title={value}>{value}</span>
                 </div>
               ))}
             </div>
+            {notebook.ramModules && (
+              <div className="mt-2 text-xs bg-muted/30 p-2 rounded border">
+                <span className="font-semibold text-muted-foreground block mb-0.5">Módulos de Memoria RAM:</span>
+                <span className="font-mono text-[11px] leading-relaxed">{notebook.ramModules}</span>
+              </div>
+            )}
           </div>
           
           {notebook.notes && (
@@ -217,8 +344,26 @@ function NotebookDetailModal({
             </div>
           )}
         </div>
-        <DialogFooter className="flex flex-row items-center justify-end gap-2">
-          <Button onClick={onClose}>Cerrar</Button>
+        <DialogFooter className="flex flex-row items-center justify-between gap-2">
+          {onDelete && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => onDelete(notebook)}
+            >
+              <Trash2 className="size-4 mr-1" />
+              Eliminar equipo
+            </Button>
+          )}
+          <div className="flex items-center gap-2 ml-auto">
+            {onEdit && (
+              <Button variant="outline" size="sm" onClick={() => { onClose(); onEdit(notebook); }}>
+                <Edit className="size-4 mr-1" />
+                Editar equipo
+              </Button>
+            )}
+            <Button onClick={onClose} size="sm">Cerrar</Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -242,19 +387,72 @@ const defaultForm = {
   entryDate: new Date().toISOString().slice(0, 10),
   notes: "",
   assignedUserId: "none",
+  assignedArea: "",
   assignmentType: "permanent" as "permanent" | "loan",
+  productKeyOEM: "",
+  productKeyInstalled: "",
+  productId: "",
+  activationStatus: "Activado",
+  licenseChannel: "",
+  win11Evaluation: "",
+  uuid: "",
+  biosVersion: "",
+  tpmInfo: "",
+  currentUserLocal: "",
+  coresThreads: "",
+  ramModules: "",
+  ramUsable: "",
 };
 
 export function NotebooksPage() {
-  const { notebooks, users, addNotebook, updateNotebook } = useApp();
+  const { notebooks, users, addNotebook, updateNotebook, deleteNotebook } = useApp();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [filterArea, setFilterArea] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [editingNotebook, setEditingNotebook] = useState<Notebook | null>(null);
   const [detailNotebook, setDetailNotebook] = useState<Notebook | null>(null);
   const [form, setForm] = useState(defaultForm);
+  const [userSearchFilter, setUserSearchFilter] = useState("");
+  const [userPopoverOpen, setUserPopoverOpen] = useState(false);
+
+  const selectedUserObj = users.find((u) => u.id === (form as any).assignedUserId);
+
+  const normalizeStr = (str: string) =>
+    str
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+  const filteredUsers = users.filter((u) => {
+    if (!userSearchFilter.trim()) return true;
+    const q = normalizeStr(userSearchFilter);
+    return (
+      normalizeStr(u.fullName || "").includes(q) ||
+      normalizeStr(u.username || "").includes(q) ||
+      normalizeStr(u.location || "").includes(q)
+    );
+  });
+
+  const handleDelete = (n: Notebook) => {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar el equipo ${n.internalCode}?`)) {
+      deleteNotebook(n.id);
+      toast.success(`Equipo ${n.internalCode} eliminado.`);
+      if (detailNotebook?.id === n.id) setDetailOpen(false);
+      if (editingNotebook?.id === n.id) setDialogOpen(false);
+    }
+  };
+
+  // Get list of unique areas from users or assigned notebooks
+  const availableAreas = Array.from(
+    new Set([
+      ...users.map((u) => u.location).filter(Boolean),
+      ...notebooks.map((n) => n.currentAssignment?.area).filter(Boolean),
+    ])
+  ).sort();
 
   const filtered = notebooks.filter((n) => {
     const matchSearch =
@@ -262,10 +460,22 @@ export function NotebooksPage() {
       n.internalCode.toLowerCase().includes(search.toLowerCase()) ||
       n.brand.toLowerCase().includes(search.toLowerCase()) ||
       n.model.toLowerCase().includes(search.toLowerCase()) ||
-      (n.currentAssignment?.userName ?? "").toLowerCase().includes(search.toLowerCase());
+      (n.currentAssignment?.userName ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      (n.currentAssignment?.area ?? "").toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === "all" || n.status === filterStatus;
     const matchCategory = filterCategory === "all" || n.category === filterCategory;
-    return matchSearch && matchStatus && matchCategory;
+    const matchArea =
+      filterArea === "all" ||
+      (n.currentAssignment?.area || "").toLowerCase() === filterArea.toLowerCase();
+
+    return matchSearch && matchStatus && matchCategory && matchArea;
+  });
+
+  const areaCounts: Record<string, number> = {};
+  availableAreas.forEach((area) => {
+    areaCounts[area] = notebooks.filter(
+      (n) => (n.currentAssignment?.area || "").toLowerCase() === area.toLowerCase()
+    ).length;
   });
 
   const statsCounts: Record<NotebookStatus, number> = {
@@ -301,7 +511,21 @@ export function NotebooksPage() {
       entryDate: n.entryDate,
       notes: n.notes ?? "",
       assignedUserId: n.currentAssignment?.userId ?? "none",
+      assignedArea: n.currentAssignment?.area ?? "",
       assignmentType: n.currentAssignment?.type ?? "permanent",
+      productKeyOEM: n.productKeyOEM || "",
+      productKeyInstalled: n.productKeyInstalled || "",
+      productId: n.productId || "",
+      activationStatus: n.activationStatus || "Activado",
+      licenseChannel: n.licenseChannel || "",
+      win11Evaluation: n.win11Evaluation || "",
+      uuid: n.uuid || "",
+      biosVersion: n.biosVersion || "",
+      tpmInfo: n.tpmInfo || "",
+      currentUserLocal: n.currentUserLocal || "",
+      coresThreads: n.coresThreads || "",
+      ramModules: n.ramModules || "",
+      ramUsable: n.ramUsable || "",
     });
     setDialogOpen(true);
   };
@@ -317,17 +541,26 @@ export function NotebooksPage() {
       return;
     }
 
-    const assignmentData = form.assignedUserId !== "none" ? {
-      currentAssignment: {
-        userName: users.find(u => u.id === form.assignedUserId)?.fullName ?? "Desconocido",
-        area: users.find(u => u.id === form.assignedUserId)?.location ?? "N/A",
-        assignedAt: editingNotebook?.currentAssignment?.assignedAt ?? new Date().toISOString(),
-        type: form.assignmentType,
-        userId: form.assignedUserId,
-      }
-    } : { currentAssignment: undefined };
+    let assignmentData: { currentAssignment?: any } = { currentAssignment: undefined };
+
+    if (form.assignedUserId !== "none" || form.assignedArea) {
+      const matchedUser = users.find((u) => u.id === form.assignedUserId);
+      const userArea = matchedUser?.location;
+      const finalArea = form.assignedArea || userArea || "Sistemas";
+
+      assignmentData = {
+        currentAssignment: {
+          userName: matchedUser ? (matchedUser.fullName || matchedUser.username) : (editingNotebook?.currentAssignment?.userName || "Asignación por Área"),
+          area: finalArea,
+          assignedAt: editingNotebook?.currentAssignment?.assignedAt ?? new Date().toISOString(),
+          type: form.assignmentType,
+          userId: form.assignedUserId !== "none" ? form.assignedUserId : (editingNotebook?.currentAssignment?.userId || "unassigned"),
+        },
+      };
+    }
 
     const finalData = { 
+      ...(editingNotebook || {}),
       ...form, 
       ...assignmentData,
       assignmentHistory: editingNotebook?.assignmentHistory ?? []
@@ -335,6 +568,7 @@ export function NotebooksPage() {
     
     // Remove temporary form fields
     delete (finalData as any).assignedUserId;
+    delete (finalData as any).assignedArea;
     delete (finalData as any).assignmentType;
 
     if (editingNotebook) {
@@ -349,33 +583,61 @@ export function NotebooksPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Equipos</h1>
           <p className="text-sm text-muted-foreground">{notebooks.length} equipos registrados</p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setImportModalOpen(true)} className="gap-2 border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30">
+            <FileCode className="size-4 text-emerald-600" />
+            Importar PowerShell (CSV/TXT)
+          </Button>
+          <Button onClick={openCreate} className="gap-2">
+            <Plus className="size-4" />
+            Nuevo equipo
+          </Button>
+        </div>
       </div>
 
-      {/* Status summary */}
-      <div className="flex flex-wrap gap-2">
-        {[
-          { status: "in-use" as NotebookStatus, label: "EN USO" },
-          { status: "loaned" as NotebookStatus, label: "PRESTADAS" },
-          { status: "in-stock" as NotebookStatus, label: "EN STOCK" },
-          { status: "in-repair" as NotebookStatus, label: "EN REPARACIÓN" },
-          { status: "decommissioned" as NotebookStatus, label: "DADAS DE BAJA" },
-        ].map(({ status, label }) => (
+      {/* Area summary pills */}
+      <div className="space-y-1.5">
+        <div className="text-xs font-semibold text-muted-foreground tracking-wider uppercase flex items-center gap-1.5">
+          <Building2 className="size-3.5 text-primary" />
+          Filtrar por Área / Sucursal
+        </div>
+        <div className="flex flex-wrap gap-2">
           <button
-            key={status}
-            onClick={() => setFilterStatus(filterStatus === status ? "all" : status)}
-            className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${notebookStatusColor(status)} ${
-              filterStatus === status ? "ring-2 ring-primary ring-offset-2" : "opacity-80 hover:opacity-100"
+            onClick={() => setFilterArea("all")}
+            className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+              filterArea === "all"
+                ? "bg-primary text-primary-foreground border-primary ring-2 ring-primary ring-offset-2"
+                : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
             }`}
           >
-            <span className="text-sm">{statsCounts[status]}</span>
-            {label}
+            <span className="text-xs font-bold">{notebooks.length}</span>
+            TODAS LAS ÁREAS
           </button>
-        ))}
+          {availableAreas.map((area) => {
+            const isSelected = filterArea.toLowerCase() === area.toLowerCase();
+            return (
+              <button
+                key={area}
+                onClick={() => setFilterArea(isSelected ? "all" : area)}
+                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                  isSelected
+                    ? "bg-primary text-primary-foreground border-primary ring-2 ring-primary ring-offset-2"
+                    : "bg-background hover:bg-muted/50 text-foreground border-border"
+                }`}
+              >
+                <span className={`text-xs font-bold ${isSelected ? "text-primary-foreground" : "text-primary"}`}>
+                  {areaCounts[area] || 0}
+                </span>
+                {area.toUpperCase()}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Mobile button: between badges and search bar, left-aligned */}
@@ -394,9 +656,23 @@ export function NotebooksPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <Select value={filterArea} onValueChange={setFilterArea}>
+          <SelectTrigger className="flex-1 min-w-[150px]">
+            <SelectValue placeholder="Todas las áreas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las áreas</SelectItem>
+            {availableAreas.map((area) => (
+              <SelectItem key={area} value={area}>
+                {area} ({areaCounts[area] || 0})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="flex-1 min-w-0">
+          <SelectTrigger className="flex-1 min-w-[150px]">
             <SelectValue placeholder="Todos los estados" />
           </SelectTrigger>
           <SelectContent>
@@ -410,7 +686,7 @@ export function NotebooksPage() {
         </Select>
 
         <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="flex-1 min-w-0">
+          <SelectTrigger className="flex-1 min-w-[150px]">
             <SelectValue placeholder="Categoría" />
           </SelectTrigger>
           <SelectContent>
@@ -438,7 +714,7 @@ export function NotebooksPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((n) => (
-            <NotebookCard key={n.id} notebook={n} onEdit={openEdit} onViewDetail={openDetail} />
+            <NotebookCard key={n.id} notebook={n} onEdit={openEdit} onDelete={handleDelete} onViewDetail={openDetail} />
           ))}
         </div>
       )}
@@ -448,6 +724,8 @@ export function NotebooksPage() {
         notebook={detailNotebook}
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
+        onEdit={openEdit}
+        onDelete={handleDelete}
       />
 
       {/* Edit/create dialog */}
@@ -565,28 +843,113 @@ export function NotebooksPage() {
             <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
               <h4 className="text-sm font-semibold flex items-center gap-1.5">
                 <User className="size-4" />
-                Asignación de Responsable
+                Asignación de Responsable y Área
               </h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5 flex flex-col">
                   <Label>Usuario Responsable</Label>
-                  <Select 
-                    value={(form as any).assignedUserId || "none"} 
-                    onValueChange={(v) => setForm({ ...form, assignedUserId: v } as any)}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Seleccionar usuario" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sin asignar</SelectItem>
-                      {users.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={userPopoverOpen} onOpenChange={setUserPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={userPopoverOpen}
+                        className="w-full justify-between font-normal"
+                      >
+                        <span className="truncate">
+                          {selectedUserObj ? selectedUserObj.fullName : "Sin asignar"}
+                        </span>
+                        <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent 
+                      className="w-[280px] p-2 pointer-events-auto" 
+                      align="start"
+                      onWheel={(e) => e.stopPropagation()}
+                      onPointerDownOutside={(e) => {
+                        // Keep open if interacting with popover content
+                      }}
+                    >
+                      <div className="flex items-center border-b px-2 pb-2 mb-2" onClick={(e) => e.stopPropagation()}>
+                        <Search className="mr-2 size-4 shrink-0 opacity-50" />
+                        <Input
+                          placeholder="Buscar colaborador..."
+                          value={userSearchFilter}
+                          onChange={(e) => setUserSearchFilter(e.target.value)}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          className="h-8 border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-xs"
+                          autoFocus
+                        />
+                      </div>
+                      <div 
+                        className="max-h-[220px] overflow-y-auto space-y-1 pr-1"
+                        style={{ overscrollBehavior: "contain" }}
+                      >
+                        <button
+                          type="button"
+                          className={`w-full text-left px-2 py-1.5 rounded-md text-xs transition-colors hover:bg-accent flex items-center justify-between ${
+                            (form as any).assignedUserId === "none" ? "bg-accent font-medium" : ""
+                          }`}
+                          onClick={() => {
+                            setForm({ ...form, assignedUserId: "none" } as any);
+                            setUserPopoverOpen(false);
+                            setUserSearchFilter("");
+                          }}
+                        >
+                          <span>Sin asignar</span>
+                          {(form as any).assignedUserId === "none" && <Check className="size-3 text-primary" />}
+                        </button>
+                        {filteredUsers.length === 0 ? (
+                          <div className="p-2 text-center text-xs text-muted-foreground">
+                            No se encontraron colaboradores.
+                          </div>
+                        ) : (
+                          filteredUsers.map((u) => {
+                            const isSelected = u.id === (form as any).assignedUserId;
+                            return (
+                              <button
+                                key={u.id}
+                                type="button"
+                                className={`w-full text-left px-2 py-1.5 rounded-md text-xs transition-colors hover:bg-accent flex items-center justify-between ${
+                                  isSelected ? "bg-accent font-medium text-primary text-emerald-600 dark:text-emerald-400" : ""
+                                }`}
+                                onClick={() => {
+                                  setForm({
+                                    ...form,
+                                    assignedUserId: u.id,
+                                    assignedArea: u.location || form.assignedArea,
+                                  } as any);
+                                  setUserPopoverOpen(false);
+                                  setUserSearchFilter("");
+                                }}
+                              >
+                                <div>
+                                  <p className="font-medium leading-none">{u.fullName}</p>
+                                  {u.location && (
+                                    <p className="text-[10px] text-muted-foreground mt-0.5">{u.location}</p>
+                                  )}
+                                </div>
+                                {isSelected && <Check className="size-3 text-primary" />}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Área / Ubicación</Label>
+                  <Input
+                    placeholder="Ej. Sistemas, Marketing, Fábrica..."
+                    value={form.assignedArea}
+                    onChange={(e) => setForm({ ...form, assignedArea: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Tipo de Asignación</Label>
                   <Select 
-                    disabled={(form as any).assignedUserId === "none"}
+                    disabled={(form as any).assignedUserId === "none" && !form.assignedArea}
                     value={(form as any).assignmentType || "permanent"} 
                     onValueChange={(v) => setForm({ ...form, assignmentType: v } as any)}
                   >
@@ -601,12 +964,26 @@ export function NotebooksPage() {
             </div>
             </div>
           </div>
-          <DialogFooter className="flex flex-row items-center justify-end gap-2">
-            <Button onClick={handleSave}><Save className="size-4 mr-1" />{editingNotebook ? "Guardar" : "Registrar equipo"}</Button>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+          <DialogFooter className="flex flex-row items-center justify-between p-6 pt-2">
+            {editingNotebook && (
+              <Button
+                variant="destructive"
+                onClick={() => handleDelete(editingNotebook)}
+              >
+                <Trash2 className="size-4 mr-1" />
+                Eliminar equipo
+              </Button>
+            )}
+            <div className="flex items-center gap-2 ml-auto">
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={handleSave}><Save className="size-4 mr-1" />{editingNotebook ? "Guardar" : "Registrar equipo"}</Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ImportPowerShellModal open={importModalOpen} onClose={() => setImportModalOpen(false)} />
     </div>
   );
 }
+

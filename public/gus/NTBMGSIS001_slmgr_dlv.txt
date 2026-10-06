@@ -1,0 +1,18 @@
+﻿Versión del Servicio de licencias de software: 10.0.26100.9168
+
+Nombre: Windows(R), Professional edition
+Descripción: Windows(R) Operating System, OEM_DM channel
+Id. de activación: fe74f55b-0338-41d6-b267-4a201abe7285
+Id. de aplicación: 55c92734-d682-4d71-983e-d6ec3f16059f
+PID extendido: 03612-03556-208-350292-02-3082-26100.0000-3332025
+Canal de clave de producto: OEM:DM
+Id. de instalación: 506190140982445452422665468415739927554904066016366128151668404
+URL de la licencia de uso: https://activation-v2.sls.microsoft.com/SLActivateProduct/SLActivateProduct.asmx?configextension=DM
+URL de validación: https://validation-v2.sls.microsoft.com/SLWGA/slwga.asmx
+Clave de producto parcial: 8HWGG
+Estado de la licencia: con licencia
+Recuento de rearmado de Windows restante: 999
+Recuento de rearmados de SKU restantes: 1001
+Hora de confianza: 2/10/2026 15:35:24
+
+

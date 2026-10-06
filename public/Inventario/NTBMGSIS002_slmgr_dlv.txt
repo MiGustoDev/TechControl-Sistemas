@@ -1,0 +1,18 @@
+﻿Software licensing service version: 10.0.26100.9549
+
+Name: Windows(R), Professional edition
+Description: Windows(R) Operating System, OEM_DM channel
+Activation ID: fe74f55b-0338-41d6-b267-4a201abe7285
+Application ID: 55c92734-d682-4d71-983e-d6ec3f16059f
+Extended PID: 03612-03556-109-944127-02-1033-26100.0000-2252025
+Product Key Channel: OEM:DM
+Installation ID: 272359532738126785003125618471267728979904459770219211853348884
+Use License URL: https://activation-v2.sls.microsoft.com/SLActivateProduct/SLActivateProduct.asmx?configextension=DM
+Validation URL: https://validation-v2.sls.microsoft.com/SLWGA/slwga.asmx
+Partial Product Key: V222T
+License Status: Licensed
+Remaining Windows rearm count: 1001
+Remaining SKU rearm count: 1001
+Trusted time: 30/9/2026 15:34:42
+
+
