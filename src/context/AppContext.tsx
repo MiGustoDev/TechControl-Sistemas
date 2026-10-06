@@ -867,18 +867,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updatedAt: m.updated_at
       })));
 
-      let localSavedUsers: User[] = [];
-      const savedUsersRaw = localStorage.getItem("techcontrol_users");
-      if (savedUsersRaw) {
-        try {
-          const parsed = JSON.parse(savedUsersRaw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            localSavedUsers = parsed;
-          }
-        } catch (e) {
-          console.error("Error parsing local users", e);
-        }
-      }
+
 
       if (usr && usr.length > 0) {
         dbUsers = usr
@@ -956,19 +945,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })));
 
       if (tvs && tvs.length > 0) {
-        const dbMapped = tvs.map(tv => ({
+        const dbMapped: DataliveTV[] = tvs.map(tv => ({
           id: tv.id,
           branch: tv.branch,
           name: tv.name,
           user: tv.username,
           deviceId: tv.device_id,
           pin: tv.pin,
-          notes: tv.notes,
+          notes: tv.notes || undefined,
           createdAt: tv.created_at,
           updatedAt: tv.updated_at
         }));
         // Merge initialTVs with dbMapped, giving priority to initialTVs for branches modified locally (like Ballester) or combining them
-        const dbMap = new Map(dbMapped.map(tv => [tv.id, tv]));
+        const dbMap = new Map<string, DataliveTV>(dbMapped.map(tv => [tv.id, tv]));
         // Remove old 'dtv-bal-soon' if present in dbMap
         dbMap.delete("dtv-bal-soon");
         initialTVs.forEach(tv => {
@@ -1527,100 +1516,139 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const getMockPrices = (): ProductPrice[] => [
-    { id: 'emp-1', name: 'American Chicken', category: 'empanadas', price: 4700.00, isPremium: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-2', name: 'Big Burger', category: 'empanadas', price: 4700.00, isPremium: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-3', name: 'Carne Picante', category: 'empanadas', price: 4700.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-4', name: 'Doble Bacon Cheese Burger', category: 'empanadas', price: 4700.00, isPremium: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-5', name: 'La Sagrada', category: 'empanadas', price: 4700.00, isPremium: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-6', name: 'Mexican Pibil Pork', category: 'empanadas', price: 4700.00, isPremium: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-7', name: 'Carne al Cuchillo', category: 'empanadas', price: 4700.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-8', name: 'Carne con Aceituna', category: 'empanadas', price: 4700.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-9', name: 'Carne Suave', category: 'empanadas', price: 4700.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-10', name: 'Pollo', category: 'empanadas', price: 4700.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-11', name: 'Pollo al Champignon', category: 'empanadas', price: 4700.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-12', name: 'Jamón y Queso', category: 'empanadas', price: 4700.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-13', name: 'Vacío y Provoleta', category: 'empanadas', price: 4700.00, isPremium: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-14', name: 'Matambre a la Pizza', category: 'empanadas', price: 4700.00, isPremium: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-15', name: 'Queso y Cebolla', category: 'empanadas', price: 4700.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-16', name: 'Roquefort con Jamón', category: 'empanadas', price: 4700.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-17', name: 'Choclo', category: 'empanadas', price: 4700.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-18', name: 'Verdura', category: 'empanadas', price: 4700.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-19', name: 'Jamón, Huevo y Queso', category: 'empanadas', price: 4700.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'emp-20', name: 'Cuatro Quesos', category: 'empanadas', price: 4700.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    // Empanadas
+    { id: 'emp-1', name: 'American Chicken', category: 'empanadas', price: 4700.00, isPremium: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-2', name: 'Big Burger', category: 'empanadas', price: 4700.00, isPremium: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-3', name: 'Carne Picante', category: 'empanadas', price: 4700.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-4', name: 'Doble Bacon Cheese Burger', category: 'empanadas', price: 4700.00, isPremium: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-5', name: 'La Sagrada', category: 'empanadas', price: 4700.00, isPremium: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-6', name: 'Mexican Pibil Pork', category: 'empanadas', price: 4700.00, isPremium: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-7', name: 'Carne al Cuchillo', category: 'empanadas', price: 4700.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-8', name: 'Carne con Aceituna', category: 'empanadas', price: 4700.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-9', name: 'Carne Suave', category: 'empanadas', price: 4700.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-10', name: 'Pollo', category: 'empanadas', price: 4700.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-11', name: 'Pollo al Champignon', category: 'empanadas', price: 4700.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-12', name: 'Jamón y Queso', category: 'empanadas', price: 4700.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-13', name: 'Vacío y Provoleta', category: 'empanadas', price: 4700.00, isPremium: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-14', name: 'Matambre a la Pizza', category: 'empanadas', price: 4700.00, isPremium: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-15', name: 'Queso y Cebolla', category: 'empanadas', price: 4700.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-16', name: 'Roquefort con Jamón', category: 'empanadas', price: 4700.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-17', name: 'Choclo', category: 'empanadas', price: 4700.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-18', name: 'Verdura', category: 'empanadas', price: 4700.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-19', name: 'Jamón, Huevo y Queso', category: 'empanadas', price: 4700.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'emp-20', name: 'Cuatro Quesos', category: 'empanadas', price: 4700.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
 
-    // Pizzas ($20.000,00)
-    { id: 'piz-1', name: 'Muzzarella', category: 'pizzas', price: 20000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'piz-2', name: 'Jamon con morron', category: 'pizzas', price: 20000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'piz-3', name: 'Napolitana', category: 'pizzas', price: 20000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'piz-4', name: 'Provolone', category: 'pizzas', price: 20000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'piz-5', name: 'Panceta', category: 'pizzas', price: 20000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'piz-6', name: 'Roquefort', category: 'pizzas', price: 20000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'piz-7', name: 'Cuatro quesos', category: 'pizzas', price: 20000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'piz-8', name: 'Fugazzeta', category: 'pizzas', price: 20000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'piz-9', name: 'Pepperoni', category: 'pizzas', price: 20000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    // Pizzas
+    { id: 'piz-1', name: 'Muzzarella', category: 'pizzas', price: 20000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'piz-2', name: 'Jamon con morron', category: 'pizzas', price: 20000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'piz-3', name: 'Napolitana', category: 'pizzas', price: 20000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'piz-4', name: 'Provolone', category: 'pizzas', price: 20000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'piz-5', name: 'Panceta', category: 'pizzas', price: 20000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'piz-6', name: 'Roquefort', category: 'pizzas', price: 20000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'piz-7', name: 'Cuatro quesos', category: 'pizzas', price: 20000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'piz-8', name: 'Fugazzeta', category: 'pizzas', price: 20000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'piz-9', name: 'Pepperoni', category: 'pizzas', price: 20000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
 
     // Pizzas INDI
-    { id: 'indi-1', name: 'Jamon Crudo y Rucula INDI', category: 'pizzas_indi', price: 9000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'indi-2', name: 'Jamon y morron INDI', category: 'pizzas_indi', price: 9000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'indi-3', name: 'Muzza INDI', category: 'pizzas_indi', price: 9000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'indi-4', name: 'Napolitana INDI', category: 'pizzas_indi', price: 9000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'indi-5', name: 'Pepperoni INDI', category: 'pizzas_indi', price: 9000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'indi-1', name: 'Jamon Crudo y Rucula INDI', category: 'pizzas_indi', price: 9000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'indi-2', name: 'Jamon y morron INDI', category: 'pizzas_indi', price: 9000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'indi-3', name: 'Muzza INDI', category: 'pizzas_indi', price: 9000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'indi-4', name: 'Napolitana INDI', category: 'pizzas_indi', price: 9000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'indi-5', name: 'Pepperoni INDI', category: 'pizzas_indi', price: 9000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+
+    // Fitzzas
+    { id: 'fitz-1', name: 'Fitzza Carne', category: 'fitzzas', price: 9500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'fitz-2', name: 'Fitzza Pollo', category: 'fitzzas', price: 9500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'fitz-3', name: 'Fitzza Jamón y Queso', category: 'fitzzas', price: 9500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'fitz-4', name: 'Fitzza Verdura', category: 'fitzzas', price: 9500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+
+    // Salsas
+    { id: 'sal-1', name: 'Salsa Criolla', category: 'salsas', price: 1200.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'sal-2', name: 'Salsa Chimichurri', category: 'salsas', price: 1200.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'sal-3', name: 'Salsa Picante', category: 'salsas', price: 1200.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'sal-4', name: 'Salsa Barbacoa', category: 'salsas', price: 1200.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'sal-5', name: 'Salsa Cheddar', category: 'salsas', price: 1400.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'sal-6', name: 'Salsa Alioli', category: 'salsas', price: 1200.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+
+    // Bebidas
+    { id: 'beb-1', name: 'Coca-Cola 500ml', category: 'bebidas', price: 2500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'beb-2', name: 'Coca-Cola Sin Azúcar 500ml', category: 'bebidas', price: 2500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'beb-3', name: 'Sprite 500ml', category: 'bebidas', price: 2500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'beb-4', name: 'Sprite Sin Azúcar 500ml', category: 'bebidas', price: 2500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'beb-5', name: 'Agua Mineral con Gas 500ml', category: 'bebidas', price: 2000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'beb-6', name: 'Agua Mineral sin Gas 500ml', category: 'bebidas', price: 2000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'beb-7', name: 'Cerveza Corona 330ml', category: 'bebidas', price: 3800.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'beb-8', name: 'Cerveza Stella Artois 473ml', category: 'bebidas', price: 4200.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+
+    // Postres
+    { id: 'pos-1', name: 'Volcán de Chocolate', category: 'postres', price: 4500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pos-2', name: 'Flan Casero con Dulce de Leche', category: 'postres', price: 3800.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pos-3', name: 'Cheesecake de Frutos Rojos', category: 'postres', price: 4500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pos-4', name: 'Tiramisú', category: 'postres', price: 4200.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pos-5', name: 'Helado Bombón Suizo', category: 'postres', price: 3500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
 
     // Cafetería
-    { id: 'caf-1', name: 'Café de Cortesia', category: 'cafeteria', price: 0.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-2', name: 'Jugo de Naranja 12oz', category: 'cafeteria', price: 3500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-3', name: 'Americano 6oz', category: 'cafeteria', price: 3200.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-4', name: 'Americano 8oz', category: 'cafeteria', price: 3800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-5', name: 'Cappuccino 6oz', category: 'cafeteria', price: 3800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-6', name: 'Cappuccino 8oz', category: 'cafeteria', price: 4500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-7', name: 'Caramel Latte 6oz', category: 'cafeteria', price: 4200.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-8', name: 'Caramel Latte 8oz', category: 'cafeteria', price: 4800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-9', name: 'Doble Espresso 8oz', category: 'cafeteria', price: 3900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-10', name: 'Doble Flat White 8oz', category: 'cafeteria', price: 4500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-11', name: 'Doble Latte 8oz', category: 'cafeteria', price: 4500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-12', name: 'Espresso 6oz', category: 'cafeteria', price: 3000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-13', name: 'Flat White 6oz', category: 'cafeteria', price: 3800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-14', name: 'Latte 6oz', category: 'cafeteria', price: 3800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-15', name: 'Mocca 6oz', category: 'cafeteria', price: 4200.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-16', name: 'Mocca 8oz', category: 'cafeteria', price: 4800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-17', name: 'Té', category: 'cafeteria', price: 2500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-18', name: 'Ice Caramel Latte 16oz', category: 'cafeteria', price: 5200.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-19', name: 'Ice Espresso 16oz', category: 'cafeteria', price: 4500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-20', name: 'Ice Latte', category: 'cafeteria', price: 4800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-21', name: 'Ice Latte 16oz', category: 'cafeteria', price: 5200.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-22', name: 'Iced Mocca', category: 'cafeteria', price: 5200.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-23', name: 'Frappe Caramel', category: 'cafeteria', price: 5500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-24', name: 'Frappe Chocolate', category: 'cafeteria', price: 5500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-25', name: 'Frappe DDL', category: 'cafeteria', price: 5500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-26', name: 'Budín Chocolate Blanco', category: 'cafeteria', price: 3500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-27', name: 'Budín de limón', category: 'cafeteria', price: 3500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-28', name: 'Cookie Chips de Chocolate', category: 'cafeteria', price: 2800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-29', name: 'Cookie Nutella', category: 'cafeteria', price: 3200.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-30', name: 'Croissant', category: 'cafeteria', price: 3000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-31', name: 'Medialuna de Manteca', category: 'cafeteria', price: 1800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-32', name: 'Medialuna J&Q', category: 'cafeteria', price: 2800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-33', name: 'Roll de Canela', category: 'cafeteria', price: 3500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-34', name: 'Roll de queso', category: 'cafeteria', price: 3500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-35', name: 'Tostado J&Q', category: 'cafeteria', price: 4800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-36', name: 'Café + 2 Medialunas', category: 'cafeteria', price: 5800.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-37', name: 'Café + Budín', category: 'cafeteria', price: 6500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'caf-38', name: 'Café + Tostado', category: 'cafeteria', price: 7500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'caf-1', name: 'Café de Cortesia', category: 'cafeteria', price: 0.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-2', name: 'Jugo de Naranja 12oz', category: 'cafeteria', price: 3500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-3', name: 'Americano 6oz', category: 'cafeteria', price: 3200.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-4', name: 'Americano 8oz', category: 'cafeteria', price: 3800.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-5', name: 'Cappuccino 6oz', category: 'cafeteria', price: 3800.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-6', name: 'Cappuccino 8oz', category: 'cafeteria', price: 4500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-7', name: 'Caramel Latte 6oz', category: 'cafeteria', price: 4200.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-8', name: 'Caramel Latte 8oz', category: 'cafeteria', price: 4800.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-9', name: 'Doble Espresso 8oz', category: 'cafeteria', price: 3900.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-10', name: 'Doble Flat White 8oz', category: 'cafeteria', price: 4500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-11', name: 'Doble Latte 8oz', category: 'cafeteria', price: 4500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-12', name: 'Espresso 6oz', category: 'cafeteria', price: 3000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-13', name: 'Flat White 6oz', category: 'cafeteria', price: 3800.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-14', name: 'Latte 6oz', category: 'cafeteria', price: 3800.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-15', name: 'Mocca 6oz', category: 'cafeteria', price: 4200.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-16', name: 'Mocca 8oz', category: 'cafeteria', price: 4800.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-17', name: 'Té', category: 'cafeteria', price: 2500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-18', name: 'Ice Caramel Latte 16oz', category: 'cafeteria', price: 5200.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-19', name: 'Ice Espresso 16oz', category: 'cafeteria', price: 4500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-20', name: 'Ice Latte', category: 'cafeteria', price: 4800.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-21', name: 'Ice Latte 16oz', category: 'cafeteria', price: 5200.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-22', name: 'Iced Mocca', category: 'cafeteria', price: 5200.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-23', name: 'Frappe Caramel', category: 'cafeteria', price: 5500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-24', name: 'Frappe Chocolate', category: 'cafeteria', price: 5500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-25', name: 'Frappe DDL', category: 'cafeteria', price: 5500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-26', name: 'Budín Chocolate Blanco', category: 'cafeteria', price: 3500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-27', name: 'Budín de limón', category: 'cafeteria', price: 3500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-28', name: 'Cookie Chips de Chocolate', category: 'cafeteria', price: 2800.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-29', name: 'Cookie Nutella', category: 'cafeteria', price: 3200.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-30', name: 'Croissant', category: 'cafeteria', price: 3000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-31', name: 'Medialuna de Manteca', category: 'cafeteria', price: 1800.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-32', name: 'Medialuna J&Q', category: 'cafeteria', price: 2800.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-33', name: 'Roll de Canela', category: 'cafeteria', price: 3500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-34', name: 'Roll de queso', category: 'cafeteria', price: 3500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-35', name: 'Tostado J&Q', category: 'cafeteria', price: 4800.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-36', name: 'Café + 2 Medialunas', category: 'cafeteria', price: 5800.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-37', name: 'Café + Budín', category: 'cafeteria', price: 6500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'caf-38', name: 'Café + Tostado', category: 'cafeteria', price: 7500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+
+    // Promos
+    { id: 'pro-1', name: 'Promo 12 Empanadas + Bebida 1.5L', category: 'promos', price: 52000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pro-2', name: 'Promo 2 Pizzas Muzzarella', category: 'promos', price: 36000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pro-3', name: 'Promo 6 Empanadas + 1 Pizza Muzza', category: 'promos', price: 44000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pro-4', name: 'Combo Almuerzo (2 Empanadas + Bebida)', category: 'promos', price: 11500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pro-5', name: 'Mega Promo Familiar (2 Pizzas + 12 Empanadas)', category: 'promos', price: 79000.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
 
     // Packs
-    { id: 'pack-1', name: 'Pack de 2 Empanadas', category: 'packs', price: 0.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pack-2', name: '2 Empanadas + 1 Salsa', category: 'packs', price: 0.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pack-3', name: 'Pack de 3 Empanadas', category: 'packs', price: 14900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pack-4', name: '3 Empanadas + 1 Salsa', category: 'packs', price: 14900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pack-5', name: 'Pack de 4 Empanadas', category: 'packs', price: 0.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pack-6', name: '4 Empanadas + 1 Salsa', category: 'packs', price: 0.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pack-7', name: 'Pack de 6 Empanadas', category: 'packs', price: 29500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pack-8', name: '6 Empanadas + 2 Salsa', category: 'packs', price: 29500.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pack-9', name: 'Pack 8 Empanadas', category: 'packs', price: 36900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pack-10', name: '8 empanadas + 2 Salsas', category: 'packs', price: 36900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pack-11', name: 'Pack 12 Empanadas', category: 'packs', price: 49900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pack-12', name: '12 Empanadas + 3 salsas', category: 'packs', price: 49900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pack-13', name: 'Pack 18 Empanadas', category: 'packs', price: 72900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pack-14', name: '18 empanadas + 5 salsas', category: 'packs', price: 72900.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+    { id: 'pack-1', name: 'Pack de 2 Empanadas', category: 'packs', price: 0.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pack-2', name: '2 Empanadas + 1 Salsa', category: 'packs', price: 0.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pack-3', name: 'Pack de 3 Empanadas', category: 'packs', price: 14900.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pack-4', name: '3 Empanadas + 1 Salsa', category: 'packs', price: 14900.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pack-5', name: 'Pack de 4 Empanadas', category: 'packs', price: 0.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pack-6', name: '4 Empanadas + 1 Salsa', category: 'packs', price: 0.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pack-7', name: 'Pack de 6 Empanadas', category: 'packs', price: 29500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pack-8', name: '6 Empanadas + 2 Salsa', category: 'packs', price: 29500.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pack-9', name: 'Pack 8 Empanadas', category: 'packs', price: 36900.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pack-10', name: '8 empanadas + 2 Salsas', category: 'packs', price: 36900.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pack-11', name: 'Pack 12 Empanadas', category: 'packs', price: 49900.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pack-12', name: '12 Empanadas + 3 salsas', category: 'packs', price: 49900.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pack-13', name: 'Pack 18 Empanadas', category: 'packs', price: 72900.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'pack-14', name: '18 empanadas + 5 salsas', category: 'packs', price: 72900.00, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' }
   ];
 
   const loadLocalPricesFallback = useCallback(() => {
@@ -1629,47 +1657,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (saved) {
       try {
         const parsed: ProductPrice[] = JSON.parse(saved);
-        const isOldVersion = parsed.some((p: any) => p.price === 1200 || p.id === 'm1' || p.id === 'piz-10' || p.name === 'Doble muzzarella');
-        if (isOldVersion) {
-          setProductPrices(mocks);
-          safeLocalStorageSetItem("techcontrol_product_prices", mocks);
-        } else {
-          const packPricesMap: Record<string, number> = {
-            'pack-1': 0.00,
-            'pack-2': 0.00,
-            'pack-3': 14900.00,
-            'pack-4': 14900.00,
-            'pack-5': 0.00,
-            'pack-6': 0.00,
-            'pack-7': 29500.00,
-            'pack-8': 29500.00,
-            'pack-9': 36900.00,
-            'pack-10': 36900.00,
-            'pack-11': 49900.00,
-            'pack-12': 49900.00,
-            'pack-13': 72900.00,
-            'pack-14': 72900.00,
-          };
-
-          const updatedWithPrices = parsed.map(p => {
-            if (packPricesMap[p.id] !== undefined) {
-              return { ...p, price: packPricesMap[p.id] };
-            }
-            return p;
-          });
-
-          const existingIds = new Set(updatedWithPrices.map(p => p.id));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const existingIds = new Set(parsed.map(p => p.id));
           const missingMocks = mocks.filter(m => !existingIds.has(m.id));
-          const updated = missingMocks.length > 0 ? [...updatedWithPrices, ...missingMocks] : updatedWithPrices;
+          const updated = missingMocks.length > 0 ? [...parsed, ...missingMocks] : parsed;
           setProductPrices(updated);
           safeLocalStorageSetItem("techcontrol_product_prices", updated);
+          return;
         }
-      } catch (e) {
-        setProductPrices(mocks);
-      }
-    } else {
-      setProductPrices(mocks);
+      } catch (e) {}
     }
+    setProductPrices(mocks);
+    safeLocalStorageSetItem("techcontrol_product_prices", mocks);
   }, []);
 
   const syncProductPricesFromSupabase = useCallback(async () => {
@@ -1680,11 +1679,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       let dbMapped: ProductPrice[] = [];
       if (data && !error && data.length > 0) {
         dbMapped = data.map((p: any) => ({
-          id: p.id,
+          id: String(p.id),
           name: p.name,
           category: p.category as ProductPriceCategory,
-          price: Number(p.price),
-          isPremium: p.is_premium || p.isPremium,
+          price: Number(p.price) || 0,
+          isPremium: Boolean(p.is_premium || p.isPremium),
           createdAt: p.created_at || new Date().toISOString(),
           updatedAt: p.updated_at || new Date().toISOString()
         }));
@@ -1715,14 +1714,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!deletedIds.has(m.id)) mergedMap.set(m.id, m);
       });
 
-      // 2. Local storage overrides mocks
+      // 2. Local storage takes precedence over mocks
       localSaved.forEach(l => {
-        if (l && l.id && !deletedIds.has(l.id)) mergedMap.set(l.id, l);
+        if (l && l.id && !deletedIds.has(l.id)) {
+          mergedMap.set(l.id, l);
+        }
       });
 
-      // 3. DB overrides both
+      // 3. Supabase DB: if DB item has newer updatedAt or local doesn't exist, update mergedMap
       dbMapped.forEach(d => {
-        if (d && d.id && !deletedIds.has(d.id)) mergedMap.set(d.id, d);
+        if (d && d.id && !deletedIds.has(d.id)) {
+          const currentLocal = mergedMap.get(d.id);
+          if (!currentLocal) {
+            mergedMap.set(d.id, d);
+          } else {
+            const localTime = new Date(currentLocal.updatedAt || 0).getTime();
+            const dbTime = new Date(d.updatedAt || 0).getTime();
+            if (dbTime >= localTime) {
+              mergedMap.set(d.id, d);
+            }
+          }
+        }
       });
 
       const finalPrices = Array.from(mergedMap.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -1730,24 +1742,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setProductPrices(finalPrices);
       safeLocalStorageSetItem("techcontrol_product_prices", finalPrices);
 
-      if (dbMapped.length > 0) {
-        const ALLOWED_DB_CATEGORIES = new Set(["empanadas", "pizzas", "pizzas_indi", "promos", "packs"]);
-        const dbIds = new Set(dbMapped.map(d => d.id));
-        const missingFromDb = finalPrices.filter(p => !dbIds.has(p.id) && ALLOWED_DB_CATEGORIES.has(p.category));
-        if (missingFromDb.length > 0) {
-          supabase.from("product_prices").upsert(missingFromDb.map(p => ({
-            id: p.id,
-            name: p.name,
-            category: p.category,
-            price: p.price,
-            created_at: p.createdAt,
-            updated_at: p.updatedAt
-          }))).then(({ error: upsertErr }) => {
-            if (upsertErr) {
-              // Silently handle seeding restrictions on client side
-            }
-          });
-        }
+      // Background sync: send any local/missing prices to Supabase so DB stays complete
+      const dbIds = new Set(dbMapped.map(d => d.id));
+      const itemsToSyncToDb = finalPrices.filter(p => !dbIds.has(p.id) || (dbMapped.find(d => d.id === p.id && Number(d.price) !== Number(p.price))));
+      
+      if (itemsToSyncToDb.length > 0) {
+        const payload = itemsToSyncToDb.map(p => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          price: p.price,
+          is_premium: p.isPremium || false,
+          created_at: p.createdAt,
+          updated_at: p.updatedAt
+        }));
+
+        supabase.from("product_prices").upsert(payload).then(({ error: upsertErr }) => {
+          if (upsertErr) {
+            // Fallback retry without is_premium if column is not in DB table
+            const fallbackPayload = itemsToSyncToDb.map(p => ({
+              id: p.id,
+              name: p.name,
+              category: p.category,
+              price: p.price,
+              created_at: p.createdAt,
+              updated_at: p.updatedAt
+            }));
+            void supabase.from("product_prices").upsert(fallbackPayload);
+          }
+        });
       }
     } catch (err) {
       console.warn("Error al sincronizar precios:", err);
@@ -1761,6 +1784,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       name: item.name.trim(),
       category: item.category,
       price: item.price,
+      isPremium: item.isPremium || false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -1772,16 +1796,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      const { error } = await supabase.from("product_prices").upsert({
+      const dbPayload: any = {
         id: newPrice.id,
         name: newPrice.name,
         category: newPrice.category,
         price: newPrice.price,
+        is_premium: newPrice.isPremium || false,
         created_at: newPrice.createdAt,
         updated_at: newPrice.updatedAt
-      });
-      if (error) console.warn("Error inserting product price to Supabase:", error);
-    } catch (e) {}
+      };
+      const { error } = await supabase.from("product_prices").upsert(dbPayload);
+      if (error) {
+        delete dbPayload.is_premium;
+        await supabase.from("product_prices").upsert(dbPayload);
+      }
+    } catch (e) {
+      console.warn("Error al guardar producto en Supabase:", e);
+    }
   }, []);
 
   const updateProductPrice = useCallback(async (id: string, data: Partial<ProductPrice>) => {
@@ -1805,12 +1836,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           name: updatedItem.name,
           category: updatedItem.category,
           price: updatedItem.price,
+          is_premium: updatedItem.isPremium || false,
           updated_at: updatedItem.updatedAt
         };
         const { error } = await supabase.from("product_prices").upsert(dbPayload);
-        if (error) console.warn("Error upserting product price in Supabase:", error);
+        if (error) {
+          delete dbPayload.is_premium;
+          await supabase.from("product_prices").upsert(dbPayload);
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Error al actualizar producto en Supabase:", e);
+    }
   }, []);
 
   const deleteProductPrice = useCallback(async (id: string) => {
