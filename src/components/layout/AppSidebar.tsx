@@ -104,8 +104,8 @@ export function AppSidebar() {
             } py-2`}
             title={userRole !== "marketing" ? "Ir a Guardias IT" : undefined}
           >
-            <div className={`flex ${isCollapsed ? "size-8" : "size-9"} shrink-0 items-center justify-center rounded-lg overflow-hidden bg-white border border-border transition-all`}>
-              <img src={`${import.meta.env.BASE_URL}LOGOcircular.png`} alt="Logo" className="size-full object-contain p-0.5" />
+            <div className={`flex ${isCollapsed ? "size-8" : "size-12"} shrink-0 items-center justify-center overflow-hidden transition-all`}>
+              <img src={`${import.meta.env.BASE_URL}LOGOcircular.png`} alt="Logo" className="size-full object-contain" />
             </div>
             {!isCollapsed && (
               <div className="grid leading-tight text-left min-w-0">

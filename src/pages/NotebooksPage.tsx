@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Search, Laptop, User, Cpu, HardDrive, Monitor, Pencil as Edit, Save, History, Database, Copy, Check, Key, FileCode, ShieldCheck, Trash2, Building2, ChevronsUpDown } from "lucide-react";
+import { Plus, Search, Laptop, User, Cpu, HardDrive, Monitor, Pencil as Edit, Save, History, Database, Copy, Check, Key, FileCode, ShieldCheck, Trash2, Building2, ChevronsUpDown, FileDown, FileSpreadsheet } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,8 @@ import {
 import type { Notebook, NotebookStatus } from "@/types";
 import { toast } from "sonner";
 import { ImportPowerShellModal } from "@/components/ImportPowerShellModal";
+import { exportNotebooksPdf } from "@/lib/exportNotebooksPdf";
+import { exportNotebooksExcel } from "@/lib/exportNotebooksExcel";
 
 function AutoResizeTextarea({
   value,
@@ -163,13 +165,49 @@ function NotebookCard({ notebook, onEdit, onDelete, onViewDetail }: NotebookCard
             <Monitor className="size-3 shrink-0 text-primary/70" />
             <span className="truncate" title={notebook.os}>{notebook.os || "Windows"}</span>
           </div>
-          {notebook.productKeyOEM && (
-            <div className="flex items-center gap-1 mt-1 pt-1 border-t border-border/40">
-              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[9px] py-0 px-1.5 font-mono">
-                <Key className="mr-1 size-2.5" /> Clave BIOS OEM
-              </Badge>
-            </div>
-          )}
+          {(() => {
+            const oemKey = notebook.productKeyOEM?.trim() || "";
+            const instKey = notebook.productKeyInstalled?.trim() || "";
+            const keysMatch = !!(oemKey && instKey && oemKey.toUpperCase() === instKey.toUpperCase());
+
+            const badges = [];
+
+            if (keysMatch) {
+              badges.push(
+                <Badge key="win-orig" variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[9px] py-0.5 px-1.5 font-medium flex items-center gap-1">
+                  <Check className="size-3 text-emerald-600 stroke-[3]" />
+                  Windows Original
+                </Badge>
+              );
+            }
+
+            if (notebook.win11Evaluation) {
+              const isNoApto = notebook.win11Evaluation.toUpperCase().includes("NO APTO") || notebook.win11Evaluation.toUpperCase().includes("MENOR A 2.0");
+              badges.push(
+                <Badge
+                  key="w11-eval"
+                  variant="outline"
+                  className={`text-[9px] py-0.5 px-1.5 font-medium flex items-center gap-1 max-w-full ${
+                    isNoApto
+                      ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                      : "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30"
+                  }`}
+                  title={notebook.win11Evaluation}
+                >
+                  <ShieldCheck className="size-2.5 shrink-0" />
+                  <span className="truncate">{isNoApto ? "W11: TPM < 2.0 / No Apto" : "Win 11 Apto"}</span>
+                </Badge>
+              );
+            }
+
+            if (badges.length === 0) return null;
+
+            return (
+              <div className="flex flex-wrap items-center gap-1 mt-1 pt-1 border-t border-border/40">
+                {badges}
+              </div>
+            );
+          })()}
         </div>
       </CardContent>
     </Card>
@@ -269,10 +307,25 @@ function NotebookDetailModal({
           {/* Claves de Windows y Licenciamiento */}
           {(notebook.productKeyOEM || notebook.productKeyInstalled || notebook.productId) && (
             <div className="rounded-lg border border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20 p-4 space-y-3">
-              <h4 className="flex items-center gap-1.5 text-sm font-semibold text-amber-800 dark:text-amber-300">
-                <Key className="size-4 text-amber-600" />
-                Licencias de Windows & PowerShell
-              </h4>
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="flex items-center gap-1.5 text-sm font-semibold text-amber-800 dark:text-amber-300">
+                  <Key className="size-4 text-amber-600" />
+                  Licencias de Windows & PowerShell
+                </h4>
+                {(() => {
+                  const oemKey = notebook.productKeyOEM?.trim() || "";
+                  const instKey = notebook.productKeyInstalled?.trim() || "";
+                  if (oemKey && instKey && oemKey.toUpperCase() === instKey.toUpperCase()) {
+                    return (
+                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs py-0.5 px-2 font-medium flex items-center gap-1">
+                        <Check className="size-3.5 text-emerald-600 stroke-[3]" />
+                        Windows Original
+                      </Badge>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
 
               <div className="space-y-2 text-xs">
                 {notebook.productKeyOEM && (
@@ -339,7 +392,7 @@ function NotebookDetailModal({
 
           <div>
             <h4 className="mb-2 text-sm font-semibold">Especificaciones Técnicas</h4>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
               {[
                 ["Procesador", notebook.processor],
                 ["Memoria RAM", notebook.ramUsable ? `${notebook.ram} (${notebook.ramUsable})` : notebook.ram],
@@ -351,9 +404,9 @@ function NotebookDetailModal({
                 ["Versión BIOS", notebook.biosVersion || "N/A"],
                 ["Fecha ingreso", formatDate(notebook.entryDate)],
               ].map(([label, value]) => (
-                <div key={label} className="flex gap-1">
-                  <span className="text-muted-foreground">{label}:</span>
-                  <span className="font-medium truncate" title={value}>{value}</span>
+                <div key={label} className="flex flex-wrap items-baseline gap-1 min-w-0">
+                  <span className="text-muted-foreground shrink-0">{label}:</span>
+                  <span className="font-medium text-foreground break-all text-xs sm:text-sm">{value}</span>
                 </div>
               ))}
             </div>
@@ -639,6 +692,42 @@ export function NotebooksPage() {
           <p className="text-sm text-muted-foreground">{notebooks.length} equipos registrados</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              const ok = exportNotebooksPdf(filtered, {
+                area: filterArea,
+                status: filterStatus,
+                search: search,
+              });
+              if (!ok) {
+                toast.error("No hay equipos para exportar");
+              } else {
+                toast.success("Inventario de equipos exportado a PDF correctamente");
+              }
+            }}
+            className="gap-2 border-red-500/30 text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+          >
+            <FileDown className="size-4 text-red-600" />
+            Exportar PDF
+          </Button>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                const ok = await exportNotebooksExcel(filtered, { area: filterArea, search });
+                if (!ok) toast.error("No hay equipos para exportar");
+                else toast.success("Inventario exportado a Excel correctamente");
+              } catch (err) {
+                console.error(err);
+                toast.error("Error al exportar a Excel");
+              }
+            }}
+            className="gap-2 border-green-600/30 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/30"
+          >
+            <FileSpreadsheet className="size-4 text-green-600" />
+            Exportar Excel
+          </Button>
           <Button variant="outline" onClick={() => setImportModalOpen(true)} className="gap-2 border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30">
             <FileCode className="size-4 text-emerald-600" />
             Importar PowerShell (CSV/TXT)
