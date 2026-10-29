@@ -85,7 +85,7 @@ function AppContent() {
       <AppSidebar />
       <SidebarInset>
         <TopBar />
-        <main className="flex-1 overflow-auto bg-background/50">
+        <main className="flex-1 overflow-auto bg-background/50 min-w-0">
           {renderPage()}
         </main>
       </SidebarInset>

@@ -388,7 +388,7 @@ export function PricesPage() {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 pb-24 w-full max-w-full overflow-x-hidden min-w-0">
+    <div className="space-y-4 sm:space-y-5 p-3 sm:p-5 pb-24 w-full max-w-full overflow-x-hidden min-w-0">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
         <div className="min-w-0">
@@ -415,41 +415,41 @@ export function PricesPage() {
       </div>
 
       {/* Metrics Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 w-full min-w-0">
-        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-orange-500/30 transition-all min-w-0">
-          <CardContent className="p-4 flex items-center justify-between">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-2.5 w-full min-w-0">
+        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-orange-500/30 transition-all min-w-0 overflow-hidden">
+          <CardContent className="p-2.5 sm:p-3 flex items-center justify-between gap-1.5 min-w-0">
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">Total Productos</p>
-              <h3 className="text-xl sm:text-2xl font-black text-foreground mt-0.5">{stats.total}</h3>
+              <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">Total Productos</p>
+              <h3 className="text-lg sm:text-xl font-black text-foreground mt-0.5">{stats.total}</h3>
             </div>
-            <div className="p-2.5 sm:p-3 rounded-xl bg-orange-500/10 text-orange-500 shrink-0">
-              <Tag className="size-4.5 sm:size-5" />
+            <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500 shrink-0">
+              <Tag className="size-4" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-purple-500/30 transition-all min-w-0">
-          <CardContent className="p-4 flex items-center justify-between">
+        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-purple-500/30 transition-all min-w-0 overflow-hidden">
+          <CardContent className="p-2.5 sm:p-3 flex items-center justify-between gap-1.5 min-w-0">
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">Categorías</p>
-              <h3 className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400 mt-0.5">{availableCategoryKeys.length}</h3>
+              <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">Categorías</p>
+              <h3 className="text-lg sm:text-xl font-black text-purple-600 dark:text-purple-400 mt-0.5">{availableCategoryKeys.length}</h3>
             </div>
-            <div className="p-2.5 sm:p-3 rounded-xl bg-purple-500/10 text-purple-500 shrink-0">
-              <Layers className="size-4.5 sm:size-5" />
+            <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500 shrink-0">
+              <Layers className="size-4" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-emerald-500/30 transition-all min-w-0">
-          <CardContent className="p-4 flex items-center justify-between gap-2">
+        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-emerald-500/30 transition-all min-w-0 overflow-hidden">
+          <CardContent className="p-2.5 sm:p-3 flex items-center justify-between gap-1.5 min-w-0">
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">Rango de Precios</p>
-              <h3 className="text-sm sm:text-base md:text-lg lg:text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5 truncate" title={stats.hasPricedProducts ? `${formatCurrencyDisplay(stats.minPrice)} a ${formatCurrencyDisplay(stats.maxPrice)}` : "$ 0"}>
+              <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">Rango de Precios</p>
+              <h3 className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5 truncate" title={stats.hasPricedProducts ? `${formatCurrencyDisplay(stats.minPrice)} a ${formatCurrencyDisplay(stats.maxPrice)}` : "$ 0"}>
                 {stats.hasPricedProducts ? `${formatCurrencyDisplay(stats.minPrice)} - ${formatCurrencyDisplay(stats.maxPrice)}` : "$ 0"}
               </h3>
             </div>
-            <div className="p-2.5 sm:p-3 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
-              <ArrowUpDown className="size-4.5 sm:size-5" />
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 shrink-0">
+              <ArrowUpDown className="size-4" />
             </div>
           </CardContent>
         </Card>
@@ -460,16 +460,16 @@ export function PricesPage() {
           rel="noopener noreferrer"
           className="block group min-w-0"
         >
-          <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-blue-500/50 hover:bg-blue-500/5 transition-all cursor-pointer h-full min-w-0">
-            <CardContent className="p-4 flex items-center justify-between gap-2">
+          <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-blue-500/50 hover:bg-blue-500/5 transition-all cursor-pointer h-full min-w-0 overflow-hidden">
+            <CardContent className="p-2.5 sm:p-3 flex items-center justify-between gap-1.5 min-w-0">
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-blue-500 transition-colors truncate">Carta Digital</p>
-                <h3 className="text-xs sm:text-sm md:text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5 flex items-center gap-1 truncate group-hover:underline">
-                  Ver Menú Web <ExternalLink className="size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-blue-500 transition-colors truncate">Carta Digital</p>
+                <h3 className="text-xs sm:text-sm font-extrabold text-blue-600 dark:text-blue-400 mt-0.5 flex items-center gap-1 truncate group-hover:underline">
+                  Ver Menú Web <ExternalLink className="size-3 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </h3>
               </div>
-              <div className="p-2.5 sm:p-3 rounded-xl bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
-                <Globe className="size-4.5 sm:size-5" />
+              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
+                <Globe className="size-4" />
               </div>
             </CardContent>
           </Card>
@@ -636,8 +636,8 @@ export function PricesPage() {
           <div className="overflow-x-auto w-full min-w-0">
             <table className="w-full border-collapse text-left text-sm text-foreground">
               <thead>
-                <tr className="border-b border-border/60 bg-muted/60 text-xs font-extrabold uppercase tracking-wider text-muted-foreground select-none">
-                  <th className="p-3 sm:p-4 w-10 sm:w-12 text-center">
+                <tr className="border-b border-border/60 bg-muted/60 text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-muted-foreground select-none">
+                  <th className="px-2.5 py-2.5 w-10 text-center">
                     <input
                       type="checkbox"
                       checked={filteredPrices.length > 0 && selectedIds.length === filteredPrices.length}
@@ -645,10 +645,10 @@ export function PricesPage() {
                       className="size-4 rounded accent-orange-600 cursor-pointer"
                     />
                   </th>
-                  <th className="p-3 sm:p-4 min-w-0 max-w-[200px] truncate">Producto</th>
-                  <th className="p-3 sm:p-4 whitespace-nowrap">Categoría</th>
-                  <th className="p-3 sm:p-4 text-right whitespace-nowrap">Precio Oficial</th>
-                  <th className="p-3 sm:p-4 text-center w-24 sm:w-28 whitespace-nowrap">Acciones</th>
+                  <th className="px-3 py-2.5 min-w-0">Producto</th>
+                  <th className="px-3 py-2.5 whitespace-nowrap w-32 sm:w-36">Categoría</th>
+                  <th className="px-3 py-2.5 text-right whitespace-nowrap w-36 sm:w-44">Precio Oficial</th>
+                  <th className="px-2.5 py-2.5 text-center w-20 sm:w-24 whitespace-nowrap">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/20">
@@ -664,7 +664,7 @@ export function PricesPage() {
                         isSelected ? "bg-orange-500/10 hover:bg-orange-500/15" : ""
                       }`}
                     >
-                      <td className="p-4 text-center">
+                      <td className="px-2.5 py-2.5 text-center">
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -672,48 +672,48 @@ export function PricesPage() {
                           className="size-4 rounded accent-orange-600 cursor-pointer"
                         />
                       </td>
-                      <td className="p-4 font-bold text-foreground">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`p-1.5 rounded-md ${catInfo.color}`}>
+                      <td className="px-3 py-2.5 font-bold text-foreground min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className={`p-1.5 rounded-md ${catInfo.color} shrink-0`}>
                             <Icon className="size-3.5" />
                           </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span>{prod.name}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <span className="text-xs sm:text-sm">{prod.name}</span>
                             {isProductPremium(prod) && (
-                              <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-[9px] uppercase tracking-wider px-2 py-0.5 shadow-2xs border-none">
+                              <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-[9px] uppercase tracking-wider px-1.5 py-0.2 shadow-2xs border-none">
                                 ⭐ Premium
                               </Badge>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="p-4">
+                      <td className="px-3 py-2.5 whitespace-nowrap">
                         <Badge variant="outline" className={`${catInfo.color} font-bold text-[10px] uppercase tracking-wider px-2 py-0.5`}>
                           {catInfo.label}
                         </Badge>
                       </td>
-                      <td className="p-4 text-right font-black text-emerald-600 dark:text-emerald-400 text-base">
+                      <td className="px-3 py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm whitespace-nowrap">
                         {formatCurrencyDisplay(prod.price)}
                       </td>
-                      <td className="p-4 text-center">
+                      <td className="px-2.5 py-2.5 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="size-8 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 rounded-lg transition-all"
+                            className="size-7 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 rounded-md transition-all"
                             onClick={() => handleOpenEdit(prod)}
                             title="Editar producto"
                           >
-                            <Edit2 className="size-4" />
+                            <Edit2 className="size-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="size-8 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                            className="size-7 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-md transition-all"
                             onClick={() => handleDeleteTrigger(prod.id)}
                             title="Eliminar producto"
                           >
-                            <Trash2 className="size-4" />
+                            <Trash2 className="size-3.5" />
                           </Button>
                         </div>
                       </td>
