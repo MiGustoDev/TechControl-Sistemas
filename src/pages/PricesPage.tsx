@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -115,6 +116,19 @@ export function PricesPage() {
       activeColor: "bg-emerald-500 text-white border-emerald-500",
       icon: Package 
     }
+  };
+
+  const categoryColors: Record<string, string> = {
+    empanadas: "text-orange-500",
+    pizzas: "text-red-500",
+    pizzas_indi: "text-amber-500",
+    fitzzas: "text-blue-500",
+    salsas: "text-rose-500",
+    bebidas: "text-sky-500",
+    postres: "text-pink-500",
+    cafeteria: "text-amber-600 dark:text-amber-400",
+    promos: "text-purple-500",
+    packs: "text-emerald-500",
   };
 
   const getCategoryInfo = (catKey: string) => {
@@ -374,68 +388,68 @@ export function PricesPage() {
   };
 
   return (
-    <div className="space-y-6 p-6 pb-24">
+    <div className="space-y-6 p-4 sm:p-6 pb-24 w-full max-w-full overflow-x-hidden min-w-0">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2.5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2.5 truncate">
             Lista de Precios
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Gestión centralizada, actualización masiva y consulta de la carta oficial de precios de Mi Gusto.
           </p>
         </div>
-        <div className="flex gap-2.5 flex-wrap items-center">
+        <div className="flex gap-2 sm:gap-2.5 flex-wrap items-center shrink-0">
           <Button
             onClick={() => setIsBulkDialogOpen(true)}
             disabled={selectedIds.length === 0}
             variant="outline"
-            className="border-input hover:bg-accent font-bold flex items-center gap-2 shadow-xs"
+            className="border-input hover:bg-accent font-bold flex items-center gap-2 shadow-xs text-xs sm:text-sm h-9"
           >
             <ArrowRightLeft className="size-4" /> Actualizar Masivo ({selectedIds.length})
           </Button>
-          <Button onClick={handleOpenCreate} className="bg-white text-slate-950 hover:bg-slate-100 font-bold flex items-center gap-2 shadow-md">
+          <Button onClick={handleOpenCreate} className="bg-white text-slate-950 hover:bg-slate-100 font-bold flex items-center gap-2 shadow-md text-xs sm:text-sm h-9">
             <Plus className="size-4.5" /> Nuevo Producto
           </Button>
         </div>
       </div>
 
       {/* Metrics Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-orange-500/30 transition-all">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 w-full min-w-0">
+        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-orange-500/30 transition-all min-w-0">
           <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Productos</p>
-              <h3 className="text-2xl font-black text-foreground mt-0.5">{stats.total}</h3>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">Total Productos</p>
+              <h3 className="text-xl sm:text-2xl font-black text-foreground mt-0.5">{stats.total}</h3>
             </div>
-            <div className="p-3 rounded-xl bg-orange-500/10 text-orange-500">
-              <Tag className="size-5" />
+            <div className="p-2.5 sm:p-3 rounded-xl bg-orange-500/10 text-orange-500 shrink-0">
+              <Tag className="size-4.5 sm:size-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-purple-500/30 transition-all">
+        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-purple-500/30 transition-all min-w-0">
           <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Categorías</p>
-              <h3 className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-0.5">{availableCategoryKeys.length}</h3>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">Categorías</p>
+              <h3 className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400 mt-0.5">{availableCategoryKeys.length}</h3>
             </div>
-            <div className="p-3 rounded-xl bg-purple-500/10 text-purple-500">
-              <Layers className="size-5" />
+            <div className="p-2.5 sm:p-3 rounded-xl bg-purple-500/10 text-purple-500 shrink-0">
+              <Layers className="size-4.5 sm:size-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-emerald-500/30 transition-all">
+        <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-emerald-500/30 transition-all min-w-0">
           <CardContent className="p-4 flex items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">Rango de Precios</p>
-              <h3 className="text-base sm:text-lg md:text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5 truncate" title={stats.hasPricedProducts ? `${formatCurrencyDisplay(stats.minPrice)} a ${formatCurrencyDisplay(stats.maxPrice)}` : "$ 0"}>
+              <h3 className="text-sm sm:text-base md:text-lg lg:text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5 truncate" title={stats.hasPricedProducts ? `${formatCurrencyDisplay(stats.minPrice)} a ${formatCurrencyDisplay(stats.maxPrice)}` : "$ 0"}>
                 {stats.hasPricedProducts ? `${formatCurrencyDisplay(stats.minPrice)} - ${formatCurrencyDisplay(stats.maxPrice)}` : "$ 0"}
               </h3>
             </div>
-            <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
-              <ArrowUpDown className="size-5" />
+            <div className="p-2.5 sm:p-3 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
+              <ArrowUpDown className="size-4.5 sm:size-5" />
             </div>
           </CardContent>
         </Card>
@@ -444,18 +458,18 @@ export function PricesPage() {
           href="https://www.migusto.com.ar/cartadigital/" 
           target="_blank" 
           rel="noopener noreferrer"
-          className="block group"
+          className="block group min-w-0"
         >
-          <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-blue-500/50 hover:bg-blue-500/5 transition-all cursor-pointer h-full">
+          <Card className="border-border/60 bg-card/60 backdrop-blur-xs shadow-xs hover:border-blue-500/50 hover:bg-blue-500/5 transition-all cursor-pointer h-full min-w-0">
             <CardContent className="p-4 flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-blue-500 transition-colors">Carta Digital</p>
-                <h3 className="text-sm sm:text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5 flex items-center gap-1 truncate group-hover:underline">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-blue-500 transition-colors truncate">Carta Digital</p>
+                <h3 className="text-xs sm:text-sm md:text-base font-extrabold text-blue-600 dark:text-blue-400 mt-0.5 flex items-center gap-1 truncate group-hover:underline">
                   Ver Menú Web <ExternalLink className="size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </h3>
               </div>
-              <div className="p-3 rounded-xl bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
-                <Globe className="size-5" />
+              <div className="p-2.5 sm:p-3 rounded-xl bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
+                <Globe className="size-4.5 sm:size-5" />
               </div>
             </CardContent>
           </Card>
@@ -463,10 +477,10 @@ export function PricesPage() {
       </div>
 
       {/* Toolbar & Category Navigation */}
-      <Card className="border-border/60 bg-card/50 backdrop-blur-xs shadow-xs">
-        <CardContent className="p-4 space-y-4">
+      <Card className="border-border/60 bg-card/50 backdrop-blur-xs shadow-xs w-full max-w-full min-w-0 overflow-hidden">
+        <CardContent className="p-4 space-y-4 w-full max-w-full min-w-0 overflow-hidden">
           {/* Category Filter Tabs (Multi-selection) */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1.5 no-scrollbar w-full min-w-0">
             <button
               onClick={() => {
                 setActiveCategories([]);
@@ -515,20 +529,20 @@ export function PricesPage() {
           </div>
 
           {/* Search, Sort and Layout Controls */}
-          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between pt-2 border-t border-border/40">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between pt-2 border-t border-border/40 w-full min-w-0">
             {/* Search Input */}
-            <div className="relative w-full sm:w-80">
+            <div className="relative w-full sm:w-80 min-w-0">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nombre de producto..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 pr-8 h-9.5 rounded-lg bg-background/50 text-xs"
+                className="pl-9 pr-8 h-9.5 rounded-lg bg-background/50 text-xs w-full"
               />
               {search && (
                 <button 
                   onClick={() => setSearch("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   <X className="size-3.5" />
                 </button>
@@ -536,27 +550,45 @@ export function PricesPage() {
             </div>
 
             {/* Sorting & Layout View Toggle */}
-            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end shrink-0">
               {/* Sort Selector */}
-              <div className="flex items-center gap-1.5 bg-background/50 border border-input rounded-lg px-2.5 h-9.5">
-                <ArrowUpDown className="size-3.5 text-muted-foreground shrink-0" />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer"
-                >
-                  <option value="name-asc">Nombre (A - Z)</option>
-                  <option value="name-desc">Nombre (Z - A)</option>
-                  <option value="price-asc">Precio (Menor a Mayor)</option>
-                  <option value="price-desc">Precio (Mayor a Menor)</option>
-                </select>
-              </div>
+              <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+                <SelectTrigger className="h-9.5 px-3 text-xs font-semibold bg-background/50 border-input rounded-lg w-full sm:w-[200px] cursor-pointer">
+                  <SelectValue placeholder="Ordenar por..." />
+                </SelectTrigger>
+                <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                  <SelectItem value="name-asc" className="cursor-pointer text-xs">
+                    <span className="flex items-center gap-2">
+                      <ArrowUpDown className="size-3.5 text-muted-foreground shrink-0" />
+                      <span>Nombre (A - Z)</span>
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="name-desc" className="cursor-pointer text-xs">
+                    <span className="flex items-center gap-2">
+                      <ArrowUpDown className="size-3.5 text-muted-foreground shrink-0" />
+                      <span>Nombre (Z - A)</span>
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="price-asc" className="cursor-pointer text-xs">
+                    <span className="flex items-center gap-2">
+                      <ArrowUpDown className="size-3.5 text-emerald-500 shrink-0" />
+                      <span>Precio (Menor a Mayor)</span>
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="price-desc" className="cursor-pointer text-xs">
+                    <span className="flex items-center gap-2">
+                      <ArrowUpDown className="size-3.5 text-emerald-500 shrink-0" />
+                      <span>Precio (Mayor a Menor)</span>
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
 
               {/* View Switcher */}
-              <div className="flex items-center bg-muted/60 p-1 rounded-lg border border-border/40">
+              <div className="flex items-center bg-muted/60 p-1 rounded-lg border border-border/40 shrink-0">
                 <button
                   onClick={() => setViewMode("table")}
-                  className={`p-1.5 rounded-md transition-all ${
+                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
                     viewMode === "table" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
                   }`}
                   title="Vista de Tabla"
@@ -565,7 +597,7 @@ export function PricesPage() {
                 </button>
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`p-1.5 rounded-md transition-all ${
+                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
                     viewMode === "grid" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
                   }`}
                   title="Vista de Tarjetas"
@@ -580,7 +612,7 @@ export function PricesPage() {
 
       {/* Content Rendering: Table or Grid */}
       {filteredPrices.length === 0 ? (
-        <Card className="border-dashed border-border/80 bg-card/20 p-12 text-center shadow-xs">
+        <Card className="border-dashed border-border/80 bg-card/20 p-12 text-center shadow-xs w-full max-w-full min-w-0">
           <CardContent className="space-y-3 p-0">
             <div className="inline-flex p-3 rounded-full bg-muted text-muted-foreground">
               <Tag className="size-6" />
@@ -600,12 +632,12 @@ export function PricesPage() {
         </Card>
       ) : viewMode === "table" ? (
         /* Table View */
-        <Card className="border-border/60 bg-card/40 backdrop-blur-xs overflow-hidden shadow-md">
-          <div className="overflow-x-auto">
+        <Card className="border-border/60 bg-card/40 backdrop-blur-xs overflow-hidden shadow-md w-full max-w-full min-w-0">
+          <div className="overflow-x-auto w-full min-w-0">
             <table className="w-full border-collapse text-left text-sm text-foreground">
               <thead>
                 <tr className="border-b border-border/60 bg-muted/60 text-xs font-extrabold uppercase tracking-wider text-muted-foreground select-none">
-                  <th className="p-4 w-12 text-center">
+                  <th className="p-3 sm:p-4 w-10 sm:w-12 text-center">
                     <input
                       type="checkbox"
                       checked={filteredPrices.length > 0 && selectedIds.length === filteredPrices.length}
@@ -613,10 +645,10 @@ export function PricesPage() {
                       className="size-4 rounded accent-orange-600 cursor-pointer"
                     />
                   </th>
-                  <th className="p-4">Producto</th>
-                  <th className="p-4">Categoría</th>
-                  <th className="p-4 text-right">Precio Oficial</th>
-                  <th className="p-4 text-center w-28">Acciones</th>
+                  <th className="p-3 sm:p-4 min-w-0 max-w-[200px] truncate">Producto</th>
+                  <th className="p-3 sm:p-4 whitespace-nowrap">Categoría</th>
+                  <th className="p-3 sm:p-4 text-right whitespace-nowrap">Precio Oficial</th>
+                  <th className="p-3 sm:p-4 text-center w-24 sm:w-28 whitespace-nowrap">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/20">
@@ -837,22 +869,29 @@ export function PricesPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-foreground">Categoría</label>
-                <select
+                <Select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as ProductPriceCategory)}
-                  className="w-full h-9.5 px-3 py-2 text-xs bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring font-semibold"
+                  onValueChange={(val: ProductPriceCategory) => setCategory(val)}
                 >
-                  <option value="empanadas">Empanadas</option>
-                  <option value="pizzas">Pizzas</option>
-                  <option value="pizzas_indi">Pizzas INDI</option>
-                  <option value="fitzzas">Fitzzas</option>
-                  <option value="salsas">Salsas</option>
-                  <option value="bebidas">Bebidas</option>
-                  <option value="postres">Postres</option>
-                  <option value="cafeteria">Cafetería</option>
-                  <option value="promos">Promos</option>
-                  <option value="packs">Packs</option>
-                </select>
+                  <SelectTrigger className="w-full h-9.5 text-xs font-semibold cursor-pointer">
+                    <SelectValue placeholder="Seleccionar categoría" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                    {availableCategoryKeys.map((key) => {
+                      const cat = getCategoryInfo(key);
+                      const Icon = cat.icon;
+                      const iconColor = categoryColors[key] || "text-muted-foreground";
+                      return (
+                        <SelectItem key={key} value={key} className="cursor-pointer text-xs">
+                          <span className="flex items-center gap-2">
+                            <Icon className={`size-3.5 shrink-0 ${iconColor}`} />
+                            <span>{cat.label}</span>
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-1.5">
@@ -864,7 +903,7 @@ export function PricesPage() {
                   value={priceInput}
                   onChange={(e) => setPriceInput(e.target.value)}
                   required
-                  className="text-xs font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="text-xs font-bold h-9.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
             </div>
