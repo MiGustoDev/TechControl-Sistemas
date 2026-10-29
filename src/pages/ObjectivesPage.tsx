@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   Plus, Search, Calendar, User, CheckSquare, ListTodo, Edit2, Trash2, 
   ChevronDown, Flag, CheckSquare2, Square, Info, Check, Target, TrendingUp,
   CheckCircle2, Zap, Server, ShieldCheck, Cpu, Workflow, Layers, LayoutGrid,
-  Kanban, Clock, Sparkles
+  Kanban, Clock, Sparkles, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useApp } from "@/context/AppContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { toast } from "sonner";
@@ -124,6 +126,263 @@ const CATEGORY_CONFIG: Record<ObjectiveCategory, { label: string; icon: any; bad
     badgeClass: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20"
   }
 };
+
+function CustomDatePicker({
+  value,
+  onChange,
+  disabled = false,
+  minDate,
+  placeholder = "dd/mm/aaaa",
+  allowClear = false,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  disabled?: boolean;
+  minDate?: string;
+  placeholder?: string;
+  allowClear?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const today = useMemo(() => new Date(), []);
+  const todayStr = useMemo(() => {
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }, [today]);
+
+  const selectedParts = useMemo(() => {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const [y, m, d] = value.split("-").map(Number);
+    return { year: y, month: m - 1, day: d };
+  }, [value]);
+
+  const [viewYear, setViewYear] = useState(() => selectedParts?.year || today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(() => selectedParts?.month ?? today.getMonth());
+
+  useEffect(() => {
+    if (isOpen) {
+      if (selectedParts) {
+        setViewYear(selectedParts.year);
+        setViewMonth(selectedParts.month);
+      } else {
+        setViewYear(today.getFullYear());
+        setViewMonth(today.getMonth());
+      }
+    }
+  }, [isOpen, selectedParts, today]);
+
+  const monthNames = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+
+  const handlePrevMonth = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear(prev => prev - 1);
+    } else {
+      setViewMonth(prev => prev - 1);
+    }
+  };
+
+  const handleNextMonth = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear(prev => prev + 1);
+    } else {
+      setViewMonth(prev => prev + 1);
+    }
+  };
+
+  const pad = (n: number) => n.toString().padStart(2, "0");
+
+  const calendarGrid = useMemo(() => {
+    const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay();
+    const startOffset = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
+
+    const cells: { day: number; dateStr: string; isCurrentMonth: boolean }[] = [];
+
+    for (let i = startOffset - 1; i >= 0; i--) {
+      const prevDay = daysInPrevMonth - i;
+      const prevM = viewMonth === 0 ? 11 : viewMonth - 1;
+      const prevY = viewMonth === 0 ? viewYear - 1 : viewYear;
+      cells.push({
+        day: prevDay,
+        dateStr: `${prevY}-${pad(prevM + 1)}-${pad(prevDay)}`,
+        isCurrentMonth: false,
+      });
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      cells.push({
+        day,
+        dateStr: `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`,
+        isCurrentMonth: true,
+      });
+    }
+
+    const total = cells.length;
+    const remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
+    for (let day = 1; day <= remaining; day++) {
+      const nextM = viewMonth === 11 ? 0 : viewMonth + 1;
+      const nextY = viewMonth === 11 ? viewYear + 1 : viewYear;
+      cells.push({
+        day,
+        dateStr: `${nextY}-${pad(nextM + 1)}-${pad(day)}`,
+        isCurrentMonth: false,
+      });
+    }
+
+    return cells;
+  }, [viewYear, viewMonth]);
+
+  const displayFormattedDate = useMemo(() => {
+    if (!value) return null;
+    const parts = value.split("-");
+    if (parts.length !== 3) return value;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }, [value]);
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          className={`h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs transition-all flex items-center justify-between text-left select-none ${
+            disabled
+              ? "opacity-50 cursor-not-allowed bg-muted/40"
+              : "cursor-pointer hover:bg-accent/40 hover:border-orange-500/40 focus:outline-hidden focus:ring-1 focus:ring-orange-500"
+          } ${isOpen ? "ring-1 ring-orange-500 border-orange-500/60" : ""}`}
+        >
+          <span className={value ? "text-foreground font-semibold" : "text-muted-foreground font-normal"}>
+            {value ? displayFormattedDate : placeholder}
+          </span>
+          <Calendar className="size-4 text-muted-foreground shrink-0 ml-2" />
+        </button>
+      </PopoverTrigger>
+
+      <PopoverContent
+        align="start"
+        sideOffset={6}
+        className="w-[280px] p-3 bg-popover/95 border border-border/80 shadow-2xl backdrop-blur-md rounded-xl z-[70] duration-150 ease-out"
+      >
+        <div className="space-y-3">
+          {/* Header: Month & Year + Navigation */}
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-black tracking-wide text-foreground capitalize">
+              {monthNames[viewMonth]} {viewYear}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handlePrevMonth}
+                className="size-7 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md cursor-pointer"
+                title="Mes anterior"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleNextMonth}
+                className="size-7 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md cursor-pointer"
+                title="Mes siguiente"
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Weekday headers */}
+          <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-black text-muted-foreground uppercase tracking-wider">
+            {["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"].map((d) => (
+              <div key={d} className="py-1">
+                {d}
+              </div>
+            ))}
+          </div>
+
+          {/* Days Grid */}
+          <div className="grid grid-cols-7 gap-1">
+            {calendarGrid.map((c, idx) => {
+              const isSelected = c.dateStr === value;
+              const isToday = c.dateStr === todayStr;
+              const isDisabled = Boolean(minDate && c.dateStr < minDate);
+
+              return (
+                <button
+                  key={`${c.dateStr}-${idx}`}
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => {
+                    onChange(c.dateStr);
+                    setIsOpen(false);
+                  }}
+                  className={`size-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-all select-none cursor-pointer ${
+                    isSelected
+                      ? "bg-orange-500 text-white font-black shadow-md shadow-orange-500/25 scale-[1.05]"
+                      : isDisabled
+                      ? "text-muted-foreground/30 cursor-not-allowed opacity-40"
+                      : isToday
+                      ? "text-orange-500 font-extrabold ring-1 ring-orange-500/50 bg-orange-500/10 hover:bg-orange-500/20"
+                      : c.isCurrentMonth
+                      ? "text-foreground hover:bg-accent/80 hover:text-foreground"
+                      : "text-muted-foreground/40 hover:bg-accent/40"
+                  }`}
+                >
+                  {c.day}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Footer with Clear and Today shortcuts */}
+          <div className="flex items-center justify-between pt-2 border-t border-border/50 text-[11px]">
+            {allowClear ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  onChange("");
+                  setIsOpen(false);
+                }}
+                className="h-7 px-2 text-xs font-semibold text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 cursor-pointer"
+              >
+                Borrar
+              </Button>
+            ) : (
+              <span />
+            )}
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onChange(todayStr);
+                setIsOpen(false);
+              }}
+              className="h-7 px-2 text-xs font-bold text-orange-500 hover:text-orange-400 hover:bg-orange-500/10 ml-auto cursor-pointer"
+            >
+              Hoy
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export function ObjectivesPage() {
   const { objectives, addObjective, updateObjective, deleteObjective, users } = useApp();
@@ -694,44 +953,124 @@ export function ObjectivesPage() {
         </div>
         <div className="grid grid-cols-3 gap-2 w-full md:flex md:w-auto md:gap-3">
           {/* Category Filter */}
-          <select
-            className="h-10 px-2 md:px-3 py-2 text-xs md:text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 min-w-0 md:w-48 truncate font-medium"
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-          >
-            <option value="all">Todas las Áreas</option>
-            <option value="infrastructure">Infraestructura</option>
-            <option value="security">Seguridad & Compliance</option>
-            <option value="software">Innovación & Software</option>
-            <option value="processes">Procesos & Soporte</option>
-            <option value="other">General / Otros</option>
-          </select>
+          <div className="w-full md:w-52">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full text-xs md:text-sm cursor-pointer">
+                <SelectValue placeholder="Todas las Áreas" />
+              </SelectTrigger>
+              <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                <SelectItem value="all" className="cursor-pointer">
+                  <span className="flex items-center gap-2">Todas las Áreas</span>
+                </SelectItem>
+                <SelectItem value="infrastructure" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <Server className="size-3.5 text-purple-500 shrink-0" />
+                    <span>Infraestructura & Servidores</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="security" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="size-3.5 text-rose-500 shrink-0" />
+                    <span>Seguridad & Compliance</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="software" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <Cpu className="size-3.5 text-blue-500 shrink-0" />
+                    <span>Innovación & Software</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="processes" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <Workflow className="size-3.5 text-teal-500 shrink-0" />
+                    <span>Procesos & Soporte</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="other" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <Layers className="size-3.5 text-slate-400 shrink-0" />
+                    <span>General / Otros</span>
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Status Filter */}
-          <select
-            className="h-10 px-2 md:px-3 py-2 text-xs md:text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 min-w-0 md:w-44 truncate font-medium"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">Todos los Estados</option>
-            <option value="pending">Pendientes</option>
-            <option value="in-progress">En Curso</option>
-            <option value="on-hold">En Pausa</option>
-            <option value="completed">Completados</option>
-          </select>
+          <div className="w-full md:w-48">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full text-xs md:text-sm cursor-pointer">
+                <SelectValue placeholder="Todos los Estados" />
+              </SelectTrigger>
+              <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                <SelectItem value="all" className="cursor-pointer">
+                  <span className="flex items-center gap-2">Todos los Estados</span>
+                </SelectItem>
+                <SelectItem value="pending" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-slate-400 shrink-0" />
+                    <span>Pendientes</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="in-progress" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-sky-500 shrink-0" />
+                    <span>En Curso</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="on-hold" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+                    <span>En Pausa</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="completed" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
+                    <span>Completados</span>
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Priority Filter */}
-          <select
-            className="h-10 px-2 md:px-3 py-2 text-xs md:text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 min-w-0 md:w-44 truncate font-medium"
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-          >
-            <option value="all">Todas las Prioridades</option>
-            <option value="critical">Prioridad Crítica</option>
-            <option value="high">Prioridad Alta</option>
-            <option value="medium">Prioridad Media</option>
-            <option value="low">Prioridad Baja</option>
-          </select>
+          <div className="w-full md:w-48">
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="w-full text-xs md:text-sm cursor-pointer">
+                <SelectValue placeholder="Todas las Prioridades" />
+              </SelectTrigger>
+              <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                <SelectItem value="all" className="cursor-pointer">
+                  <span className="flex items-center gap-2">Todas las Prioridades</span>
+                </SelectItem>
+                <SelectItem value="critical" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-rose-500 shrink-0" />
+                    <span>Prioridad Crítica</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="high" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+                    <span>Prioridad Alta</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="medium" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-blue-500 shrink-0" />
+                    <span>Prioridad Media</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="low" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-slate-400 shrink-0" />
+                    <span>Prioridad Baja</span>
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -824,17 +1163,46 @@ export function ObjectivesPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-muted-foreground uppercase">Área / Categoría</label>
-                <select
-                  className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 font-medium"
+                <Select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as ObjectiveCategory)}
+                  onValueChange={(val: any) => setCategory(val)}
                 >
-                  <option value="infrastructure">Infraestructura & Servidores</option>
-                  <option value="security">Seguridad & Compliance</option>
-                  <option value="software">Innovación & Software</option>
-                  <option value="processes">Procesos & Soporte</option>
-                  <option value="other">General / Otros</option>
-                </select>
+                  <SelectTrigger className="w-full text-xs md:text-sm cursor-pointer">
+                    <SelectValue placeholder="Seleccionar área" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                    <SelectItem value="infrastructure" className="cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <Server className="size-3.5 text-purple-500 shrink-0" />
+                        <span>Infraestructura & Servidores</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="security" className="cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <ShieldCheck className="size-3.5 text-rose-500 shrink-0" />
+                        <span>Seguridad & Compliance</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="software" className="cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <Cpu className="size-3.5 text-blue-500 shrink-0" />
+                        <span>Innovación & Software</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="processes" className="cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <Workflow className="size-3.5 text-teal-500 shrink-0" />
+                        <span>Procesos & Soporte</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="other" className="cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <Layers className="size-3.5 text-slate-400 shrink-0" />
+                        <span>General / Otros</span>
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-1.5">
@@ -863,29 +1231,77 @@ export function ObjectivesPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-muted-foreground uppercase">Estado</label>
-                <select
-                  className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 font-medium"
+                <Select
                   value={status}
-                  onChange={(e) => setStatus(e.target.value as any)}
+                  onValueChange={(val: any) => setStatus(val)}
                 >
-                  <option value="pending">Pendiente</option>
-                  <option value="in-progress">En Curso</option>
-                  <option value="on-hold">En Pausa</option>
-                  <option value="completed">Completado</option>
-                </select>
+                  <SelectTrigger className="w-full text-xs md:text-sm cursor-pointer">
+                    <SelectValue placeholder="Estado" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                    <SelectItem value="pending" className="cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <span className="size-2 rounded-full bg-slate-400 shrink-0" />
+                        <span>Pendiente</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="in-progress" className="cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <span className="size-2 rounded-full bg-sky-500 shrink-0" />
+                        <span>En Curso</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="on-hold" className="cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+                        <span>En Pausa</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="completed" className="cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span>Completado</span>
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-muted-foreground uppercase">Prioridad</label>
-                <select
-                  className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 font-medium"
+                <Select
                   value={priority}
-                  onChange={(e) => setPriority(e.target.value as any)}
+                  onValueChange={(val: any) => setPriority(val)}
                 >
-                  <option value="low">Baja</option>
-                  <option value="medium">Media</option>
-                  <option value="high">Alta</option>
-                  <option value="critical">Crítica</option>
-                </select>
+                  <SelectTrigger className="w-full text-xs md:text-sm cursor-pointer">
+                    <SelectValue placeholder="Prioridad" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                    <SelectItem value="low" className="cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <span className="size-2 rounded-full bg-slate-400 shrink-0" />
+                        <span>Baja</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="medium" className="cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <span className="size-2 rounded-full bg-blue-500 shrink-0" />
+                        <span>Media</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="high" className="cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+                        <span>Alta</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="critical" className="cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <span className="size-2 rounded-full bg-rose-500 shrink-0" />
+                        <span>Crítica</span>
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -893,20 +1309,21 @@ export function ObjectivesPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-muted-foreground uppercase">Fecha Inicio</label>
-                <Input
-                  type="date"
+                <CustomDatePicker
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={setStartDate}
+                  placeholder="dd/mm/aaaa"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-muted-foreground uppercase">Fecha Fin Límite</label>
-                <Input
-                  type="date"
+                <CustomDatePicker
                   value={endDate}
+                  onChange={setEndDate}
                   disabled={noEndDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className={noEndDate ? "opacity-40 cursor-not-allowed" : ""}
+                  minDate={startDate || undefined}
+                  placeholder={noEndDate ? "Sin fecha límite específica" : "dd/mm/aaaa"}
+                  allowClear
                 />
                 <label className="flex items-center gap-2 cursor-pointer mt-1 select-none group w-fit">
                   <input
