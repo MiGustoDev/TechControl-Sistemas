@@ -1634,40 +1634,122 @@ export function SpecialTasksPage() {
           />
         </div>
         <div className="grid grid-cols-2 gap-2 w-full md:flex md:w-auto md:gap-3">
-          <select
-            className="h-10 px-2 md:px-3 py-2 text-xs md:text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 min-w-0 md:w-48 truncate"
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-          >
-            <option value="all">Todas las Categorías</option>
-            <option value="promotion">Promociones</option>
-            <option value="event">Eventos</option>
-            <option value="special-day">Días Especiales</option>
-            <option value="campaign">Campañas</option>
-            <option value="other">Otros</option>
-          </select>
-          <select
-            className="h-10 px-2 md:px-3 py-2 text-xs md:text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 min-w-0 md:w-48 truncate"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">Todos los Estados</option>
-            <option value="pending">Pendientes</option>
-            <option value="in-progress">En Curso</option>
-            <option value="on-hold">En Pausa</option>
-            <option value="completed">Completados</option>
-          </select>
-          <select
-            className="col-span-2 md:col-span-1 h-10 px-2 md:px-3 py-2 text-xs md:text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 min-w-0 md:w-48 truncate"
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-          >
-            <option value="all">Todas las Prioridades</option>
-            <option value="critical">Prioridad Crítica</option>
-            <option value="high">Prioridad Alta</option>
-            <option value="medium">Prioridad Media</option>
-            <option value="low">Prioridad Baja</option>
-          </select>
+          <div className="w-full md:w-48">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full text-xs md:text-sm cursor-pointer">
+                <SelectValue placeholder="Todas las Categorías" />
+              </SelectTrigger>
+              <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                <SelectItem value="all" className="cursor-pointer">
+                  <span className="flex items-center gap-2">Todas las Categorías</span>
+                </SelectItem>
+                <SelectItem value="promotion" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <Megaphone className="size-3.5 text-orange-500 shrink-0" />
+                    <span>Promociones</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="event" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <PartyPopper className="size-3.5 text-purple-500 shrink-0" />
+                    <span>Eventos</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="special-day" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <CalendarHeart className="size-3.5 text-pink-500 shrink-0" />
+                    <span>Días Especiales</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="campaign" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="size-3.5 text-teal-500 shrink-0" />
+                    <span>Campañas</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="other" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <HelpCircle className="size-3.5 text-slate-400 shrink-0" />
+                    <span>Otros</span>
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="w-full md:w-48">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full text-xs md:text-sm cursor-pointer">
+                <SelectValue placeholder="Todos los Estados" />
+              </SelectTrigger>
+              <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                <SelectItem value="all" className="cursor-pointer">
+                  <span className="flex items-center gap-2">Todos los Estados</span>
+                </SelectItem>
+                <SelectItem value="pending" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-slate-400 shrink-0" />
+                    <span>Pendientes</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="in-progress" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-sky-500 shrink-0" />
+                    <span>En Curso</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="on-hold" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+                    <span>En Pausa</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="completed" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
+                    <span>Completados</span>
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="col-span-2 md:col-span-1 w-full md:w-48">
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="w-full text-xs md:text-sm cursor-pointer">
+                <SelectValue placeholder="Todas las Prioridades" />
+              </SelectTrigger>
+              <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                <SelectItem value="all" className="cursor-pointer">
+                  <span className="flex items-center gap-2">Todas las Prioridades</span>
+                </SelectItem>
+                <SelectItem value="critical" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-rose-500 shrink-0" />
+                    <span>Prioridad Crítica</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="high" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+                    <span>Prioridad Alta</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="medium" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-blue-500 shrink-0" />
+                    <span>Prioridad Media</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="low" className="cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-slate-400 shrink-0" />
+                    <span>Prioridad Baja</span>
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -1929,11 +2011,10 @@ export function SpecialTasksPage() {
               <div className="md:col-span-2 grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-foreground">Categoría <span className="text-red-500">*</span></label>
-                  <select
-                    className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  <Select
                     value={category}
-                    onChange={(e) => {
-                      const newCategory = e.target.value as SpecialTaskCategory;
+                    onValueChange={(val: string) => {
+                      const newCategory = val as SpecialTaskCategory;
                       setCategory(newCategory);
                       if (!editingTask) {
                         const isDefaultFecha = formTasks.length === 1 && formTasks[0].title === "Fecha";
@@ -1955,42 +2036,117 @@ export function SpecialTasksPage() {
                         }
                       }
                     }}
-                    required
                   >
-                    <option value="campaign">Campaña</option>
-                    <option value="promotion">Promoción</option>
-                    <option value="event">Evento</option>
-                    <option value="special-day">Día Especial</option>
-                    <option value="other">Otro / Especial</option>
-                  </select>
+                    <SelectTrigger className="w-full text-xs md:text-sm cursor-pointer">
+                      <SelectValue placeholder="Categoría" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                      <SelectItem value="campaign" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <Sparkles className="size-3.5 text-teal-500 shrink-0" />
+                          <span>Campaña</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="promotion" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <Megaphone className="size-3.5 text-orange-500 shrink-0" />
+                          <span>Promoción</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="event" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <PartyPopper className="size-3.5 text-purple-500 shrink-0" />
+                          <span>Evento</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="special-day" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <CalendarHeart className="size-3.5 text-pink-500 shrink-0" />
+                          <span>Día Especial</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="other" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <HelpCircle className="size-3.5 text-slate-400 shrink-0" />
+                          <span>Otro / Especial</span>
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-foreground">Estado <span className="text-red-500">*</span></label>
-                  <select
-                    className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  <Select
                     value={status}
-                    onChange={(e) => setStatus(e.target.value as any)}
-                    required
+                    onValueChange={(val: any) => setStatus(val)}
                   >
-                    <option value="pending">Pendiente</option>
-                    <option value="in-progress">En Curso</option>
-                    <option value="on-hold">En Pausa</option>
-                    <option value="completed">Completado</option>
-                  </select>
+                    <SelectTrigger className="w-full text-xs md:text-sm cursor-pointer">
+                      <SelectValue placeholder="Estado" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                      <SelectItem value="pending" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-slate-400 shrink-0" />
+                          <span>Pendiente</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="in-progress" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-sky-500 shrink-0" />
+                          <span>En Curso</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="on-hold" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+                          <span>En Pausa</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="completed" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
+                          <span>Completado</span>
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-foreground">Prioridad <span className="text-red-500">*</span></label>
-                  <select
-                    className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  <Select
                     value={priority}
-                    onChange={(e) => setPriority(e.target.value as any)}
-                    required
+                    onValueChange={(val: any) => setPriority(val)}
                   >
-                    <option value="low">Baja</option>
-                    <option value="medium">Media</option>
-                    <option value="high">Alta</option>
-                    <option value="critical">Crítica</option>
-                  </select>
+                    <SelectTrigger className="w-full text-xs md:text-sm cursor-pointer">
+                      <SelectValue placeholder="Prioridad" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                      <SelectItem value="low" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-slate-400 shrink-0" />
+                          <span>Baja</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="medium" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-blue-500 shrink-0" />
+                          <span>Media</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="high" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+                          <span>Alta</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="critical" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-rose-500 shrink-0" />
+                          <span>Crítica</span>
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -2343,7 +2499,7 @@ export function SpecialTasksPage() {
                   <SelectTrigger id="eventType">
                     <SelectValue placeholder="Seleccionar tipo" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
                     {eventTypes.map((t) => {
                       const bgMap: Record<string, string> = {
                         sky: "bg-sky-500", blue: "bg-blue-500", indigo: "bg-indigo-500", violet: "bg-violet-500",
