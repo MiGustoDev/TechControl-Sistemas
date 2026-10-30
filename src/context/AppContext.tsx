@@ -1677,7 +1677,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.from("product_prices").select("*").order("name", { ascending: true });
       
       let dbMapped: ProductPrice[] = [];
+      let dbHasIsPremium = false;
       if (data && !error && data.length > 0) {
+        dbHasIsPremium = "is_premium" in (data[0] || {});
         dbMapped = data.map((p: any) => ({
           id: String(p.id),
           name: p.name,
@@ -1688,6 +1690,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           updatedAt: p.updated_at || new Date().toISOString()
         }));
       }
+
+      if (error) { loadLocalPricesFallback(); return; }
 
       let localSaved: ProductPrice[] = [];
       const saved = localStorage.getItem("techcontrol_product_prices");
@@ -1752,7 +1756,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           name: p.name,
           category: p.category,
           price: p.price,
-          is_premium: p.isPremium || false,
+          ...(dbHasIsPremium ? { is_premium: p.isPremium || false } : {}),
           created_at: p.createdAt,
           updated_at: p.updatedAt
         }));

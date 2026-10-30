@@ -306,8 +306,6 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   scrollbar-color: rgba(156, 163, 175, 0.15) transparent;
 }
 
-
-
 /* Utility: hide scrollbar visually while keeping scroll functionality */
 .no-scrollbar {
   scrollbar-width: none !important; /* Firefox */
@@ -315,6 +313,27 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none !important; /* Chrome, Safari, Opera */
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Modal & Dialogs: Hide scrollbars completely while keeping full scroll functionality */
+[data-slot="dialog-content"],
+[data-slot="dialog-content"] *,
+[role="dialog"],
+[role="dialog"] *,
+.no-scrollbar,
+.no-scrollbar * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+[data-slot="dialog-content"]::-webkit-scrollbar,
+[data-slot="dialog-content"] *::-webkit-scrollbar,
+[role="dialog"]::-webkit-scrollbar,
+[role="dialog"] *::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar,
+.no-scrollbar *::-webkit-scrollbar {
+  display: none !important;
   width: 0 !important;
   height: 0 !important;
 }
@@ -410,4 +429,3 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
     transform: translateX(0);
   }
 }
-

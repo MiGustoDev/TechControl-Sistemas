@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { useApp } from "@/context/AppContext";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { CustomDatePicker } from "@/components/shared/CustomDatePicker";
 import { cn } from "@/lib/utils";
 import {
   notebookStatusLabel,
@@ -240,7 +241,7 @@ function NotebookDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl no-scrollbar">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {notebook.category === "desktop" ? <Monitor className="size-5" /> : <Laptop className="size-5" />}
@@ -732,8 +733,8 @@ export function NotebooksPage() {
             <FileCode className="size-4 text-emerald-600" />
             Importar PowerShell (CSV/TXT)
           </Button>
-          <Button onClick={openCreate} className="gap-2">
-            <Plus className="size-4" />
+          <Button className="hidden">
+    
             Nuevo equipo
           </Button>
         </div>
@@ -779,14 +780,14 @@ export function NotebooksPage() {
         </div>
       </div>
 
-      {/* Mobile button: between badges and search bar, left-aligned */}
-      <Button onClick={openCreate} className="sm:hidden w-fit">
-        <Plus className="size-4" />
+      <Button className="hidden">
+
+
         Nuevo equipo
       </Button>
 
       {/* Filters */}
-      <div className="relative w-full">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full"><div className="relative flex-1 min-w-[200px]">
         <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Buscar por código, marca, usuario, área..."
@@ -795,9 +796,9 @@ export function NotebooksPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
-      <div className="flex flex-wrap items-center gap-3">
+      {/* selects and actions */}
         <Select value={filterArea} onValueChange={setFilterArea}>
-          <SelectTrigger className="flex-1 min-w-[150px]">
+          <SelectTrigger className="w-full sm:w-[160px] shrink-0">
             <SelectValue placeholder="Todas las áreas" />
           </SelectTrigger>
           <SelectContent>
@@ -811,7 +812,7 @@ export function NotebooksPage() {
         </Select>
 
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="flex-1 min-w-[150px]">
+          <SelectTrigger className="w-full sm:w-[160px] shrink-0">
             <SelectValue placeholder="Todos los estados" />
           </SelectTrigger>
           <SelectContent>
@@ -825,7 +826,7 @@ export function NotebooksPage() {
         </Select>
 
         <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="flex-1 min-w-[150px]">
+          <SelectTrigger className="w-full sm:w-[160px] shrink-0">
             <SelectValue placeholder="Categoría" />
           </SelectTrigger>
           <SelectContent>
@@ -836,8 +837,8 @@ export function NotebooksPage() {
         </Select>
 
         {/* Button only visible on sm+ (desktop) */}
-        <Button onClick={openCreate} className="ml-auto hidden sm:flex">
-          <Plus className="size-4" />
+        <Button onClick={openCreate} className="shrink-0 gap-2"><Plus className="size-4" />
+  
           Nuevo equipo
         </Button>
       </div>
@@ -869,11 +870,11 @@ export function NotebooksPage() {
 
       {/* Edit/create dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-2xl p-0">
+        <DialogContent className="sm:max-w-2xl p-0 no-scrollbar">
           <DialogHeader className="p-6 pb-0">
             <DialogTitle>{editingNotebook ? "Editar equipo" : "Nuevo equipo"}</DialogTitle>
           </DialogHeader>
-          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto p-6 pt-2">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto p-6 pt-2 no-scrollbar">
             <div className="grid gap-4 py-2">
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
@@ -945,7 +946,12 @@ export function NotebooksPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Fecha de ingreso</Label>
-                <Input type="date" value={form.entryDate} onChange={(e) => setForm({ ...form, entryDate: e.target.value })} />
+                <CustomDatePicker
+                  value={form.entryDate}
+                  onChange={(val) => setForm({ ...form, entryDate: val })}
+                  placeholder="dd/mm/aaaa"
+                  allowClear
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">

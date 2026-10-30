@@ -6,13 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useApp } from "@/context/AppContext";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ConsumableUnits } from "@/components/shared/ConsumableUnits";
 import { PrinterSectorBanner } from "@/components/shared/PrinterSectorBanner";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { CustomDatePicker } from "@/components/shared/CustomDatePicker";
+import { AutoResizeTextarea } from "@/components/shared/AutoResizeTextarea";
 import {
   formatDate,
   getTonerMinUnits,
@@ -431,13 +433,13 @@ export function PrintersPage() {
       </div>
 
       {/* Mobile button: between 'Filtrar por área' and search bar */}
-      <Button onClick={openCreate} className="sm:hidden w-fit">
+      <Button className="hidden">
         <Plus className="size-4" />
         Nueva impresora
       </Button>
 
       {/* Filters */}
-      <div className="relative w-full">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full"><div className="relative flex-1 min-w-[200px]">
         <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Buscar por nombre, modelo, toner, unid. de imagen, área o sucursal..."
@@ -446,9 +448,9 @@ export function PrintersPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
-      <div className="flex items-center gap-2">
+      {/* filters and actions */}
         <Select value={filterSector} onValueChange={setFilterSector}>
-          <SelectTrigger className="flex-1 min-w-0 font-medium">
+          <SelectTrigger className="w-full sm:w-[160px] shrink-0 font-medium">
             <SelectValue placeholder="Área" />
           </SelectTrigger>
           <SelectContent>
@@ -461,7 +463,7 @@ export function PrintersPage() {
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="flex-1 min-w-0">
+          <SelectTrigger className="w-full sm:w-[160px] shrink-0">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
           <SelectContent>
@@ -476,7 +478,7 @@ export function PrintersPage() {
           </SelectContent>
         </Select>
         <Select value={filterBranch} onValueChange={setFilterBranch}>
-          <SelectTrigger className="flex-1 min-w-0">
+          <SelectTrigger className="w-full sm:w-[160px] shrink-0">
             <SelectValue placeholder="Sucursal" />
           </SelectTrigger>
           <SelectContent>
@@ -488,7 +490,7 @@ export function PrintersPage() {
         </Select>
 
         {/* Button only visible on sm+ (desktop) */}
-        <Button onClick={openCreate} className="ml-auto hidden sm:flex">
+        <Button onClick={openCreate} className="shrink-0 gap-1.5">
           <Plus className="size-4" />
           Nueva impresora
         </Button>
@@ -518,7 +520,7 @@ export function PrintersPage() {
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl no-scrollbar">
           <DialogHeader>
             <DialogTitle>{editingPrinter ? "Editar impresora" : "Nueva impresora"}</DialogTitle>
           </DialogHeader>
@@ -702,12 +704,21 @@ export function PrintersPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Último cambio toner</Label>
-                <Input type="date" value={form.lastTonerChange} onChange={(e) => setForm({ ...form, lastTonerChange: e.target.value })} />
+                <CustomDatePicker
+                  value={form.lastTonerChange}
+                  onChange={(val) => setForm({ ...form, lastTonerChange: val })}
+                  placeholder="dd/mm/aaaa"
+                  allowClear
+                />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label>Observaciones</Label>
-              <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
+              <AutoResizeTextarea
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                placeholder="Notas u observaciones adicionales..."
+              />
             </div>
           </div>
           <DialogFooter className="flex flex-row items-center justify-end gap-2">

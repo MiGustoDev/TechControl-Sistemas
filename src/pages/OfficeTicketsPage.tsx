@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { 
-  Plus, Search, Clock, Calendar, User, 
+  Plus, Search, Clock, Calendar, User, Users, Layers,
   Wrench, Network, Database, ShieldAlert, Code, FileText, 
   CheckCircle2, Trophy, Edit
 } from "lucide-react";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useApp } from "@/context/AppContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { toast } from "sonner";
@@ -29,8 +30,6 @@ const CATEGORIES: { id: OfficeTicketCategory; label: string; icon: any; color: s
 ];
 
 const DURATIONS = [5, 10, 15, 30, 45, 60, 120];
-
-
 
 const getWeekRangeLabel = (dateStr: string) => {
   if (!dateStr) return "Fecha Desconocida";
@@ -77,7 +76,6 @@ const getDayOfWeekLabel = (dateStr: string) => {
   const formatted = formatter.format(date);
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 };
-
 
 const getShortId = (id: any): string => {
   if (id === null || id === undefined) return "N/A";
@@ -554,27 +552,58 @@ export function OfficeTicketsPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <select
-                    value={filterUser}
-                    onChange={(e) => setFilterUser(e.target.value)}
-                    className="h-8 rounded-lg border border-border/80 bg-background px-2 py-1 text-xs text-foreground focus-visible:ring-indigo-500 focus-visible:ring-1 focus-visible:outline-none"
-                  >
-                    <option value="all">Todos los técnicos</option>
-                    {systemsUsers.map(u => (
-                      <option key={u.id} value={u.id}>{u.fullName}</option>
-                    ))}
-                  </select>
+                  <Select value={filterUser} onValueChange={setFilterUser}>
+                    <SelectTrigger className="w-full h-8 rounded-lg border-border/80 text-xs cursor-pointer">
+                      <SelectValue placeholder="Todos los técnicos" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                      <SelectItem value="all" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <Users className="size-3.5 text-muted-foreground shrink-0" />
+                          <span>Todos los técnicos</span>
+                        </span>
+                      </SelectItem>
+                      {systemsUsers.map(u => (
+                        <SelectItem key={u.id} value={u.id} className="cursor-pointer">
+                          <span className="flex items-center gap-2">
+                            <span className="size-2 rounded-full bg-indigo-500 shrink-0" />
+                            <span>{u.fullName}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-                  <select
-                    value={filterCategory}
-                    onChange={(e) => setFilterCategory(e.target.value)}
-                    className="h-8 rounded-lg border border-border/80 bg-background px-2 py-1 text-xs text-foreground focus-visible:ring-indigo-500 focus-visible:ring-1 focus-visible:outline-none"
-                  >
-                    <option value="all">Todas las categorías</option>
-                    {CATEGORIES.map(c => (
-                      <option key={c.id} value={c.id}>{c.label}</option>
-                    ))}
-                  </select>
+                  <Select value={filterCategory} onValueChange={setFilterCategory}>
+                    <SelectTrigger className="w-full h-8 rounded-lg border-border/80 text-xs cursor-pointer">
+                      <SelectValue placeholder="Todas las categorías" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className="max-h-72 duration-150 ease-out">
+                      <SelectItem value="all" className="cursor-pointer">
+                        <span className="flex items-center gap-2">
+                          <Layers className="size-3.5 text-muted-foreground shrink-0" />
+                          <span>Todas las categorías</span>
+                        </span>
+                      </SelectItem>
+                      {CATEGORIES.map(c => {
+                        const CatIcon = c.icon;
+                        let iconColor = "text-blue-500";
+                        if (c.id === "redes") iconColor = "text-emerald-500";
+                        if (c.id === "servidores") iconColor = "text-purple-500";
+                        if (c.id === "mantenimiento") iconColor = "text-amber-500";
+                        if (c.id === "desarrollo") iconColor = "text-pink-500";
+                        if (c.id === "otro") iconColor = "text-slate-400";
+                        return (
+                          <SelectItem key={c.id} value={c.id} className="cursor-pointer">
+                            <span className="flex items-center gap-2">
+                              <CatIcon className={`size-3.5 ${iconColor} shrink-0`} />
+                              <span>{c.label}</span>
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

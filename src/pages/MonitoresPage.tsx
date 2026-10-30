@@ -4,14 +4,16 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useApp } from "@/context/AppContext";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { CustomDatePicker } from "@/components/shared/CustomDatePicker";
+import { AutoResizeTextarea } from "@/components/shared/AutoResizeTextarea";
 import {
   notebookStatusLabel,
   notebookStatusColor,
@@ -98,9 +100,10 @@ function MonitorDetailModal({
   if (!monitor) return null;
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl no-scrollbar">
+        <DialogHeader><DialogDescription className="sr-only">Detalles del monitor</DialogDescription>
           <DialogTitle className="flex items-center gap-2">
+
             <Monitor className="size-5" />
             {monitor.brand} {monitor.model}
           </DialogTitle>
@@ -283,12 +286,12 @@ export function MonitoresPage() {
       </div>
 
       {/* Mobile button: between subtitle and search bar, left-aligned */}
-      <Button onClick={openCreate} className="sm:hidden w-fit">
+      <Button className="hidden">
         <Plus className="size-4" />
         Nuevo monitor
       </Button>
 
-      <div className="relative w-full">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full"><div className="relative flex-1 min-w-[200px]">
         <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Buscar por marca, modelo, PC vinculada..."
@@ -297,9 +300,9 @@ export function MonitoresPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
-      <div className="flex items-center gap-3">
+      {/* filter and action */}
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="flex-1 min-w-0">
+          <SelectTrigger className="w-full sm:w-[180px] shrink-0">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
           <SelectContent>
@@ -312,7 +315,7 @@ export function MonitoresPage() {
         </Select>
 
         {/* Button only visible on sm+ (desktop) */}
-        <Button onClick={openCreate} className="ml-auto hidden sm:flex">
+        <Button onClick={openCreate} className="shrink-0 gap-1.5">
           <Plus className="size-4" />
           Nuevo monitor
         </Button>
@@ -340,9 +343,9 @@ export function MonitoresPage() {
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{editingMonitor ? "Editar monitor" : "Nuevo monitor"}</DialogTitle>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl no-scrollbar">
+          <DialogHeader><DialogDescription className="sr-only">Detalles del monitor</DialogDescription>
+            <DialogTitle>{editingMonitor ? "Editar monitor" : "Nuevo monitor"}</DialogTitle><DialogDescription className="sr-only">Formulario para crear o editar monitor</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid grid-cols-2 gap-3">
@@ -380,12 +383,21 @@ export function MonitoresPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Fecha de ingreso</Label>
-                <Input type="date" value={form.entryDate} onChange={(e) => setForm({ ...form, entryDate: e.target.value })} />
+                <CustomDatePicker
+                  value={form.entryDate}
+                  onChange={(val) => setForm({ ...form, entryDate: val })}
+                  placeholder="dd/mm/aaaa"
+                  allowClear
+                />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label>Observaciones</Label>
-              <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
+              <AutoResizeTextarea
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                placeholder="Notas u observaciones adicionales..."
+              />
             </div>
 
             <Separator />
